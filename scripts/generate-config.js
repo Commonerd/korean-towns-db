@@ -29,8 +29,9 @@ try {
 }
 
 const config = {
-  spreadsheetId: env.SPREADSHEET_ID || '',
-  geminiApiKey: env.GEMINI_API_KEY || ''
+  // process.env에 값이 있으면 그걸 쓰고, 없으면 로컬 .env 파일(env 변수)에서 가져옵니다.
+  spreadsheetId: process.env.SPREADSHEET_ID || env.SPREADSHEET_ID || '',
+  geminiApiKey: process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ''
 };
 
 const output = `window.APP_CONFIG = ${JSON.stringify(config, null, 2)};\n`;
