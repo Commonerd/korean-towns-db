@@ -76,7 +76,7 @@
                     <span class="text-slate-500">김슬기, 박영훈, 송영화</span>
                 </div>
                 <button id="syncBtn" onclick="syncData()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm">
-                    <i class="fa-brands fa-google"></i> 데이터 동기화
+                    <i class="fa-brands fa-google"></i> 실시간 동기화
                 </button>
                 <button onclick="toggleAIChat()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI 보조원
@@ -126,18 +126,48 @@
         
     </main>
 
+    <div id="aiChatPanel" class="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-[-10px_0_20px_rgba(0,0,0,0.1)] transform translate-x-full transition-transform duration-300 z-[1000] flex flex-col border-l border-slate-200">
+        <div class="px-4 py-3 bg-purple-600 text-white flex justify-between items-center shadow-sm z-10">
+            <div class="flex items-center gap-2 font-bold">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI 연구 보조원</span>
+            </div>
+            <button onclick="toggleAIChat()" class="hover:bg-purple-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="chatBody" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col scroll-smooth"></div>
+
+        <div class="p-3 border-t border-slate-200 bg-white">
+            <div class="relative">
+                <input type="text" id="chatInput" onkeypress="handleChatSubmit(event)" placeholder="역사적 배경이나 추가 정보를 물어보세요..." class="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow bg-slate-50">
+                <button onclick="handleChatSubmit()" class="absolute right-2 top-2 w-8 h-8 bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white rounded flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+            <div class="text-[10px] text-center text-slate-400 mt-2">
+                Gemini AI가 제공하는 정보는 참고용으로 교차 검증이 필요합니다.
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="./env-config.js"></script>
 
     <script>
-        // 전역 상태 관리 (rawData를 빈 배열로 초기화 후 구글 시트에서 비동기로 주입)
+        // 전역 상태 관리
         let rawData = [];
         let map;
         let markers = [];
         let currentFilter = 'all';
         let currentSearch = '';
+        let chatHistory = [];
+        let isChatOpen = false;
 
-        // CSV 텍스트를 배열로 안전하게 파싱하는 헬퍼 함수 (셀 내부 쉼표 및 따옴표 완벽 대응)
+        const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
+
+        // CSV 안전 파싱 헬퍼 함수
         function csvToArray(text) {
             let p = '', c = '', r = [];
             let q = false;
@@ -168,16 +198,15 @@
             return r;
         }
 
-        // 구글 스프레드시트 비동기 호출 및 데이터 통합 세팅
+        // 구글 스프레드시트 비동기 백그라운드 호출 함수
         async function loadGoogleSheetsData() {
             const spreadsheetId = window.APP_CONFIG?.spreadsheetId || '';
             if (!spreadsheetId) {
-                alert('스프레드시트 ID가 설정되지 않았습니다. 프로젝트 루트의 .env 파일을 확인하세요.');
+                console.error('스프레드시트 ID가 설정되지 않았습니다.');
                 return;
             }
             const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv`;
             
-            // 각 엔티티 타입별 gid 매핑
             const targets = [
                 { type: '마을', gid: '0' },
                 { type: '조직', gid: '1633831664' },
@@ -190,16 +219,13 @@
             for (const target of targets) {
                 try {
                     const response = await fetch(`${baseUrl}&gid=${target.gid}`);
-                    if (!response.ok) throw new Error(`${target.type} 시트 응답 불안정`);
+                    if (!response.ok) throw new Error(`${target.type} 시트 응답 에러`);
                     
                     const csvText = await response.text();
                     const records = csvToArray(csvText);
                     
-                    // index 0번 행(헤더)은 건너뛰고 1번 행부터 처리
                     for (let i = 1; i < records.length; i++) {
                         const row = records[i];
-                        
-                        // 이름(A열) 정보가 없는 빈 줄은 제외
                         if (!row[0] || row[0].trim() === '') continue;
                         
                         updatedData.push({
@@ -216,44 +242,48 @@
                         });
                     }
                 } catch (error) {
-                    console.error(`${target.type} 데이터를 가져오는 중 오류가 발생했습니다:`, error);
+                    console.error(`${target.type} fetch 실패:`, error);
                 }
             }
             
             rawData = updatedData;
         }
 
-        // 실시간 동기화 버튼 매핑 함수
+        // 수동/자동 데이터 갱신 및 UI 리렌더링 코어 함수
+        async function fetchLatestAndRender() {
+            await loadGoogleSheetsData();
+            renderData();
+        }
+
+        // 동기화 버튼 클릭용 함수
         async function syncData() {
             const btn = document.getElementById('syncBtn');
             btn.disabled = true;
             btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 동기화 중...`;
             
             try {
-                await loadGoogleSheetsData();
-                renderData();
-                alert('구글 스프레드시트 최신 정보가 성공적으로 동기화되었습니다.');
+                await fetchLatestAndRender();
+                alert('구글 스프레드시트 최신 데이터가 반영되었습니다.');
             } catch (err) {
-                alert('동기화 실패: 네트워크 연결 상태나 스프레드시트 공유 설정을 확인하세요.');
+                alert('동기화에 실패했습니다.');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `<i class="fa-brands fa-google"></i> 데이터 동기화`;
+                btn.innerHTML = `<i class="fa-brands fa-google"></i> 실시간 동기화`;
             }
         }
 
-        // 초기화 함수 (async 변경)
-        async function init() {
-            // 지도 초기화 (초기 중심은 태평양 중심)
+        // 정기적 Polling 세팅 및 앱 초기화 함수
+        window.addEventListener('DOMContentLoaded', async () => {
+            // 1. 지도 초기화 (기본 Leaflet 세팅 유지)
             map = L.map('map').setView([40.0, 180.0], 3);
 
-            // OpenStreetMap 타일 추가
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 maxZoom: 18,
                 minZoom: 2
             }).addTo(map);
 
-            // 이벤트 리스너 등록
+            // 2. 이벤트 등록
             document.getElementById('searchInput').addEventListener('input', handleSearch);
             
             const filterBtns = document.querySelectorAll('.filter-btn');
@@ -261,12 +291,14 @@
                 btn.addEventListener('click', (e) => handleFilter(e, filterBtns));
             });
 
-            // 페이지 처음 열릴 때 구글 시트 데이터를 백그라운드 연동 후 렌더링
-            await loadGoogleSheetsData();
-            renderData();
-        }
+            // 3. 최초 데이터 패치 및 렌더링
+            await fetchLatestAndRender();
 
-        // 아이콘 생성기 (타입별 색상 다르게)
+            // 💡 4. 30초마다 백그라운드에서 구글 시트 감시하여 자동 갱신
+            setInterval(fetchLatestAndRender, 30000);
+        });
+
+        // 아이콘 스타일 생성
         function getIcon(type) {
             let color, iconClass;
             if (type === '마을') { color = '#ea580c'; iconClass = 'fa-house'; } 
@@ -289,7 +321,7 @@
             });
         }
 
-        // 검색 및 필터링 로직
+        // 필터 결과 산출
         function getFilteredData() {
             return rawData.filter(item => {
                 const matchType = currentFilter === 'all' || item.type === currentFilter;
@@ -300,16 +332,14 @@
             });
         }
 
-        // 화면 렌더링 (리스트 + 마커)
+        // 리스트 UI 및 Leaflet 마커 렌더링 (중복 방지 초기화 로직 내장)
         function renderData() {
             const filteredData = getFilteredData();
-            
-            // 1. 리스트 렌더링
             const listContainer = document.getElementById('dataList');
             listContainer.innerHTML = '';
             
             if (filteredData.length === 0) {
-                listContainer.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">데이터를 조회할 수 없거나 결과가 없습니다.</div>`;
+                listContainer.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">데이터가 없거나 결과가 없습니다.</div>`;
             }
 
             filteredData.forEach(item => {
@@ -343,12 +373,11 @@
 
             document.getElementById('resultCount').innerText = `총 ${filteredData.length}건`;
 
-            // 2. 지도 마커 렌더링
+            // 💡 Leaflet 지도 마커 리셋 후 다시 그리기 (중복 제거용)
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
             filteredData.forEach(item => {
-                // 위도, 경도 유효성 체크 후 매핑
                 if(!item.lat || !item.lng) return;
                 
                 const marker = L.marker([item.lat, item.lng], { icon: getIcon(item.type) }).addTo(map);
@@ -377,17 +406,13 @@
             });
         }
 
-        // 아이템 클릭 시 지도 포커스 이동
         function focusOnMap(item) {
             if(!item.lat || !item.lng) return;
             if(window.innerWidth < 768) {
                 document.getElementById('map').scrollIntoView({behavior: 'smooth'});
             }
 
-            map.setView([item.lat, item.lng], 6, {
-                animate: true,
-                duration: 1
-            });
+            map.setView([item.lat, item.lng], 6, { animate: true, duration: 1 });
 
             const targetMarker = markers.find(m => m.itemId === item.id);
             if (targetMarker) {
@@ -395,13 +420,11 @@
             }
         }
 
-        // 검색어 입력 처리
         function handleSearch(e) {
             currentSearch = e.target.value.toLowerCase();
             renderData();
         }
 
-        // 필터 버튼 처리
         function handleFilter(e, allBtns) {
             allBtns.forEach(btn => {
                 btn.classList.remove('bg-primary', 'text-white', 'active');
@@ -415,13 +438,7 @@
             renderData();
         }
 
-        window.onload = init;
-
-        // --- Gemini AI 관련 스크립트 ---
-        const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
-        let isChatOpen = false;
-        let chatHistory = [];
-
+        // --- Gemini AI 관련 기능 ---
         function toggleAIChat() {
             const panel = document.getElementById('aiChatPanel');
             isChatOpen = !isChatOpen;
@@ -451,7 +468,6 @@
             
             const inputEl = document.getElementById('chatInput');
             const message = inputEl.value.trim();
-            
             if (!message) return;
             
             inputEl.value = '';
@@ -460,7 +476,7 @@
         }
 
         function parseSimpleMarkdown(text) {
-            let html = text.replace(/\*\*(.*?)\*\"/g, '<strong>$1</strong>'); 
+            let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
             html = html.replace(/\*(.*?)\*/g, '<em>$1</em>'); 
             html = html.replace(/\n/g, '<br>'); 
             return html;
@@ -471,14 +487,9 @@
             const msgDiv = document.createElement('div');
             msgDiv.className = `flex gap-3 mb-4 ${role === 'user' ? 'flex-row-reverse' : ''}`;
             
-            const avatarClass = role === 'user' 
-                ? 'bg-slate-200 text-slate-600' 
-                : 'bg-purple-100 text-purple-600 border border-purple-200';
+            const avatarClass = role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-purple-100 text-purple-600 border border-purple-200';
             const avatarIcon = role === 'user' ? 'fa-user' : 'fa-robot';
-            
-            const bubbleClass = role === 'user'
-                ? 'bg-primary text-white rounded-l-lg rounded-br-lg'
-                : 'bg-slate-100 text-slate-800 rounded-r-lg rounded-bl-lg border border-slate-200';
+            const bubbleClass = role === 'user' ? 'bg-primary text-white rounded-l-lg rounded-br-lg' : 'bg-slate-100 text-slate-800 rounded-r-lg rounded-bl-lg border border-slate-200';
 
             const parsedText = role === 'assistant' ? parseSimpleMarkdown(text) : text;
 
@@ -492,9 +503,7 @@
             `;
             
             const loadingIndicator = document.getElementById('loadingIndicator');
-            if (loadingIndicator && role !== 'loading') {
-                loadingIndicator.remove();
-            }
+            if (loadingIndicator && role !== 'loading') loadingIndicator.remove();
 
             chatBody.appendChild(msgDiv);
             chatBody.scrollTop = chatBody.scrollHeight;
@@ -522,20 +531,15 @@
             showLoading();
 
             if (!geminiApiKey) {
-                addMessageToUI('assistant', 'Gemini API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.');
+                addMessageToUI('assistant', 'Gemini API 키가 설정되지 않았습니다.');
                 return;
             }
 
-            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 뛰어난 AI 연구 보조원(역사학자)입니다. 
-프로젝트 목적: 사라진 해외 한인 마을, 독립운동 조직, 역사적 인물을 지도상에 복원하여 교육 및 학술용으로 제공합니다.
-현재 DB에 등록된 기초 데이터는 다음과 같습니다: ${JSON.stringify(rawData)}.
-사용자의 질문에 대해 이 DB를 바탕으로 답변하되, 당신이 가진 역사적 지식을 더하여 더욱 풍성하고 학술적인 해설을 제공해주세요. 너무 길지 않게 핵심을 중심으로 답변하고, 가독성을 위해 적절히 줄바꿈과 텍스트 강조(**)를 사용하세요.`;
+            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 뛰어난 AI 연구 보조원(역사학자)입니다. 프로젝트 목적: 사라진 해외 한인 마을, 독립운동 조직, 역사적 인물을 지도상에 복원하여 교육 및 학술용으로 제공합니다. 현재 DB 데이터: ${JSON.stringify(rawData)}. 사용자의 질문에 답변하되 역사적 지식을 더해 풍성한 해설을 제공하세요.`;
 
             const payload = {
                 contents: chatHistory,
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
+                systemInstruction: { parts: [{ text: systemPrompt }] },
             };
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`;
@@ -546,7 +550,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
                 const result = await response.json();
                 
                 if (result.candidates && result.candidates[0].content) {
@@ -554,40 +557,12 @@
                     chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
                     addMessageToUI('assistant', aiResponseText);
                 } else {
-                    addMessageToUI('assistant', "죄송합니다. 자료를 분석하는 중에 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                    addMessageToUI('assistant', "자료를 분석하는 중에 오류가 발생했습니다.");
                 }
             } catch (error) {
-                addMessageToUI('assistant', "네트워크 오류가 발생했습니다. API 연결 상태를 확인해주세요.");
+                addMessageToUI('assistant', "네트워크 오류가 발생했습니다.");
             }
         }
     </script>
-
-    <div id="aiChatPanel" class="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-[-10px_0_20px_rgba(0,0,0,0.1)] transform translate-x-full transition-transform duration-300 z-[1000] flex flex-col border-l border-slate-200">
-        <div class="px-4 py-3 bg-purple-600 text-white flex justify-between items-center shadow-sm z-10">
-            <div class="flex items-center gap-2 font-bold">
-                <i class="fa-solid fa-robot"></i>
-                <span>AI 연구 보조원</span>
-            </div>
-            <button onclick="toggleAIChat()" class="hover:bg-purple-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <div id="chatBody" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col scroll-smooth">
-            </div>
-
-        <div class="p-3 border-t border-slate-200 bg-white">
-            <div class="relative">
-                <input type="text" id="chatInput" onkeypress="handleChatSubmit(event)" placeholder="역사적 배경이나 추가 정보를 물어보세요..." class="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow bg-slate-50">
-                <button onclick="handleChatSubmit()" class="absolute right-2 top-2 w-8 h-8 bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white rounded flex items-center justify-center transition-colors">
-                    <i class="fa-solid fa-paper-plane text-xs"></i>
-                </button>
-            </div>
-            <div class="text-[10px] text-center text-slate-400 mt-2">
-                Gemini AI가 제공하는 정보는 참고용으로 교차 검증이 필요합니다.
-            </div>
-        </div>
-    </div>
-
 </body>
 </html>
