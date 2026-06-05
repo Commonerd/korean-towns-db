@@ -488,21 +488,30 @@
                     marker.itemType = item.type;
                     marker.itemRelatedTown = item.relatedTown;
 
-                    // 지도 마커 클릭 시 네트워크 하이라이트 트리거
-                    marker.on('click', () => {
+                    // ✨ [수정 핵심] 지도 마커 클릭 시 팝업 방해 금지 및 안전한 동기화
+                    marker.on('click', function(e) {
+                        // 1. 선택된 마을 네트워크 상태 갱신
                         if (item.type === '마을') {
                             selectedTownName = item.name;
                         } else if (item.relatedTown) {
                             selectedTownName = item.relatedTown;
                         }
-                        // 사이드바 및 지도 마커 동시 하이라이트를 위해 리렌더링
-                        renderData(); 
+
+                        // 2. 사이드바 리스트만 즉시 하이라이트 스타일을 먹이기 위해 렌더링하되,
+                        // 마커가 다시 그려지면서 현재 열린 팝업이 닫히는 현상을 막기 위해 대기 처리를 합니다.
+                        setTimeout(() => {
+                            renderData();
+                            // 리렌더링 후, 방금 클릭한 노드의 팝업을 강제로 유지시켜 줍니다.
+                            const currentTarget = markers.find(m => m.itemId === item.id);
+                            if (currentTarget) {
+                                currentTarget.openPopup();
+                            }
+                        }, 100);
                     });
 
                     markers.push(marker);
                 } catch (e) { console.error(e); }
             });
-        }
 
         function focusOnMap(item) {
             const lat = parseFloat(item.lat);
