@@ -376,6 +376,7 @@
         }
 
         function renderData() {
+            // 1. 순수하게 검색/필터 조건에 맞는 데이터만 가져옴 (지도 마커용)
             const filteredData = getFilteredData();
             const listContainer = document.getElementById('dataList');
             listContainer.innerHTML = '';
@@ -385,19 +386,21 @@
                 return;
             }
 
-            // 💡 네트워크 뷰 조립용 (마을 클릭 시 딸려 나올 조직/인물 분리 레이아웃 생성)
+            // 💡 [수정 핵심] 지도 데이터와 사이드바 표시용 데이터를 완벽히 분리
+            // 지도 마커는 필터 상태를 그대로 유지하고, 사이드바만 관계망 정렬 트리를 적용합니다.
             let displayData = [...filteredData];
             
-            // 만약 특정 마을이 선택된 상태이고 필터가 'all'이라면 네트워크 정렬 트리 배치
+            // 만약 특정 마을이 선택된 상태이고 전체보기('all') 필터라면 사이드바에 네트워크 트리 배치
             if (selectedTownName && currentFilter === 'all') {
                 const townItem = rawData.find(d => d.type === '마을' && d.name === selectedTownName);
                 const children = rawData.filter(d => d.type !== '마을' && d.relatedTown === selectedTownName);
                 
-                // 검색 결과와 겹치지 않게 우선 노출되도록 재구성
+                // 기존 검색 결과 배열에서 중복 제거 후 맨 앞에 마을과 종속 노드들을 밀어넣음
                 displayData = displayData.filter(d => d.name !== selectedTownName && d.relatedTown !== selectedTownName);
                 if (townItem) displayData.unshift(townItem, ...children);
             }
 
+            // 2. 사이드바 리스트 UI 렌더링
             displayData.forEach(item => {
                 let badgeColor = '';
                 let isChild = false;
@@ -406,7 +409,6 @@
                 else if (item.type === '조직') badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
                 else if (item.type === '인물') badgeColor = 'bg-green-100 text-green-800 border-green-200';
 
-                // 선택된 마을의 자식 요소인지 판단
                 if (selectedTownName && item.type !== '마을' && item.relatedTown === selectedTownName) {
                     isChild = true;
                 }
@@ -439,7 +441,7 @@
 
             document.getElementById('resultCount').innerText = `총 ${filteredData.length}건`;
 
-            // 💡 마커 다시 그리기 및 관계망 하이라이트 반영
+            // 3. 💡 Leaflet 지도 마커 다시 그리기 (filteredData 원본 기반)
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
@@ -448,13 +450,12 @@
                 const lng = parseFloat(item.lng);
                 if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
 
-                // 하이라이트 여부 결정 (클릭한 마을 본인 혹은 소속 조직/인물인 경우 활성화)
+                // 하이라이트 여부 판단
                 const isHighlighted = selectedTownName && (item.name === selectedTownName || item.relatedTown === selectedTownName);
 
                 try {
                     const marker = L.marker([lat, lng], { icon: getIcon(item.type, isHighlighted) }).addTo(map);
                     
-                    // 팝업 내용 고도화 (소속 관계 표시)
                     let relationsHtml = '';
                     if (item.type === '마을') {
                         const subOrgs = rawData.filter(d => d.type === '조직' && d.relatedTown === item.name).map(d => d.name).join(', ');
@@ -488,20 +489,16 @@
                     marker.itemType = item.type;
                     marker.itemRelatedTown = item.relatedTown;
 
-                    // ✨ [수정 핵심] 지도 마커 클릭 시 팝업 방해 금지 및 안전한 동기화
+                    // 마커 클릭 시 팝업 팅김 현상 방지 처리
                     marker.on('click', function(e) {
-                        // 1. 선택된 마을 네트워크 상태 갱신
                         if (item.type === '마을') {
                             selectedTownName = item.name;
                         } else if (item.relatedTown) {
                             selectedTownName = item.relatedTown;
                         }
 
-                        // 2. 사이드바 리스트만 즉시 하이라이트 스타일을 먹이기 위해 렌더링하되,
-                        // 마커가 다시 그려지면서 현재 열린 팝업이 닫히는 현상을 막기 위해 대기 처리를 합니다.
                         setTimeout(() => {
                             renderData();
-                            // 리렌더링 후, 방금 클릭한 노드의 팝업을 강제로 유지시켜 줍니다.
                             const currentTarget = markers.find(m => m.itemId === item.id);
                             if (currentTarget) {
                                 currentTarget.openPopup();
@@ -512,6 +509,7 @@
                     markers.push(marker);
                 } catch (e) { console.error(e); }
             });
+        }
 
         function focusOnMap(item) {
             const lat = parseFloat(item.lat);
