@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>코리안타운 DB - 기억의 복원</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                        serif: ['"Noto Serif KR"', 'serif'],
+                    },
+                    colors: {
+                        primary: '#1e3a8a', // 깊은 파란색 (학술/신뢰)
+                        secondary: '#b45309', // 구리색/갈색 (역사/기억)
+                        bgLight: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f8fafc; overflow: hidden; }
+        
+        /* 스크롤바 디자인 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Leaflet 팝업 커스텀 */
+        .leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .leaflet-popup-content { margin: 16px; font-family: 'Noto Sans KR', sans-serif; }
+        .custom-popup .title { font-family: 'Noto Serif KR', serif; font-size: 1.125rem; font-weight: 700; color: #1e3a8a; margin-bottom: 4px; }
+        .custom-popup .meta { font-size: 0.75rem; color: #64748b; margin-bottom: 8px; }
+        .custom-popup .desc { font-size: 0.875rem; color: #334155; line-height: 1.4; }
+        
+        /* 지도 마커 애니메이션 */
+        .marker-pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(30, 58, 138, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 58, 138, 0); }
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col text-slate-800">
+
+    <header class="bg-white border-b border-slate-200 shadow-sm z-20 relative flex-shrink-0">
+        <div class="px-4 py-3 flex justify-between items-center max-w-full">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-earth-asia text-primary text-2xl"></i>
+                <div>
+                    <h1 class="font-serif text-xl font-bold text-primary leading-tight">코리안타운 DB</h1>
+                    <p class="text-xs text-slate-500 tracking-wider">기억의 복원 : 사라진 한인 마을을 지도 위에</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 hidden sm:flex">
+                <div class="text-xs text-right bg-slate-100 p-2 rounded-md border border-slate-200">
+                    <span class="block font-bold text-slate-600 mb-1"><i class="fa-solid fa-users mr-1"></i> 연구팀</span>
+                    <span class="text-slate-500">김슬기, 박영훈, 송영화</span>
+                </div>
+                <button id="syncBtn" onclick="syncData()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm">
+                    <i class="fa-brands fa-google"></i> 데이터 동기화
+                </button>
+                <button onclick="toggleAIChat()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI 보조원
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        <aside class="w-full md:w-96 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_15px_-3px_rgba(0,0,0,0.1)] h-[40vh] md:h-full">
+            
+            <div class="p-4 border-b border-slate-100 bg-slate-50">
+                <div class="relative mb-3">
+                    <input type="text" id="searchInput" placeholder="이름, 지역, 설명으로 검색..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow">
+                    <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400"></i>
+                </div>
+                
+                <div class="flex gap-2 text-xs font-medium" id="filterContainer">
+                    <button class="filter-btn active px-3 py-1.5 rounded-full border border-primary bg-primary text-white transition-colors" data-type="all">전체보기</button>
+                    <button class="filter-btn px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-colors" data-type="마을">
+                        <i class="fa-solid fa-house text-orange-600 mr-1"></i> 마을
+                    </button>
+                    <button class="filter-btn px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-colors" data-type="조직">
+                        <i class="fa-solid fa-users text-blue-600 mr-1"></i> 조직
+                    </button>
+                    <button class="filter-btn px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-colors" data-type="인물">
+                        <i class="fa-solid fa-user text-green-600 mr-1"></i> 인물
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-2" id="dataList">
+                <div class="p-8 text-center text-slate-400 text-sm flex flex-col gap-2 justify-center items-center h-full">
+                    <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary"></i>
+                    구글 시트 데이터를 불러오는 중...
+                </div>
+            </div>
+            
+            <div class="p-2 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 flex justify-between items-center">
+                <span id="resultCount">총 0건</span>
+                <span>DB v1.0 (Phase 1)</span>
+            </div>
+        </aside>
+
+        <div id="map" class="flex-1 h-[60vh] md:h-full z-0"></div>
+        
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        // 전역 상태 관리 (rawData를 빈 배열로 초기화 후 구글 시트에서 비동기로 주입)
+        let rawData = [];
+        let map;
+        let markers = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+
+        // CSV 텍스트를 배열로 안전하게 파싱하는 헬퍼 함수 (셀 내부 쉼표 및 따옴표 완벽 대응)
+        function csvToArray(text) {
+            let p = '', c = '', r = [];
+            let q = false;
+            let row = [''];
+            for (let i = 0; i < text.length; i++) {
+                c = text[i];
+                let next = text[i + 1];
+                if (c === '"') {
+                    if (q && next === '"') { row[row.length - 1] += '"'; i++; }
+                    else { q = !q; }
+                } else if (c === ',') {
+                    if (q) { row[row.length - 1] += c; }
+                    else { row.push(''); }
+                } else if (c === '\r' || c === '\n') {
+                    if (c === '\r' && next === '\n') { i++; }
+                    if (q) { row[row.length - 1] += c; }
+                    else {
+                        r.push(row);
+                        row = [''];
+                    }
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== '') {
+                r.push(row);
+            }
+            return r;
+        }
+
+        // 구글 스프레드시트 비동기 호출 및 데이터 통합 세팅
+        async function loadGoogleSheetsData() {
+            const spreadsheetId = '10SKZ4XhufyTydB9CYxf3DlwPw55huY8-jQEndcWuFZc';
+            const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv`;
+            
+            // 각 엔티티 타입별 gid 매핑
+            const targets = [
+                { type: '마을', gid: '0' },
+                { type: '조직', gid: '1633831664' },
+                { type: '인물', gid: '997795861' }
+            ];
+            
+            let globalId = 1;
+            const updatedData = [];
+
+            for (const target of targets) {
+                try {
+                    const response = await fetch(`${baseUrl}&gid=${target.gid}`);
+                    if (!response.ok) throw new Error(`${target.type} 시트 응답 불안정`);
+                    
+                    const csvText = await response.text();
+                    const records = csvToArray(csvText);
+                    
+                    // index 0번 행(헤더)은 건너뛰고 1번 행부터 처리
+                    for (let i = 1; i < records.length; i++) {
+                        const row = records[i];
+                        
+                        // 이름(A열) 정보가 없는 빈 줄은 제외
+                        if (!row[0] || row[0].trim() === '') continue;
+                        
+                        updatedData.push({
+                            id: globalId++,
+                            type: target.type,
+                            name: row[0] ? row[0].trim() : '',
+                            description: row[1] ? row[1].trim() : '',
+                            founded: row[2] ? row[2].trim() : '',
+                            dissolved: row[3] ? row[3].trim() : '',
+                            lat: row[4] ? parseFloat(row[4].trim()) : 0,
+                            lng: row[5] ? parseFloat(row[5].trim()) : 0,
+                            source: row[6] ? row[6].trim() : '',
+                            author: row[7] ? row[7].trim() : ''
+                        });
+                    }
+                } catch (error) {
+                    console.error(`${target.type} 데이터를 가져오는 중 오류가 발생했습니다:`, error);
+                }
+            }
+            
+            rawData = updatedData;
+        }
+
+        // 실시간 동기화 버튼 매핑 함수
+        async function syncData() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 동기화 중...`;
+            
+            try {
+                await loadGoogleSheetsData();
+                renderData();
+                alert('구글 스프레드시트 최신 정보가 성공적으로 동기화되었습니다.');
+            } catch (err) {
+                alert('동기화 실패: 네트워크 연결 상태나 스프레드시트 공유 설정을 확인하세요.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-brands fa-google"></i> 데이터 동기화`;
+            }
+        }
+
+        // 초기화 함수 (async 변경)
+        async function init() {
+            // 지도 초기화 (초기 중심은 태평양 중심)
+            map = L.map('map').setView([40.0, 180.0], 3);
+
+            // OpenStreetMap 타일 추가
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+                minZoom: 2
+            }).addTo(map);
+
+            // 이벤트 리스너 등록
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => handleFilter(e, filterBtns));
+            });
+
+            // 페이지 처음 열릴 때 구글 시트 데이터를 백그라운드 연동 후 렌더링
+            await loadGoogleSheetsData();
+            renderData();
+        }
+
+        // 아이콘 생성기 (타입별 색상 다르게)
+        function getIcon(type) {
+            let color, iconClass;
+            if (type === '마을') { color = '#ea580c'; iconClass = 'fa-house'; } 
+            else if (type === '조직') { color = '#2563eb'; iconClass = 'fa-users'; } 
+            else if (type === '인물') { color = '#16a34a'; iconClass = 'fa-user'; }
+
+            const html = `
+                <div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);" class="text-white text-sm">
+                    <i class="fa-solid ${iconClass}"></i>
+                </div>
+                <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid ${color}; margin: 0 auto; margin-top: -2px;"></div>
+            `;
+
+            return L.divIcon({
+                html: html,
+                className: '', 
+                iconSize: [30, 40],
+                iconAnchor: [15, 40],
+                popupAnchor: [0, -40]
+            });
+        }
+
+        // 검색 및 필터링 로직
+        function getFilteredData() {
+            return rawData.filter(item => {
+                const matchType = currentFilter === 'all' || item.type === currentFilter;
+                const matchSearch = item.name.toLowerCase().includes(currentSearch) || 
+                                    item.description.toLowerCase().includes(currentSearch) ||
+                                    item.source.toLowerCase().includes(currentSearch);
+                return matchType && matchSearch;
+            });
+        }
+
+        // 화면 렌더링 (리스트 + 마커)
+        function renderData() {
+            const filteredData = getFilteredData();
+            
+            // 1. 리스트 렌더링
+            const listContainer = document.getElementById('dataList');
+            listContainer.innerHTML = '';
+            
+            if (filteredData.length === 0) {
+                listContainer.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">데이터를 조회할 수 없거나 결과가 없습니다.</div>`;
+            }
+
+            filteredData.forEach(item => {
+                let badgeColor = '';
+                if (item.type === '마을') badgeColor = 'bg-orange-100 text-orange-800 border-orange-200';
+                else if (item.type === '조직') badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+                else if (item.type === '인물') badgeColor = 'bg-green-100 text-green-800 border-green-200';
+
+                const card = document.createElement('div');
+                card.className = 'p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <h3 class="font-bold text-slate-800 font-serif text-lg">${item.name}</h3>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-medium ${badgeColor}">${item.type}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-2 line-clamp-2">${item.description}</p>
+                    <div class="flex justify-between items-end text-[10px] text-slate-400">
+                        <span><i class="fa-regular fa-clock"></i> ${item.founded} ~ ${item.dissolved}</span>
+                        <div class="flex gap-2 items-center">
+                            <button onclick="event.stopPropagation(); askAIAboutById(${item.id})" class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 transition-colors bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 z-10">
+                                <i class="fa-solid fa-sparkles"></i> AI 해설
+                            </button>
+                            <span>작성: ${item.author}</span>
+                        </div>
+                    </div>
+                `;
+                
+                card.onclick = () => focusOnMap(item);
+                listContainer.appendChild(card);
+            });
+
+            document.getElementById('resultCount').innerText = `총 ${filteredData.length}건`;
+
+            // 2. 지도 마커 렌더링
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            filteredData.forEach(item => {
+                // 위도, 경도 유효성 체크 후 매핑
+                if(!item.lat || !item.lng) return;
+                
+                const marker = L.marker([item.lat, item.lng], { icon: getIcon(item.type) }).addTo(map);
+                
+                const popupContent = `
+                    <div class="custom-popup">
+                        <div class="text-[10px] text-slate-500 mb-1">${item.type}</div>
+                        <div class="title">${item.name}</div>
+                        <div class="meta"><i class="fa-regular fa-clock"></i> ${item.founded} ~ ${item.dissolved}</div>
+                        <div class="desc mb-2">${item.description}</div>
+                        <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex justify-between items-end gap-2">
+                            <div>
+                                <strong>출처:</strong> ${item.source}<br>
+                                <strong>작성자:</strong> ${item.author}
+                            </div>
+                            <button onclick="askAIAboutById(${item.id})" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI 심층 해설
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                marker.itemId = item.id;
+                markers.push(marker);
+            });
+        }
+
+        // 아이템 클릭 시 지도 포커스 이동
+        function focusOnMap(item) {
+            if(!item.lat || !item.lng) return;
+            if(window.innerWidth < 768) {
+                document.getElementById('map').scrollIntoView({behavior: 'smooth'});
+            }
+
+            map.setView([item.lat, item.lng], 6, {
+                animate: true,
+                duration: 1
+            });
+
+            const targetMarker = markers.find(m => m.itemId === item.id);
+            if (targetMarker) {
+                targetMarker.openPopup();
+            }
+        }
+
+        // 검색어 입력 처리
+        function handleSearch(e) {
+            currentSearch = e.target.value.toLowerCase();
+            renderData();
+        }
+
+        // 필터 버튼 처리
+        function handleFilter(e, allBtns) {
+            allBtns.forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-white', 'active');
+                btn.classList.add('bg-white', 'text-slate-600');
+            });
+            
+            e.currentTarget.classList.remove('bg-white', 'text-slate-600');
+            e.currentTarget.classList.add('bg-primary', 'text-white', 'active');
+
+            currentFilter = e.currentTarget.getAttribute('data-type');
+            renderData();
+        }
+
+        window.onload = init;
+
+        // --- Gemini AI 관련 스크립트 ---
+        const geminiApiKey = ""; 
+        let isChatOpen = false;
+        let chatHistory = [];
+
+        function toggleAIChat() {
+            const panel = document.getElementById('aiChatPanel');
+            isChatOpen = !isChatOpen;
+            if (isChatOpen) {
+                panel.classList.remove('translate-x-full');
+                if (chatHistory.length === 0) {
+                    addMessageToUI('assistant', "안녕하세요! 코리안타운 DB 연구 보조원입니다. 데이터에 등록된 한인 마을, 조직, 인물에 대해 궁금한 점을 물어보시거나, 지도에서 'AI 해설' 버튼을 눌러 심층 정보를 알아보세요.");
+                }
+            } else {
+                panel.classList.add('translate-x-full');
+            }
+        }
+
+        function askAIAboutById(id) {
+            const item = rawData.find(d => d.id === id);
+            if (!item) return;
+
+            if (!isChatOpen) toggleAIChat();
+
+            const prompt = `'${item.name}'(${item.type})에 대해 학술적이고 역사적인 배경을 더 자세히 설명해 줘. (현재 DB 설명: ${item.description})`;
+            addMessageToUI('user', `'${item.name}'에 대해 더 자세히 알려주세요.`);
+            fetchGeminiResponse(prompt);
+        }
+
+        function handleChatSubmit(event) {
+            if (event && event.type === 'keypress' && event.key !== 'Enter') return;
+            
+            const inputEl = document.getElementById('chatInput');
+            const message = inputEl.value.trim();
+            
+            if (!message) return;
+            
+            inputEl.value = '';
+            addMessageToUI('user', message);
+            fetchGeminiResponse(message);
+        }
+
+        function parseSimpleMarkdown(text) {
+            let html = text.replace(/\*\*(.*?)\*\"/g, '<strong>$1</strong>'); 
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>'); 
+            html = html.replace(/\n/g, '<br>'); 
+            return html;
+        }
+
+        function addMessageToUI(role, text) {
+            const chatBody = document.getElementById('chatBody');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex gap-3 mb-4 ${role === 'user' ? 'flex-row-reverse' : ''}`;
+            
+            const avatarClass = role === 'user' 
+                ? 'bg-slate-200 text-slate-600' 
+                : 'bg-purple-100 text-purple-600 border border-purple-200';
+            const avatarIcon = role === 'user' ? 'fa-user' : 'fa-robot';
+            
+            const bubbleClass = role === 'user'
+                ? 'bg-primary text-white rounded-l-lg rounded-br-lg'
+                : 'bg-slate-100 text-slate-800 rounded-r-lg rounded-bl-lg border border-slate-200';
+
+            const parsedText = role === 'assistant' ? parseSimpleMarkdown(text) : text;
+
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm ${avatarClass}">
+                    <i class="fa-solid ${avatarIcon}"></i>
+                </div>
+                <div class="p-3 max-w-[75%] text-sm shadow-sm ${bubbleClass} leading-relaxed">
+                    ${parsedText}
+                </div>
+            `;
+            
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator && role !== 'loading') {
+                loadingIndicator.remove();
+            }
+
+            chatBody.appendChild(msgDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function showLoading() {
+            const chatBody = document.getElementById('chatBody');
+            const msgDiv = document.createElement('div');
+            msgDiv.id = 'loadingIndicator';
+            msgDiv.className = `flex gap-3 mb-4`;
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm bg-purple-100 text-purple-600 border border-purple-200">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="p-3 bg-slate-100 text-slate-500 rounded-r-lg rounded-bl-lg border border-slate-200 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> 문헌 조사 중...
+                </div>
+            `;
+            chatBody.appendChild(msgDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        async function fetchGeminiResponse(userMessage) {
+            chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+            showLoading();
+
+            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 뛰어난 AI 연구 보조원(역사학자)입니다. 
+프로젝트 목적: 사라진 해외 한인 마을, 독립운동 조직, 역사적 인물을 지도상에 복원하여 교육 및 학술용으로 제공합니다.
+현재 DB에 등록된 기초 데이터는 다음과 같습니다: ${JSON.stringify(rawData)}.
+사용자의 질문에 대해 이 DB를 바탕으로 답변하되, 당신이 가진 역사적 지식을 더하여 더욱 풍성하고 학술적인 해설을 제공해주세요. 너무 길지 않게 핵심을 중심으로 답변하고, 가독성을 위해 적절히 줄바꿈과 텍스트 강조(**)를 사용하세요.`;
+
+            const payload = {
+                contents: chatHistory,
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0].content) {
+                    const aiResponseText = result.candidates[0].content.parts[0].text;
+                    chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
+                    addMessageToUI('assistant', aiResponseText);
+                } else {
+                    addMessageToUI('assistant', "죄송합니다. 자료를 분석하는 중에 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                }
+            } catch (error) {
+                addMessageToUI('assistant', "네트워크 오류가 발생했습니다. API 연결 상태를 확인해주세요.");
+            }
+        }
+    </script>
+
+    <div id="aiChatPanel" class="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-[-10px_0_20px_rgba(0,0,0,0.1)] transform translate-x-full transition-transform duration-300 z-[1000] flex flex-col border-l border-slate-200">
+        <div class="px-4 py-3 bg-purple-600 text-white flex justify-between items-center shadow-sm z-10">
+            <div class="flex items-center gap-2 font-bold">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI 연구 보조원</span>
+            </div>
+            <button onclick="toggleAIChat()" class="hover:bg-purple-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="chatBody" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col scroll-smooth">
+            </div>
+
+        <div class="p-3 border-t border-slate-200 bg-white">
+            <div class="relative">
+                <input type="text" id="chatInput" onkeypress="handleChatSubmit(event)" placeholder="역사적 배경이나 추가 정보를 물어보세요..." class="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow bg-slate-50">
+                <button onclick="handleChatSubmit()" class="absolute right-2 top-2 w-8 h-8 bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white rounded flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+            <div class="text-[10px] text-center text-slate-400 mt-2">
+                Gemini AI가 제공하는 정보는 참고용으로 교차 검증이 필요합니다.
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
