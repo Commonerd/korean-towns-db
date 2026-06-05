@@ -198,7 +198,7 @@
             return r;
         }
 
-        // 구글 스프레드시트 비동기 백그라운드 호출 함수
+       // 구글 스프레드시트 비동기 백그라운드 호출 함수
         async function loadGoogleSheetsData() {
             const spreadsheetId = window.APP_CONFIG?.spreadsheetId || '';
             if (!spreadsheetId) {
@@ -228,17 +228,54 @@
                         const row = records[i];
                         if (!row[0] || row[0].trim() === '') continue;
                         
+                        // 기본 변수 초기화
+                        let name = row[0] ? row[0].trim() : '';
+                        let description = row[1] ? row[1].trim() : '';
+                        let founded = '';
+                        let dissolved = '';
+                        let population = ''; // 마을용 인구 필드 추가
+                        let lat = 0;
+                        let lng = 0;
+                        let source = '';
+                        let author = '';
+
+                        // 🔥 시트 타입('마을' vs '조직/인물')에 따른 인덱스 분기 처리
+                        if (target.type === '마을') {
+                            // 마을 시트 구조: 이름(0), 설명(1), 인구(2), 설립일(3), 해산일(4), 위도(5), 경도(6), 출처(7), 작성자(8) 가정
+                            // (※ 만약 실제 시트 순서가 다르면 아래 숫자를 시트에 맞게 조절해 주세요!)
+                            population = row[2] ? row[2].trim() : '';
+                            founded = row[3] ? row[3].trim() : '';
+                            dissolved = row[4] ? row[4].trim() : '';
+                            lat = row[5] ? parseFloat(row[5].trim()) : 0;
+                            lng = row[6] ? parseFloat(row[6].trim()) : 0;
+                            source = row[7] ? row[7].trim() : '';
+                            author = row[8] ? row[8].trim() : '';
+                            
+                            // 설명(description) 영역에 인구 정보를 직관적으로 결합해 줍니다.
+                            if (population) {
+                                description = `[인구: ${population}] ` + description;
+                            }
+                        } else {
+                            // 조직/인물 시트 구조 (기존 유지): 이름(0), 설명(1), 설립(2), 해산(3), 위도(4), 경도(5), 출처(6), 작성자(7)
+                            founded = row[2] ? row[2].trim() : '';
+                            dissolved = row[3] ? row[3].trim() : '';
+                            lat = row[4] ? parseFloat(row[4].trim()) : 0;
+                            lng = row[5] ? parseFloat(row[5].trim()) : 0;
+                            source = row[6] ? row[6].trim() : '';
+                            author = row[7] ? row[7].trim() : '';
+                        }
+                        
                         updatedData.push({
                             id: globalId++,
                             type: target.type,
-                            name: row[0] ? row[0].trim() : '',
-                            description: row[1] ? row[1].trim() : '',
-                            founded: row[2] ? row[2].trim() : '',
-                            dissolved: row[3] ? row[3].trim() : '',
-                            lat: row[4] ? parseFloat(row[4].trim()) : 0,
-                            lng: row[5] ? parseFloat(row[5].trim()) : 0,
-                            source: row[6] ? row[6].trim() : '',
-                            author: row[7] ? row[7].trim() : ''
+                            name: name,
+                            description: description,
+                            founded: founded,
+                            dissolved: dissolved,
+                            lat: lat,
+                            lng: lng,
+                            source: source,
+                            author: author
                         });
                     }
                 } catch (error) {
