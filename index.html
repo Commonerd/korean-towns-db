@@ -216,6 +216,10 @@
             }
             
             rawData = updatedData;
+            JavaScript
+            if (window.map) {
+                window.map.invalidateSize();
+            }
         }
 
         // 실시간 동기화 버튼 매핑 함수
