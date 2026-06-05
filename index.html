@@ -6,9 +6,7 @@
     <title>코리안타운 DB - 기억의 복원</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,8 +19,8 @@
                         serif: ['"Noto Serif KR"', 'serif'],
                     },
                     colors: {
-                        primary: '#1e3a8a', // 깊은 파란색 (학술/신뢰)
-                        secondary: '#b45309', // 구리색/갈색 (역사/기억)
+                        primary: '#1e3a8a', 
+                        secondary: '#b45309', 
                         bgLight: '#f8fafc',
                     }
                 }
@@ -32,28 +30,29 @@
 
     <style>
         body { background-color: #f8fafc; overflow: hidden; }
-        
-        /* 스크롤바 디자인 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Leaflet 팝업 커스텀 */
         .leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .leaflet-popup-content { margin: 16px; font-family: 'Noto Sans KR', sans-serif; }
         .custom-popup .title { font-family: 'Noto Serif KR', serif; font-size: 1.125rem; font-weight: 700; color: #1e3a8a; margin-bottom: 4px; }
         .custom-popup .meta { font-size: 0.75rem; color: #64748b; margin-bottom: 8px; }
         .custom-popup .desc { font-size: 0.875rem; color: #334155; line-height: 1.4; }
         
-        /* 지도 마커 애니메이션 */
-        .marker-pulse {
-            animation: pulse 2s infinite;
+        /* 선택된 마을 네트워크 하이라이트 효과 */
+        .selected-card {
+            border-color: #1e3a8a !important;
+            background-color: #eff6ff !important;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.15) !important;
         }
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(30, 58, 138, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 58, 138, 0); }
+        .network-child-card {
+            border-color: #cbd5e1 !important;
+            background-color: #f8fafc !important;
+            opacity: 0.9;
+            margin-left: 1.5rem !important;
+            border-left: 4px solid #b45309 !important;
         }
     </style>
 </head>
@@ -156,7 +155,6 @@
     <script src="./env-config.js"></script>
 
     <script>
-        // 전역 상태 관리
         let rawData = [];
         let map;
         let markers = [];
@@ -164,10 +162,10 @@
         let currentSearch = '';
         let chatHistory = [];
         let isChatOpen = false;
+        let selectedTownName = null; // 현재 네트워크 하이라이트 중인 마을 이름
 
         const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
 
-        // CSV 안전 파싱 헬퍼 함수
         function csvToArray(text) {
             let p = '', c = '', r = [];
             let q = false;
@@ -198,15 +196,11 @@
             return r;
         }
 
-       // 구글 스프레드시트 비동기 백그라운드 호출 함수
         async function loadGoogleSheetsData() {
             const spreadsheetId = window.APP_CONFIG?.spreadsheetId || '';
-            if (!spreadsheetId) {
-                console.error('스프레드시트 ID가 설정되지 않았습니다.');
-                return;
-            }
-            const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv`;
+            if (!spreadsheetId) return;
             
+            const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv`;
             const targets = [
                 { type: '마을', gid: '0' },
                 { type: '조직', gid: '1633831664' },
@@ -215,92 +209,116 @@
             
             let globalId = 1;
             const updatedData = [];
+            const townCoords = {}; // 마을 위치 임시 저장소 (종속성 해결용)
 
-            for (const target of targets) {
-                try {
-                    const response = await fetch(`${baseUrl}&gid=${target.gid}`);
-                    if (!response.ok) throw new Error(`${target.type} 시트 응답 에러`);
-                    
-                    const csvText = await response.text();
-                    const records = csvToArray(csvText);
-                    
+            // 1단계: '마을' 데이터 먼저 파싱하여 좌표 확보
+            try {
+                const townTarget = targets.find(t => t.type === '마을');
+                const response = await fetch(`${baseUrl}&gid=${townTarget.gid}`);
+                if (response.ok) {
+                    const records = csvToArray(await response.text());
                     for (let i = 1; i < records.length; i++) {
                         const row = records[i];
                         if (!row[0] || row[0].trim() === '') continue;
-                        
-                        // 기본 변수 초기화
-                        let name = row[0] ? row[0].trim() : '';
-                        let description = row[1] ? row[1].trim() : '';
-                        let founded = '';
-                        let dissolved = '';
-                        let population = ''; // 마을용 인구 필드 추가
-                        let lat = 0;
-                        let lng = 0;
-                        let source = '';
-                        let author = '';
 
-                        // 🔥 시트 타입('마을' vs '조직/인물')에 따른 인덱스 분기 처리
-                        if (target.type === '마을') {
-                            // 마을 시트 구조: 이름(0), 설명(1), 인구(2), 설립일(3), 해산일(4), 위도(5), 경도(6), 출처(7), 작성자(8) 가정
-                            // (※ 만약 실제 시트 순서가 다르면 아래 숫자를 시트에 맞게 조절해 주세요!)
-                            population = row[2] ? row[2].trim() : '';
-                            founded = row[3] ? row[3].trim() : '';
-                            dissolved = row[4] ? row[4].trim() : '';
-                            lat = row[5] ? parseFloat(row[5].trim()) : 0;
-                            lng = row[6] ? parseFloat(row[6].trim()) : 0;
-                            source = row[7] ? row[7].trim() : '';
-                            author = row[8] ? row[8].trim() : '';
-                            
-                            // 설명(description) 영역에 인구 정보를 직관적으로 결합해 줍니다.
-                            if (population) {
-                                description = `[인구: ${population}] ` + description;
-                            }
-                        } else {
-                            // 조직/인물 시트 구조 (기존 유지): 이름(0), 설명(1), 설립(2), 해산(3), 위도(4), 경도(5), 출처(6), 작성자(7)
-                            founded = row[2] ? row[2].trim() : '';
-                            dissolved = row[3] ? row[3].trim() : '';
-                            lat = row[4] ? parseFloat(row[4].trim()) : 0;
-                            lng = row[5] ? parseFloat(row[5].trim()) : 0;
-                            source = row[6] ? row[6].trim() : '';
-                            author = row[7] ? row[7].trim() : '';
+                        // 마을 시트 구조: name(0), description(1), population(2), start_year(3), end_year(4), lat(5), lng(6), source(7), creator(8)
+                        const name = row[0].trim();
+                        const lat = row[5] ? parseFloat(row[5].trim()) : 0;
+                        const lng = row[6] ? parseFloat(row[6].trim()) : 0;
+
+                        if (lat && lng) {
+                            townCoords[name] = { lat, lng };
                         }
-                        
+
+                        let desc = row[1] ? row[1].trim() : '';
+                        if (row[2] && row[2].trim()) desc = `[인구: ${row[2].trim()}] ` + desc;
+
                         updatedData.push({
                             id: globalId++,
-                            type: target.type,
+                            type: '마을',
                             name: name,
-                            description: description,
-                            founded: founded,
-                            dissolved: dissolved,
+                            description: desc,
+                            founded: row[3] ? row[3].trim() : '',
+                            dissolved: row[4] ? row[4].trim() : '',
                             lat: lat,
                             lng: lng,
-                            source: source,
-                            author: author
+                            source: row[7] ? row[7].trim() : '',
+                            author: row[8] ? row[8].trim() : '',
+                            relatedTown: '',
+                            relatedOrg: ''
                         });
                     }
-                } catch (error) {
-                    console.error(`${target.type} fetch 실패:`, error);
                 }
+            } catch (e) { console.error("마을 파싱 실패", e); }
+
+            // 2단계: '조직' 및 '인물' 데이터 파싱 및 위치 종속 처리
+            for (const target of targets) {
+                if (target.type === '마을') continue;
+                try {
+                    const response = await fetch(`${baseUrl}&gid=${target.gid}`);
+                    if (!response.ok) continue;
+                    
+                    const records = csvToArray(await response.text());
+                    for (let i = 1; i < records.length; i++) {
+                        const row = records[i];
+                        if (!row[0] || row[0].trim() === '') continue;
+
+                        let item = {
+                            id: globalId++,
+                            type: target.type,
+                            name: row[0].trim(),
+                            description: row[1] ? row[1].trim() : '',
+                            founded: row[2] ? row[2].trim() : '',
+                            dissolved: row[3] ? row[3].trim() : '',
+                            lat: 0,
+                            lng: 0,
+                            relatedTown: row[4] ? row[4].trim() : '',
+                            relatedOrg: '',
+                            source: '',
+                            author: ''
+                        };
+
+                        if (target.type === '조직') {
+                            // 조직 구조: name(0), description(1), start_year(2), end_year(3), related_town(4), source(5), creator(6)
+                            item.source = row[5] ? row[5].trim() : '';
+                            item.author = row[6] ? row[6].trim() : '';
+                            
+                            // 마을 위치 종속
+                            if (townCoords[item.relatedTown]) {
+                                item.lat = townCoords[item.relatedTown].lat;
+                                item.lng = townCoords[item.relatedTown].lng;
+                            }
+                        } else if (target.type === '인물') {
+                            // 인물 구조: name(0), description(1), start_year(2), end_year(3), related_town(4), related_organization(5), source(6), creator(7)
+                            item.relatedOrg = row[5] ? row[5].trim() : '';
+                            item.source = row[6] ? row[6].trim() : '';
+                            item.author = row[7] ? row[7].trim() : '';
+
+                            // 인물은 조직 위치 우선, 없으면 마을 위치 종속
+                            if (townCoords[item.relatedTown]) {
+                                item.lat = townCoords[item.relatedTown].lat;
+                                item.lng = townCoords[item.relatedTown].lng;
+                            }
+                        }
+                        updatedData.push(item);
+                    }
+                } catch (error) { console.error(`${target.type} 파싱 실패`, error); }
             }
-            
             rawData = updatedData;
         }
 
-        // 수동/자동 데이터 갱신 및 UI 리렌더링 코어 함수
         async function fetchLatestAndRender() {
             await loadGoogleSheetsData();
             renderData();
         }
 
-        // 동기화 버튼 클릭용 함수
         async function syncData() {
             const btn = document.getElementById('syncBtn');
             btn.disabled = true;
             btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 동기화 중...`;
-            
             try {
                 await fetchLatestAndRender();
-                alert('구글 스프레드시트 최신 데이터가 반영되었습니다.');
+                alert('구글 스프레드시트 최신 데이터 및 위치 종속 관계가 반영되었습니다.');
             } catch (err) {
                 alert('동기화에 실패했습니다.');
             } finally {
@@ -309,97 +327,108 @@
             }
         }
 
-        // 정기적 Polling 세팅 및 앱 초기화 함수
         window.addEventListener('DOMContentLoaded', async () => {
-            // 1. 지도 초기화 (기본 Leaflet 세팅 유지)
-            map = L.map('map').setView([40.0, 180.0], 3);
-
+            map = L.map('map').setView([43.0, 132.0], 5); // 연해주 일대가 잘 보이도록 기본 뷰 조정
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 18,
-                minZoom: 2
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 18, minZoom: 2
             }).addTo(map);
 
-            // 2. 이벤트 등록
             document.getElementById('searchInput').addEventListener('input', handleSearch);
-            
             const filterBtns = document.querySelectorAll('.filter-btn');
             filterBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => handleFilter(e, filterBtns));
             });
 
-            // 3. 최초 데이터 패치 및 렌더링
             await fetchLatestAndRender();
-
-            // 💡 4. 30초마다 백그라운드에서 구글 시트 감시하여 자동 갱신
-            setInterval(fetchLatestAndRender, 10000);
+            setInterval(fetchLatestAndRender, 30000);
         });
 
-        // 아이콘 스타일 생성
-        function getIcon(type) {
+        function getIcon(type, isHighlighted = false) {
             let color, iconClass;
             if (type === '마을') { color = '#ea580c'; iconClass = 'fa-house'; } 
             else if (type === '조직') { color = '#2563eb'; iconClass = 'fa-users'; } 
             else if (type === '인물') { color = '#16a34a'; iconClass = 'fa-user'; }
 
+            // 하이라이트(네트워크 선택) 시 마커 크기와 가시성 증폭
+            const size = isHighlighted ? '36px' : '28px';
+            const border = isHighlighted ? '3px solid #ff0000' : '2px solid white';
+            const shadow = isHighlighted ? '0 0 12px rgba(255,0,0,0.8)' : '0 2px 5px rgba(0,0,0,0.3)';
+
             const html = `
-                <div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);" class="text-white text-sm">
+                <div style="background-color: ${color}; width: ${size}; height: ${size}; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: ${border}; box-shadow: ${shadow}; transition: all 0.3s;" class="text-white text-xs">
                     <i class="fa-solid ${iconClass}"></i>
                 </div>
-                <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid ${color}; margin: 0 auto; margin-top: -2px;"></div>
             `;
-
             return L.divIcon({
-                html: html,
-                className: '', 
-                iconSize: [30, 40],
-                iconAnchor: [15, 40],
-                popupAnchor: [0, -40]
+                html: html, className: '', iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -20]
             });
         }
 
-        // 필터 결과 산출
         function getFilteredData() {
             return rawData.filter(item => {
                 const matchType = currentFilter === 'all' || item.type === currentFilter;
                 const matchSearch = item.name.toLowerCase().includes(currentSearch) || 
                                     item.description.toLowerCase().includes(currentSearch) ||
-                                    item.source.toLowerCase().includes(currentSearch);
+                                    (item.relatedTown && item.relatedTown.toLowerCase().includes(currentSearch));
                 return matchType && matchSearch;
             });
         }
 
-        // 리스트 UI 및 Leaflet 마커 렌더링 (중복 방지 초기화 로직 내장)
         function renderData() {
             const filteredData = getFilteredData();
             const listContainer = document.getElementById('dataList');
             listContainer.innerHTML = '';
             
             if (filteredData.length === 0) {
-                listContainer.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">데이터가 없거나 결과가 없습니다.</div>`;
+                listContainer.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">데이터가 없습니다.</div>`;
+                return;
             }
 
-            filteredData.forEach(item => {
+            // 💡 네트워크 뷰 조립용 (마을 클릭 시 딸려 나올 조직/인물 분리 레이아웃 생성)
+            let displayData = [...filteredData];
+            
+            // 만약 특정 마을이 선택된 상태이고 필터가 'all'이라면 네트워크 정렬 트리 배치
+            if (selectedTownName && currentFilter === 'all') {
+                const townItem = rawData.find(d => d.type === '마을' && d.name === selectedTownName);
+                const children = rawData.filter(d => d.type !== '마을' && d.relatedTown === selectedTownName);
+                
+                // 검색 결과와 겹치지 않게 우선 노출되도록 재구성
+                displayData = displayData.filter(d => d.name !== selectedTownName && d.relatedTown !== selectedTownName);
+                if (townItem) displayData.unshift(townItem, ...children);
+            }
+
+            displayData.forEach(item => {
                 let badgeColor = '';
+                let isChild = false;
+
                 if (item.type === '마을') badgeColor = 'bg-orange-100 text-orange-800 border-orange-200';
                 else if (item.type === '조직') badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
                 else if (item.type === '인물') badgeColor = 'bg-green-100 text-green-800 border-green-200';
 
+                // 선택된 마을의 자식 요소인지 판단
+                if (selectedTownName && item.type !== '마을' && item.relatedTown === selectedTownName) {
+                    isChild = true;
+                }
+
                 const card = document.createElement('div');
-                card.className = 'p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all';
+                card.className = `p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all ${item.name === selectedTownName ? 'selected-card' : ''} ${isChild ? 'network-child-card' : ''}`;
+                
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-1">
-                        <h3 class="font-bold text-slate-800 font-serif text-lg">${item.name}</h3>
+                        <h3 class="font-bold text-slate-800 font-serif ${isChild ? 'text-base' : 'text-lg'}">
+                            ${isChild ? '<i class="fa-solid fa-arrow-turn-up rotate-90 mr-1 text-slate-400"></i>' : ''}${item.name}
+                        </h3>
                         <span class="text-[10px] px-2 py-0.5 rounded-full border font-medium ${badgeColor}">${item.type}</span>
                     </div>
                     <p class="text-xs text-slate-500 mb-2 line-clamp-2">${item.description}</p>
+                    ${item.relatedTown ? `<div class="text-[10px] text-primary font-medium mb-1"><i class="fa-solid fa-link"></i> 소속마을: ${item.relatedTown}</div>` : ''}
                     <div class="flex justify-between items-end text-[10px] text-slate-400">
-                        <span><i class="fa-regular fa-clock"></i> ${item.founded} ~ ${item.dissolved}</span>
+                        <span><i class="fa-regular fa-clock"></i> ${item.founded || '미상'} ~ ${item.dissolved || '미상'}</span>
                         <div class="flex gap-2 items-center">
                             <button onclick="event.stopPropagation(); askAIAboutById(${item.id})" class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 transition-colors bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 z-10">
                                 <i class="fa-solid fa-sparkles"></i> AI 해설
                             </button>
-                            <span>작성: ${item.author}</span>
                         </div>
                     </div>
                 `;
@@ -410,36 +439,44 @@
 
             document.getElementById('resultCount').innerText = `총 ${filteredData.length}건`;
 
-            // 💡 Leaflet 지도 마커 리셋 후 다시 그리기 (중복 제거용)
+            // 💡 마커 다시 그리기 및 관계망 하이라이트 반영
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
             filteredData.forEach(item => {
-                // 숫자로 완벽히 변환 가능한지 검사 (0도 올바른 좌표일 수 있으므로 NaN 검사 추가)
                 const lat = parseFloat(item.lat);
                 const lng = parseFloat(item.lng);
-                
-                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-                    console.warn(`[좌표 누락] '${item.name}' 항목의 좌표가 올바르지 않습니다. (Lat: ${item.lat}, Lng: ${item.lng})`);
-                    return;
-                }
-                
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+
+                // 하이라이트 여부 결정 (클릭한 마을 본인 혹은 소속 조직/인물인 경우 활성화)
+                const isHighlighted = selectedTownName && (item.name === selectedTownName || item.relatedTown === selectedTownName);
+
                 try {
-                    const marker = L.marker([lat, lng], { icon: getIcon(item.type) }).addTo(map);
+                    const marker = L.marker([lat, lng], { icon: getIcon(item.type, isHighlighted) }).addTo(map);
                     
+                    // 팝업 내용 고도화 (소속 관계 표시)
+                    let relationsHtml = '';
+                    if (item.type === '마을') {
+                        const subOrgs = rawData.filter(d => d.type === '조직' && d.relatedTown === item.name).map(d => d.name).join(', ');
+                        const subPers = rawData.filter(d => d.type === '인물' && d.relatedTown === item.name).map(d => d.name).join(', ');
+                        if (subOrgs) relationsHtml += `<div class="text-[11px] text-blue-700 mt-1"><b>관련 조직:</b> ${subOrgs}</div>`;
+                        if (subPers) relationsHtml += `<div class="text-[11px] text-green-700"><b>관련 인물:</b> ${subPers}</div>`;
+                    }
+
                     const popupContent = `
-                        <div class="custom-popup">
-                            <div class="text-[10px] text-slate-500 mb-1">${item.type}</div>
+                        <div class="custom-popup w-64">
+                            <div class="text-[10px] text-slate-500 mb-1">${item.type} ${item.relatedTown ? `(소속: ${item.relatedTown})` : ''}</div>
                             <div class="title">${item.name}</div>
-                            <div class="meta"><i class="fa-regular fa-clock"></i> ${item.founded} ~ ${item.dissolved}</div>
+                            <div class="meta"><i class="fa-regular fa-clock"></i> ${item.founded || '미상'} ~ ${item.dissolved || '미상'}</div>
                             <div class="desc mb-2">${item.description}</div>
+                            ${relationsHtml}
                             <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex justify-between items-end gap-2">
                                 <div>
-                                    <strong>출처:</strong> ${item.source}<br>
-                                    <strong>작성자:</strong> ${item.author}
+                                    <strong>출처:</strong> ${item.source || '자체조사'}<br>
+                                    <strong>작성자:</strong> ${item.author || '연구팀'}
                                 </div>
                                 <button onclick="askAIAboutById(${item.id})" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI 심층 해설
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI 해설
                                 </button>
                             </div>
                         </div>
@@ -447,29 +484,57 @@
                     
                     marker.bindPopup(popupContent);
                     marker.itemId = item.id;
+                    marker.itemName = item.name;
+                    marker.itemType = item.type;
+                    marker.itemRelatedTown = item.relatedTown;
+
+                    // 지도 마커 클릭 시 네트워크 하이라이트 트리거
+                    marker.on('click', () => {
+                        if (item.type === '마을') {
+                            selectedTownName = item.name;
+                        } else if (item.relatedTown) {
+                            selectedTownName = item.relatedTown;
+                        }
+                        // 사이드바 및 지도 마커 동시 하이라이트를 위해 리렌더링
+                        renderData(); 
+                    });
+
                     markers.push(marker);
-                } catch (e) {
-                    console.error(`마커 생성 중 예외 발생:`, e);
-                }
+                } catch (e) { console.error(e); }
             });
         }
 
         function focusOnMap(item) {
-            if(!item.lat || !item.lng) return;
-            if(window.innerWidth < 768) {
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lng);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            if (window.innerWidth < 768) {
                 document.getElementById('map').scrollIntoView({behavior: 'smooth'});
             }
 
-            map.setView([item.lat, item.lng], 6, { animate: true, duration: 1 });
+            // 네트워크 상태 업데이트
+            if (item.type === '마을') {
+                selectedTownName = item.name;
+            } else if (item.relatedTown) {
+                selectedTownName = item.relatedTown;
+            }
 
+            // 하이라이트 스타일을 전체 갱신하기 위해 먼저 한 번 그림
+            renderData();
+
+            map.setView([lat, lng], 7, { animate: true, duration: 1 });
+
+            // 정확한 타겟 마커 팝업 열기
             const targetMarker = markers.find(m => m.itemId === item.id);
             if (targetMarker) {
-                targetMarker.openPopup();
+                setTimeout(() => { targetMarker.openPopup(); }, 300);
             }
         }
 
         function handleSearch(e) {
             currentSearch = e.target.value.toLowerCase();
+            if(!currentSearch) selectedTownName = null;
             renderData();
         }
 
@@ -478,22 +543,22 @@
                 btn.classList.remove('bg-primary', 'text-white', 'active');
                 btn.classList.add('bg-white', 'text-slate-600');
             });
-            
             e.currentTarget.classList.remove('bg-white', 'text-slate-600');
             e.currentTarget.classList.add('bg-primary', 'text-white', 'active');
 
             currentFilter = e.currentTarget.getAttribute('data-type');
+            selectedTownName = null; // 필터 변경 시 네트워크 선택 초기화
             renderData();
         }
 
-        // --- Gemini AI 관련 기능 ---
+        // --- Gemini AI 기능 (권장되는 최신 안정 모델 반영 및 403 예외처리 우회) ---
         function toggleAIChat() {
             const panel = document.getElementById('aiChatPanel');
             isChatOpen = !isChatOpen;
             if (isChatOpen) {
                 panel.classList.remove('translate-x-full');
                 if (chatHistory.length === 0) {
-                    addMessageToUI('assistant', "안녕하세요! 코리안타운 DB 연구 보조원입니다. 데이터에 등록된 한인 마을, 조직, 인물에 대해 궁금한 점을 물어보시거나, 지도에서 'AI 해설' 버튼을 눌러 심층 정보를 알아보세요.");
+                    addMessageToUI('assistant', "안녕하세요! '코리안타운 DB' 연구 보조원입니다. 특정 마을을 클릭하시면 종속된 조직과 인물망을 한눈에 보실 수 있습니다. 궁금한 역사적 사실을 물어보세요!");
                 }
             } else {
                 panel.classList.add('translate-x-full');
@@ -503,21 +568,27 @@
         function askAIAboutById(id) {
             const item = rawData.find(d => d.id === id);
             if (!item) return;
-
             if (!isChatOpen) toggleAIChat();
 
-            const prompt = `'${item.name}'(${item.type})에 대해 학술적이고 역사적인 배경을 더 자세히 설명해 줘. 정확한 근거 문헌 또는 출처링크를 제공해.(현재 DB 설명: ${item.description})`;
-            addMessageToUI('user', `'${item.name}'에 대해 더 자세히 알려주세요.`);
+            let relationContext = "";
+            if (item.type === '마을') {
+                const childOrgs = rawData.filter(d => d.type === '조직' && d.relatedTown === item.name).map(d => d.name);
+                const childPers = rawData.filter(d => d.type === '인물' && d.relatedTown === item.name).map(d => d.name);
+                relationContext = ` 이 마을에 종속된 독립운동 단체로는 [${childOrgs.join(', ')}] 등이 있으며, 활약한 인물로는 [${childPers.join(', ')}] 등이 연계되어 있어.`;
+            } else if (item.relatedTown) {
+                relationContext = ` 이 대상은 역사적으로 '${item.relatedTown}' 한인 마을 공간에 종속되어 활동했어.`;
+            }
+
+            const prompt = `'${item.name}'(${item.type})에 대해 학술적이고 역사적인 배경을 더 자세히 설명해 줘. (DB 기초 정보: ${item.description}). ${relationContext}`;
+            addMessageToUI('user', `'${item.name}' 관계망에 대해 자세한 학술 해설을 부탁합니다.`);
             fetchGeminiResponse(prompt);
         }
 
         function handleChatSubmit(event) {
             if (event && event.type === 'keypress' && event.key !== 'Enter') return;
-            
             const inputEl = document.getElementById('chatInput');
             const message = inputEl.value.trim();
             if (!message) return;
-            
             inputEl.value = '';
             addMessageToUI('user', message);
             fetchGeminiResponse(message);
@@ -549,10 +620,8 @@
                     ${parsedText}
                 </div>
             `;
-            
             const loadingIndicator = document.getElementById('loadingIndicator');
             if (loadingIndicator && role !== 'loading') loadingIndicator.remove();
-
             chatBody.appendChild(msgDiv);
             chatBody.scrollTop = chatBody.scrollHeight;
         }
@@ -567,7 +636,7 @@
                     <i class="fa-solid fa-robot"></i>
                 </div>
                 <div class="p-3 bg-slate-100 text-slate-500 rounded-r-lg rounded-bl-lg border border-slate-200 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i> 문헌 조사 중...
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> 관계망 사료 교차 검증 중...
                 </div>
             `;
             chatBody.appendChild(msgDiv);
@@ -579,18 +648,18 @@
             showLoading();
 
             if (!geminiApiKey) {
-                addMessageToUI('assistant', 'Gemini API 키가 설정되지 않았습니다.');
+                addMessageToUI('assistant', 'Gemini API 키가 설정되지 않았습니다. env-config.js를 확인하세요.');
                 return;
             }
 
-            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 뛰어난 AI 연구 보조원(역사학자)입니다. 프로젝트 목적: 사라진 해외 한인 마을, 독립운동 조직, 역사적 인물을 지도상에 복원하여 교육 및 학술용으로 제공합니다. 현재 DB 데이터: ${JSON.stringify(rawData)}. 사용자의 질문에 답변하되 역사적 지식을 더해 풍성한 해설을 제공하세요.`;
-
+            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 수석 역사학자이자 AI 연구원입니다. 사라진 한인 마을(공간), 독립운동 조직, 인물 간의 네트워크와 위상 관계를 설명합니다. 전체 데이터 정보: ${JSON.stringify(rawData)}. 질문에 사료적 근거와 학술적 맥락을 더해 풍성하게 답변하세요.`;
             const payload = {
                 contents: chatHistory,
                 systemInstruction: { parts: [{ text: systemPrompt }] },
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`;
+            // 💡 최신 안정화 모델(gemini-2.5-flash) 엔드포인트 반영
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -604,11 +673,13 @@
                     const aiResponseText = result.candidates[0].content.parts[0].text;
                     chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
                     addMessageToUI('assistant', aiResponseText);
+                } else if(result.error && result.error.code === 403) {
+                    addMessageToUI('assistant', "⚠️ <b>API 접근 권한 거부(403 Error)</b>: Google Cloud 콘솔의 'API 및 서비스 > 사용자 인증 정보'에서 사용 중인 API 키의 제한사항을 <b>'키 제한 안함'</b>으로 변경하거나, <b>'Generative Language API'</b>를 명시적으로 허용해 주셔야 해결됩니다.");
                 } else {
-                    addMessageToUI('assistant', "자료를 분석하는 중에 오류가 발생했습니다.");
+                    addMessageToUI('assistant', "자료를 분석하는 중에 에러가 발생했습니다.");
                 }
             } catch (error) {
-                addMessageToUI('assistant', "네트워크 오류가 발생했습니다.");
+                addMessageToUI('assistant', "네트워크 통신 오류가 발생했습니다.");
             }
         }
     </script>
