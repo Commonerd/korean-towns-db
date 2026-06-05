@@ -41,7 +41,6 @@
         .custom-popup .meta { font-size: 0.75rem; color: #64748b; margin-bottom: 8px; }
         .custom-popup .desc { font-size: 0.875rem; color: #334155; line-height: 1.4; }
         
-        /* 선택된 마을 네트워크 하이라이트 효과 */
         .selected-card {
             border-color: #1e3a8a !important;
             background-color: #eff6ff !important;
@@ -158,11 +157,12 @@
         let rawData = [];
         let map;
         let markers = [];
+        let networkLines = []; // 관계망 연결 선들을 관리하는 배열 추가
         let currentFilter = 'all';
         let currentSearch = '';
         let chatHistory = [];
         let isChatOpen = false;
-        let selectedTownName = null; // 현재 네트워크 하이라이트 중인 마을 이름
+        let selectedTownName = null; 
 
         const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
 
@@ -209,9 +209,8 @@
             
             let globalId = 1;
             const updatedData = [];
-            const townCoords = {}; // 마을 위치 임시 저장소 (종속성 해결용)
+            const townCoords = {}; 
 
-            // 1단계: '마을' 데이터 먼저 파싱하여 확실하게 숫자형 좌표 확보
             try {
                 const townTarget = targets.find(t => t.type === '마을');
                 const response = await fetch(`${baseUrl}&gid=${townTarget.gid}`);
@@ -222,7 +221,6 @@
                         if (!row[0] || row[0].trim() === '') continue;
 
                         const name = row[0].trim();
-                        // 💡 반드시 확실한 숫자형(Float)으로 변환하여 저장
                         const lat = row[5] ? parseFloat(row[5].trim()) : 0;
                         const lng = row[6] ? parseFloat(row[6].trim()) : 0;
 
@@ -251,7 +249,6 @@
                 }
             } catch (e) { console.error("마을 파싱 실패", e); }
 
-            // 2단계: '조직' 및 '인물' 데이터 파싱 및 위치 종속 처리 보강
             for (const target of targets) {
                 if (target.type === '마을') continue;
                 try {
@@ -287,7 +284,6 @@
                             item.author = row[7] ? row[7].trim() : '';
                         }
 
-                        // 💡 핵심 수정: 부모 마을의 실수형(Float) 좌표를 안전하게 상속받음
                         if (item.relatedTown && townCoords[item.relatedTown]) {
                             item.lat = townCoords[item.relatedTown].lat;
                             item.lng = townCoords[item.relatedTown].lng;
@@ -321,7 +317,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            map = L.map('map').setView([43.0, 132.0], 5); // 연해주 일대가 잘 보이도록 기본 뷰 조정
+            map = L.map('map').setView([43.0, 132.0], 5); 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors',
                 maxZoom: 18, minZoom: 2
@@ -343,13 +339,12 @@
             else if (type === '조직') { color = '#2563eb'; iconClass = 'fa-users'; } 
             else if (type === '인물') { color = '#16a34a'; iconClass = 'fa-user'; }
 
-            // 하이라이트(네트워크 선택) 시 마커 크기와 가시성 증폭
-            const size = isHighlighted ? '36px' : '28px';
-            const border = isHighlighted ? '3px solid #ff0000' : '2px solid white';
-            const shadow = isHighlighted ? '0 0 12px rgba(255,0,0,0.8)' : '0 2px 5px rgba(0,0,0,0.3)';
+            const size = isHighlighted ? '34px' : '26px';
+            const border = isHighlighted ? '3px solid #ef4444' : '2px solid white';
+            const shadow = isHighlighted ? '0 0 12px rgba(239,68,68,0.8)' : '0 2px 5px rgba(0,0,0,0.3)';
 
             const html = `
-                <div style="background-color: ${color}; width: ${size}; height: ${size}; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: ${border}; box-shadow: ${shadow}; transition: all 0.3s;" class="text-white text-xs">
+                <div style="background-color: ${color}; width: ${size}; height: ${size}; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: ${border}; box-shadow: ${shadow}; transition: all 0.3s;" class="text-white text-[11px]">
                     <i class="fa-solid ${iconClass}"></i>
                 </div>
             `;
@@ -369,20 +364,18 @@
         }
 
         function renderData() {
-            // 1. 순수 검색/필터 결과 분리
             const filteredData = getFilteredData();
             const listContainer = document.getElementById('dataList');
             listContainer.innerHTML = '';
             
             if (filteredData.length === 0) {
                 listContainer.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">데이터가 없습니다.</div>`;
-                // 검색 결과가 없을 때 기존 지도 마커도 깨끗이 지워줍니다.
                 markers.forEach(m => map.removeLayer(m));
                 markers = [];
+                clearNetworkLines();
                 return;
             }
 
-            // 사이드바 전용 정렬 트리 조립
             let displayData = [...filteredData];
             if (selectedTownName && currentFilter === 'all') {
                 const townItem = rawData.find(d => d.type === '마을' && d.name === selectedTownName);
@@ -392,7 +385,6 @@
                 if (townItem) displayData.unshift(townItem, ...children);
             }
 
-            // 사이드바 UI 출력
             displayData.forEach(item => {
                 let badgeColor = '';
                 let isChild = false;
@@ -431,22 +423,56 @@
 
             document.getElementById('resultCount').innerText = `총 ${filteredData.length}건`;
 
-            // 2. 💡 지도 마커 렌더링 시스템 전면 수정
+            // 지도 레이어 초기화
             markers.forEach(m => map.removeLayer(m));
             markers = [];
+            clearNetworkLines();
 
-            filteredData.forEach(item => {
-                const lat = parseFloat(item.lat);
-                const lng = parseFloat(item.lng);
+            // 💡 [핵심 최적화] 선택된 부모 마을의 모든 하위 자식 노드를 카운트하여 방사형 배치 계산 준비
+            const activeChildren = filteredData.filter(d => d.type !== '마을' && d.relatedTown === selectedTownName);
+            const totalChildrenCount = activeChildren.length;
+
+            filteredData.forEach((item, index) => {
+                let lat = parseFloat(item.lat);
+                let lng = parseFloat(item.lng);
                 if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
 
-                // 마커 하이라이트 활성화 조건 설정
                 const isHighlighted = selectedTownName && (item.name === selectedTownName || item.relatedTown === selectedTownName);
+                
+                // 💡 [네트워크 분산 핵심 로직] 조직/인물 마커 둥둥 띄우기
+                let parentLat = lat;
+                let parentLng = lng;
+                
+                if (item.type !== '마을' && item.relatedTown) {
+                    // 전체보기 모드이거나, 특정 마을 소속 하이라이트 상태일 때 둥둥 뜨게 좌표 분산 처리
+                    if (selectedTownName === item.relatedTown || currentFilter !== 'all') {
+                        // 현재 그려지는 자식 노드 중 몇 번째 인덱스인지 확인
+                        const childIndex = activeChildren.findIndex(c => c.id === item.id);
+                        if (childIndex !== -1) {
+                            // 반지름 오프셋 설정 (지도의 축척 대비 적절하게 둥둥 뜰 수 있는 반경 값 계산)
+                            const angle = (childIndex / totalChildrenCount) * 2 * Math.PI;
+                            const radius = 0.015; // 둥둥 떠 있는 거리 조절 (원하는 범위에 따라 변경 가능)
+                            
+                            lat = parentLat + radius * Math.sin(angle);
+                            lng = parentLng + radius * Math.cos(angle);
+                        }
+                    }
+                }
 
                 try {
                     const marker = L.marker([lat, lng], { icon: getIcon(item.type, isHighlighted) }).addTo(map);
                     
-                    // 💡 마을 노드이거나 종속 노드일 때 툴팁에 유기적 관계망 텍스트 빌드
+                    // 💡 [네트워크 선 연결] 마을과 조직/인물 사이를 잇는 학술 점선 생성
+                    if (item.type !== '마을' && item.relatedTown && selectedTownName === item.relatedTown) {
+                        const polyline = L.polyline([[parentLat, parentLng], [lat, lng]], {
+                            color: item.type === '조직' ? '#2563eb' : '#16a34a',
+                            weight: 2,
+                            dashArray: '5, 5', // 대시 점선 형태
+                            opacity: 0.8
+                        }).addTo(map);
+                        networkLines.push(polyline);
+                    }
+
                     let relationsHtml = '';
                     const targetTown = item.type === '마을' ? item.name : item.relatedTown;
                     
@@ -479,7 +505,6 @@
                     marker.bindPopup(popupContent);
                     marker.itemId = item.id;
 
-                    // 마커 누를 때 다른 마커 안 날아가게 우회 팝업 동기화
                     marker.on('click', function() {
                         if (item.type === '마을') {
                             selectedTownName = item.name;
@@ -499,32 +524,36 @@
             });
         }
 
+        function clearNetworkLines() {
+            networkLines.forEach(line => map.removeLayer(line));
+            networkLines = [];
+        }
+
         function focusOnMap(item) {
-            const lat = parseFloat(item.lat);
-            const lng = parseFloat(item.lng);
-            if (isNaN(lat) || isNaN(lng)) return;
+            // 포커싱할 때 둥둥 떠 있는 마커 자리를 찾아서 이동하도록 개선
+            const targetMarker = markers.find(m => m.itemId === item.id);
+            if (!targetMarker) return;
+            
+            const position = targetMarker.getLatLng();
 
             if (window.innerWidth < 768) {
                 document.getElementById('map').scrollIntoView({behavior: 'smooth'});
             }
 
-            // 네트워크 상태 업데이트
             if (item.type === '마을') {
                 selectedTownName = item.name;
             } else if (item.relatedTown) {
                 selectedTownName = item.relatedTown;
             }
 
-            // 하이라이트 스타일을 전체 갱신하기 위해 먼저 한 번 그림
             renderData();
 
-            map.setView([lat, lng], 7, { animate: true, duration: 1 });
+            map.setView(position, 12, { animate: true, duration: 1 }); // 네트워크 정밀 조회를 위해 줌 단계를 12로 밀착 확대
 
-            // 정확한 타겟 마커 팝업 열기
-            const targetMarker = markers.find(m => m.itemId === item.id);
-            if (targetMarker) {
-                setTimeout(() => { targetMarker.openPopup(); }, 300);
-            }
+            setTimeout(() => { 
+                const refreshedMarker = markers.find(m => m.itemId === item.id);
+                if (refreshedMarker) refreshedMarker.openPopup(); 
+            }, 400);
         }
 
         function handleSearch(e) {
@@ -542,13 +571,10 @@
             e.currentTarget.classList.add('bg-primary', 'text-white', 'active');
 
             currentFilter = e.currentTarget.getAttribute('data-type');
-            
-            // 💡 핵심: 필터를 바꿀 때는 하이라이트 상태를 초기화하고 완벽히 지도를 새로 그립니다.
             selectedTownName = null; 
             renderData();
         }
 
-        // --- Gemini AI 기능 (권장되는 최신 안정 모델 반영 및 403 예외처리 우회) ---
         function toggleAIChat() {
             const panel = document.getElementById('aiChatPanel');
             isChatOpen = !isChatOpen;
@@ -649,13 +675,12 @@
                 return;
             }
 
-            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 수석 역사학자이자 AI 연구원입니다. 사라진 한인 마을(공간), 독립운동 조직, 인물 간의 네트워크와 위상 관계를 설명합니다. 전체 데이터 정보: ${JSON.stringify(rawData)}. 질문에 사료적 근거와 학술적 맥락을 더해 풍성하게 답변하세요.`;
+            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 수석 역사학자이자 AI 연구원입니다. 사라진 한인 마을(공간), 독립운동 조직, 인물 간의 네트워크와 위상 관계를 설명합니다. 전체 데이터 정보: ${JSON.stringify(rawData)}. 질문에 사료적 근거 and 학술적 맥락을 더해 풍성하게 답변하세요.`;
             const payload = {
                 contents: chatHistory,
                 systemInstruction: { parts: [{ text: systemPrompt }] },
             };
 
-            // 💡 최신 안정화 모델(gemini-2.5-flash) 엔드포인트 반영
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
             try {
