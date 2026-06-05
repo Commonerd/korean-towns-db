@@ -437,7 +437,6 @@
                                 <div>
                                     <strong>출처:</strong> ${item.source}<br>
                                     <strong>작성자:</strong> ${item.author}
-                                Full Document
                                 </div>
                                 <button onclick="askAIAboutById(${item.id})" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
                                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI 심층 해설
@@ -507,7 +506,7 @@
 
             if (!isChatOpen) toggleAIChat();
 
-            const prompt = `'${item.name}'(${item.type})에 대해 학술적이고 역사적인 배경을 더 자세히 설명해 줘. (현재 DB 설명: ${item.description})`;
+            const prompt = `'${item.name}'(${item.type})에 대해 학술적이고 역사적인 배경을 더 자세히 설명해 줘. 정확한 근거 문헌 또는 출처링크를 제공해.(현재 DB 설명: ${item.description})`;
             addMessageToUI('user', `'${item.name}'에 대해 더 자세히 알려주세요.`);
             fetchGeminiResponse(prompt);
         }
