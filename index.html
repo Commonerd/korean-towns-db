@@ -378,31 +378,43 @@
             markers = [];
 
             filteredData.forEach(item => {
-                if(!item.lat || !item.lng) return;
+                // 숫자로 완벽히 변환 가능한지 검사 (0도 올바른 좌표일 수 있으므로 NaN 검사 추가)
+                const lat = parseFloat(item.lat);
+                const lng = parseFloat(item.lng);
                 
-                const marker = L.marker([item.lat, item.lng], { icon: getIcon(item.type) }).addTo(map);
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+                    console.warn(`[좌표 누락] '${item.name}' 항목의 좌표가 올바르지 않습니다. (Lat: ${item.lat}, Lng: ${item.lng})`);
+                    return;
+                }
                 
-                const popupContent = `
-                    <div class="custom-popup">
-                        <div class="text-[10px] text-slate-500 mb-1">${item.type}</div>
-                        <div class="title">${item.name}</div>
-                        <div class="meta"><i class="fa-regular fa-clock"></i> ${item.founded} ~ ${item.dissolved}</div>
-                        <div class="desc mb-2">${item.description}</div>
-                        <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex justify-between items-end gap-2">
-                            <div>
-                                <strong>출처:</strong> ${item.source}<br>
-                                <strong>작성자:</strong> ${item.author}
+                try {
+                    const marker = L.marker([lat, lng], { icon: getIcon(item.type) }).addTo(map);
+                    
+                    const popupContent = `
+                        <div class="custom-popup">
+                            <div class="text-[10px] text-slate-500 mb-1">${item.type}</div>
+                            <div class="title">${item.name}</div>
+                            <div class="meta"><i class="fa-regular fa-clock"></i> ${item.founded} ~ ${item.dissolved}</div>
+                            <div class="desc mb-2">${item.description}</div>
+                            <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex justify-between items-end gap-2">
+                                <div>
+                                    <strong>출처:</strong> ${item.source}<br>
+                                    <strong>작성자:</strong> ${item.author}
+                                Full Document
+                                </div>
+                                <button onclick="askAIAboutById(${item.id})" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI 심층 해설
+                                </button>
                             </div>
-                            <button onclick="askAIAboutById(${item.id})" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI 심층 해설
-                            </button>
                         </div>
-                    </div>
-                `;
-                
-                marker.bindPopup(popupContent);
-                marker.itemId = item.id;
-                markers.push(marker);
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    marker.itemId = item.id;
+                    markers.push(marker);
+                } catch (e) {
+                    console.error(`마커 생성 중 예외 발생:`, e);
+                }
             });
         }
 
