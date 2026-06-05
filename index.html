@@ -127,6 +127,7 @@
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="./env-config.js"></script>
 
     <script>
         // 전역 상태 관리 (rawData를 빈 배열로 초기화 후 구글 시트에서 비동기로 주입)
@@ -169,7 +170,11 @@
 
         // 구글 스프레드시트 비동기 호출 및 데이터 통합 세팅
         async function loadGoogleSheetsData() {
-            const spreadsheetId = '10SKZ4XhufyTydB9CYxf3DlwPw55huY8-jQEndcWuFZc';
+            const spreadsheetId = window.APP_CONFIG?.spreadsheetId || '';
+            if (!spreadsheetId) {
+                alert('스프레드시트 ID가 설정되지 않았습니다. 프로젝트 루트의 .env 파일을 확인하세요.');
+                return;
+            }
             const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv`;
             
             // 각 엔티티 타입별 gid 매핑
@@ -413,7 +418,7 @@
         window.onload = init;
 
         // --- Gemini AI 관련 스크립트 ---
-        const geminiApiKey = ""; 
+        const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
         let isChatOpen = false;
         let chatHistory = [];
 
@@ -515,6 +520,11 @@
         async function fetchGeminiResponse(userMessage) {
             chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
             showLoading();
+
+            if (!geminiApiKey) {
+                addMessageToUI('assistant', 'Gemini API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.');
+                return;
+            }
 
             const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 뛰어난 AI 연구 보조원(역사학자)입니다. 
 프로젝트 목적: 사라진 해외 한인 마을, 독립운동 조직, 역사적 인물을 지도상에 복원하여 교육 및 학술용으로 제공합니다.
