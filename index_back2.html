@@ -156,49 +156,6 @@
             overflow: hidden;
         }
     </style>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-
-<style id="orange-cluster-theme">
-/* Orange-only cluster colors: small -> large */
-.marker-cluster,
-.marker-cluster div {
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    border-radius: 999px !important;
-    background-clip: padding-box !important;
-}
-
-.marker-cluster-small {
-    background-color: rgba(251, 146, 60, 0.35) !important; /* light orange */
-}
-.marker-cluster-small div {
-    background-color: #fb923c !important; /* orange-400 */
-}
-
-.marker-cluster-medium {
-    background-color: rgba(234, 88, 12, 0.35) !important; /* orange */
-}
-.marker-cluster-medium div {
-    background-color: #ea580c !important; /* orange-600 */
-}
-
-.marker-cluster-large {
-    background-color: rgba(194, 65, 12, 0.38) !important; /* deep orange */
-}
-.marker-cluster-large div {
-    background-color: #c2410c !important; /* orange-700 */
-}
-
-.marker-cluster-xlarge {
-    background-color: rgba(124, 45, 18, 0.42) !important; /* brownish orange */
-}
-.marker-cluster-xlarge div {
-    background-color: #7c2d12 !important; /* brown */
-}
-</style>
-
 </head>
 
 <body class="h-screen flex flex-col text-slate-800">
@@ -320,14 +277,13 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="./env-config.js"></script>
 
     <script>
         /* ====== 상태 ====== */
         let rawData = [];
         let map;
-        let townClusterLayer;      // 마을 클러스터\n        let markersLayer;          // 상세 마커 그룹
+        let markersLayer;          // 마커 그룹
         let linesLayer;            // 네트워크 라인 그룹
         let markers = [];          // 마커 객체 캐시 (id 추적용)
         let currentFilter = 'all';
@@ -337,7 +293,7 @@
         let selectedTownName = null;
 
         /* 2계층 표시 임계 줌 */
-        const ZOOM_DETAIL_THRESHOLD = 10;
+        const ZOOM_DETAIL_THRESHOLD = 12;
 
         const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
 
@@ -544,24 +500,6 @@
                 attribution: '&copy; OpenStreetMap contributors',
                 maxZoom: 18, minZoom: 2
             }).addTo(map);
-
-            townClusterLayer = L.markerClusterGroup({
-                disableClusteringAtZoom: 10,
-                showCoverageOnHover: false,
-                iconCreateFunction: function(cluster) {
-                    const count = cluster.getChildCount();
-                    let cls = 'marker-cluster-small';
-                    if (count >= 20) cls = 'marker-cluster-xlarge';
-                    else if (count >= 10) cls = 'marker-cluster-large';
-                    else if (count >= 5) cls = 'marker-cluster-medium';
-                    return L.divIcon({
-                        html: `<div><span>${count}</span></div>`,
-                        className: `marker-cluster ${cls}`,
-                        iconSize: L.point(40, 40)
-                    });
-                }
-            });
-            map.addLayer(townClusterLayer);
 
             markersLayer = L.layerGroup().addTo(map);
             linesLayer = L.layerGroup().addTo(map);
@@ -784,7 +722,6 @@
         /* --- 지도 마커 --- */
         function renderMap() {
             if (!map) return;
-            townClusterLayer.clearLayers();
             markersLayer.clearLayers();
             linesLayer.clearLayers();
             markers = [];
@@ -815,7 +752,7 @@
                     icon: getIcon('마을', { isHighlighted, badgeCount: childCount, isPrecise: true })
                 });
                 attachPopupAndEvents(marker, item);
-                townClusterLayer.addLayer(marker);
+                markersLayer.addLayer(marker);
                 markers.push(marker);
 
                 addNodeLabel(
