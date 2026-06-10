@@ -906,18 +906,11 @@
 
             const markerMap = {};
 
-            // 마을(클러스터 레이어) + 조직/인물(일반 레이어) 모두 포함
-            const collectMarkers = (layerGroup) => {
-                if (!layerGroup || !layerGroup.eachLayer) return;
-                layerGroup.eachLayer(layer => {
-                    if (layer && layer.itemId !== undefined && layer.itemId !== null) {
-                        markerMap[layer.itemId] = layer;
-                    }
-                });
-            };
-
-            collectMarkers(townClusterLayer);
-            collectMarkers(markersLayer);
+            markersLayer.eachLayer(layer => {
+                if (layer.itemId) {
+                    markerMap[layer.itemId] = layer;
+                }
+            });
 
             rawData.forEach(item => {
 
