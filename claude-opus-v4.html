@@ -769,17 +769,9 @@
 
                 /* 네트워크 라인 */
                 const color = item.type === '조직' ? '#2563eb' : '#16a34a';
-                const line = L.polyline(
-                    [[parentVillage.lat, parentVillage.lng], pos],
-                    {
-                        color,
-                        weight: 1.6,
-                        opacity: isHighlighted ? 0.9 : 0.55,
-                        className: 'network-line'
-                    }
-                );
                 linesLayer.addLayer(line);
             });
+            drawRelationshipLines();
         }
 
         /* 부유 노드 좌표 계산 — 줌에 따라 반경 자동 조절 */
@@ -794,6 +786,82 @@
             const lonCorr = 1 / Math.max(0.2, Math.cos(village.lat * Math.PI / 180));
             const dLng = radius * Math.cos(angle) * lonCorr;
             return [village.lat + dLat, village.lng + dLng];
+        }
+
+        function drawRelationshipLines() {
+
+            const markerMap = {};
+
+            markersLayer.eachLayer(layer => {
+                if (layer.itemId) {
+                    markerMap[layer.itemId] = layer;
+                }
+            });
+
+            rawData.forEach(item => {
+
+                const fromMarker = markerMap[item.id];
+                if (!fromMarker) return;
+
+                let target = null;
+                let color = '#64748b';
+
+                // 조직 → 마을
+                if (item.type === '조직' && item.relatedTown) {
+
+                    target = rawData.find(
+                        d => d.type === '마을' &&
+                        d.name === item.relatedTown
+                    );
+
+                    color = '#2563eb';
+                }
+
+                // 인물 → 조직 우선
+                else if (item.type === '인물') {
+
+                    if (item.relatedOrg) {
+
+                        target = rawData.find(
+                            d => d.type === '조직' &&
+                            d.name === item.relatedOrg
+                        );
+
+                        color = '#16a34a';
+                    }
+
+                    // 조직 없으면 마을
+                    if (!target && item.relatedTown) {
+
+                        target = rawData.find(
+                            d => d.type === '마을' &&
+                            d.name === item.relatedTown
+                        );
+
+                        color = '#16a34a';
+                    }
+                }
+
+                if (!target) return;
+
+                const toMarker = markerMap[target.id];
+                if (!toMarker) return;
+
+                const fromLatLng = fromMarker.getLatLng();
+                const toLatLng = toMarker.getLatLng();
+
+                const line = L.polyline(
+                    [fromLatLng, toLatLng],
+                    {
+                        color,
+                        weight: 2,
+                        opacity: 0.6,
+                        className: 'network-line'
+                    }
+                );
+
+                linesLayer.addLayer(line);
+            });
         }
 
         function attachPopupAndEvents(marker, item) {
