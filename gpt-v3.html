@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>코리안타운 DB - 기억의 복원</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9dT/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                        serif: ['"Noto Serif KR"', 'serif'],
+                    },
+                    colors: {
+                        primary: '#1e3a8a',
+                        secondary: '#b45309',
+                        bgLight: '#f8fafc',
+                    },
+                    boxShadow: {
+                        soft: '0 12px 32px rgba(15, 23, 42, 0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --town: #ea580c;
+            --org: #2563eb;
+            --person: #16a34a;
+            --ink: #0f172a;
+            --muted: #64748b;
+        }
+
+        html, body { height: 100%; }
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(30, 58, 138, 0.05), transparent 28%),
+                radial-gradient(circle at top right, rgba(180, 83, 9, 0.06), transparent 26%),
+                #f8fafc;
+            overflow: hidden;
+            color: var(--ink);
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .leaflet-container { font-family: 'Noto Sans KR', sans-serif; }
+        .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+        }
+        .leaflet-popup-content {
+            margin: 16px;
+            min-width: 240px;
+        }
+        .leaflet-control-zoom a {
+            border-radius: 10px !important;
+        }
+
+        .custom-popup .title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 4px;
+        }
+        .custom-popup .meta {
+            font-size: 0.76rem;
+            color: #64748b;
+            margin-bottom: 8px;
+            line-height: 1.45;
+        }
+        .custom-popup .desc {
+            font-size: 0.88rem;
+            color: #334155;
+            line-height: 1.55;
+        }
+
+        .clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.84);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .panel-shadow { box-shadow: 0 14px 36px rgba(15, 23, 42, 0.10); }
+
+        .selected-card {
+            border-color: #1e3a8a !important;
+            background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%) !important;
+            box-shadow: 0 10px 28px rgba(30, 58, 138, 0.12) !important;
+        }
+
+        .network-child-card {
+            border-color: #cbd5e1 !important;
+            background-color: #f8fafc !important;
+            opacity: 0.98;
+            margin-left: 1rem !important;
+            border-left: 4px solid #b45309 !important;
+        }
+
+        .chip {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+        .chip:hover { transform: translateY(-1px); border-color: #cbd5e1; }
+
+        .chip.active {
+            background: #1e3a8a;
+            color: white;
+            border-color: #1e3a8a;
+            box-shadow: 0 10px 18px rgba(30, 58, 138, 0.16);
+        }
+
+        .map-legend {
+            position: absolute;
+            left: 16px;
+            bottom: 16px;
+            z-index: 400;
+            width: min(360px, calc(100% - 32px));
+        }
+
+        .legend-card {
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            border-radius: 18px;
+            box-shadow: 0 20px 32px rgba(15, 23, 42, 0.12);
+        }
+
+        .node-card {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 92px;
+            pointer-events: auto;
+            user-select: none;
+            transform: translate(-50%, -100%);
+        }
+
+        .node-shell {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+            border: 3px solid rgba(255,255,255,0.95);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+        }
+        .node-card:hover .node-shell {
+            transform: scale(1.05);
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.22);
+        }
+
+        .node-core {
+            width: 100%;
+            height: 100%;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            color: white;
+        }
+
+        .node-town .node-shell {
+            width: 96px;
+            height: 96px;
+        }
+
+        .node-town .node-core {
+            background: radial-gradient(circle at 30% 30%, #fb923c, var(--town));
+        }
+
+        .node-org .node-core {
+            background: radial-gradient(circle at 30% 30%, #60a5fa, var(--org));
+        }
+
+        .node-person .node-core {
+            background: radial-gradient(circle at 30% 30%, #4ade80, var(--person));
+        }
+
+        .node-floating .node-shell {
+            border-style: dashed;
+            border-width: 2px;
+            background: rgba(255,255,255,0.98);
+        }
+
+        .node-floating .node-core {
+            background: rgba(255,255,255,0.96);
+            color: var(--ink);
+        }
+
+        .node-floating .node-core i { font-size: 14px; }
+        .node-town .node-core i { font-size: 22px; }
+        .node-org .node-core i, .node-person .node-core i { font-size: 16px; }
+
+        .node-count {
+            position: absolute;
+            bottom: 9px;
+            right: 9px;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 7px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.88);
+            color: white;
+            font-size: 12px;
+            font-weight: 800;
+            display: grid;
+            place-items: center;
+            border: 2px solid rgba(255,255,255,0.96);
+        }
+
+        .node-label {
+            max-width: 126px;
+            font-size: 11px;
+            line-height: 1.2;
+            text-align: center;
+            color: #0f172a;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(226,232,240,0.96);
+            border-radius: 999px;
+            padding: 4px 8px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .node-meta {
+            font-size: 10px;
+            color: var(--muted);
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(226,232,240,0.96);
+            border-radius: 999px;
+            padding: 2px 7px;
+            white-space: nowrap;
+        }
+
+        .precision-exact { color: #059669; border-color: #a7f3d0; background: #ecfdf5; }
+        .precision-street { color: #0f766e; border-color: #99f6e4; background: #f0fdfa; }
+        .precision-town { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
+        .precision-city { color: #7c3aed; border-color: #ddd6fe; background: #f5f3ff; }
+        .precision-region { color: #b45309; border-color: #fed7aa; background: #fff7ed; }
+        .precision-unknown { color: #475569; border-color: #e2e8f0; background: #f8fafc; }
+
+        .network-highlight {
+            filter: saturate(1.15);
+            z-index: 900 !important;
+        }
+
+        .sidebar-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+
+        .soft-note {
+            border: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            border-radius: 18px;
+        }
+
+        .pulse {
+            position: absolute;
+            inset: -6px;
+            border-radius: 999px;
+            border: 2px solid rgba(37, 99, 235, 0.18);
+            animation: pulse 2.1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.65; }
+            70% { transform: scale(1.12); opacity: 0; }
+            100% { transform: scale(1.12); opacity: 0; }
+        }
+
+        .float-hint {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            z-index: 400;
+            max-width: 360px;
+        }
+
+        .list-empty {
+            border: 1px dashed #cbd5e1;
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col text-slate-800">
+
+    <header class="bg-white/90 backdrop-blur border-b border-slate-200 shadow-sm z-30 relative flex-shrink-0">
+        <div class="px-4 py-3 flex justify-between items-center gap-3 max-w-full">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-slate-900 text-white flex items-center justify-center shadow-soft">
+                    <i class="fa-solid fa-earth-asia text-xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="font-serif text-xl font-bold text-primary leading-tight truncate">코리안타운 DB</h1>
+                    <p class="text-xs text-slate-500 tracking-wider truncate">기억의 복원 : 사라진 한인 마을과 그 관계망을 지도 위에</p>
+                </div>
+            </div>
+
+            <div class="hidden lg:flex items-center gap-3">
+                <div class="sidebar-badge bg-slate-50">
+                    <i class="fa-solid fa-layer-group text-slate-500"></i>
+                    마을→관계망 2계층 지도
+                </div>
+                <div class="sidebar-badge bg-slate-50">
+                    <i class="fa-solid fa-magnifying-glass text-slate-500"></i>
+                    검색 / 필터 / 노드 연결
+                </div>
+                <div class="text-xs text-right bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <span class="block font-bold text-slate-600 mb-1"><i class="fa-solid fa-users mr-1"></i> 연구팀</span>
+                    <span class="text-slate-500">김슬기, 박영훈, 송영화</span>
+                </div>
+                <button id="syncBtn" onclick="syncData()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2.5 px-4 rounded-xl transition duration-200 flex items-center gap-2 shadow-sm">
+                    <i class="fa-brands fa-google"></i> 실시간 동기화
+                </button>
+                <button onclick="toggleAIChat()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2.5 px-4 rounded-xl transition duration-200 flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI 보조원
+                </button>
+            </div>
+
+            <div class="flex lg:hidden items-center gap-2">
+                <button id="syncBtnMobile" onclick="syncData()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-xl transition duration-200 shadow-sm">
+                    <i class="fa-brands fa-google"></i>
+                </button>
+                <button onclick="toggleAIChat()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-3 rounded-xl transition duration-200 shadow-sm">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <aside class="w-full md:w-[23rem] lg:w-[26rem] bg-white border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_15px_-3px_rgba(0,0,0,0.08)] h-[42vh] md:h-full">
+            <div class="p-4 border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white">
+                <div class="relative mb-3">
+                    <input type="text" id="searchInput" placeholder="이름, 설명, 지역, 속성으로 검색..." class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow bg-white">
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs font-medium" id="filterContainer">
+                    <button class="filter-btn active chip px-3 py-2 rounded-xl transition-colors" data-type="all">전체보기</button>
+                    <button class="filter-btn chip px-3 py-2 rounded-xl transition-colors" data-type="마을"><i class="fa-solid fa-house text-orange-600 mr-1"></i> 마을</button>
+                    <button class="filter-btn chip px-3 py-2 rounded-xl transition-colors" data-type="조직"><i class="fa-solid fa-users text-blue-600 mr-1"></i> 조직</button>
+                    <button class="filter-btn chip px-3 py-2 rounded-xl transition-colors" data-type="인물"><i class="fa-solid fa-user text-green-600 mr-1"></i> 인물</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                    <div class="soft-note p-3">
+                        <div class="text-[11px] text-slate-500 mb-1 flex items-center gap-1"><i class="fa-solid fa-layer-group"></i> 지도 규칙</div>
+                        <div class="text-xs text-slate-700 leading-relaxed">
+                            멀리서는 <b>마을만</b>, 확대하면 <b>조직·인물</b>이 나타납니다.
+                        </div>
+                    </div>
+                    <div class="soft-note p-3">
+                        <div class="text-[11px] text-slate-500 mb-1 flex items-center gap-1"><i class="fa-solid fa-sitemap"></i> 연결 규칙</div>
+                        <div class="text-xs text-slate-700 leading-relaxed">
+                            정확한 위치가 없으면 관계망 노드로 연결됩니다.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-4 pt-3 pb-2 flex items-center justify-between text-[11px] text-slate-500">
+                <span id="resultCount">총 0건</span>
+                <span id="zoomHintText">줌 7 이상에서 관계망 표시</span>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-3 pb-3" id="dataList">
+                <div class="p-8 text-center text-slate-400 text-sm flex flex-col gap-2 justify-center items-center h-full list-empty rounded-2xl">
+                    <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary"></i>
+                    구글 시트 데이터를 불러오는 중...
+                </div>
+            </div>
+
+            <div class="p-2.5 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 flex justify-between items-center">
+                <span>DB v2.0 · 2계층 네트워크</span>
+                <span id="dataHealthText">연결 확인 중</span>
+            </div>
+        </aside>
+
+        <div id="map" class="flex-1 h-[58vh] md:h-full z-0 relative"></div>
+
+        <div class="map-legend pointer-events-none">
+            <div class="legend-card glass p-3">
+                <div class="flex items-start justify-between gap-2 mb-2 pointer-events-auto">
+                    <div>
+                        <div class="text-sm font-bold text-slate-800">표시 안내</div>
+                        <div class="text-[11px] text-slate-500">줌아웃: 마을만 · 줌인: 관계망 표시</div>
+                    </div>
+                    <div class="text-[11px] text-slate-500 text-right">
+                        <div>마을: <span class="font-semibold text-orange-700">카운트 중심</span></div>
+                        <div>조직/인물: <span class="font-semibold text-blue-700">관계선 연결</span></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-[11px] pointer-events-auto">
+                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-orange-50 border border-orange-100">
+                        <span class="w-3 h-3 rounded-full bg-orange-500"></span> 마을
+                    </div>
+                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-blue-50 border border-blue-100">
+                        <span class="w-3 h-3 rounded-full bg-blue-500"></span> 조직
+                    </div>
+                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-green-50 border border-green-100">
+                        <span class="w-3 h-3 rounded-full bg-green-500"></span> 인물
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="aiChatPanel" class="fixed right-0 top-0 h-full w-full sm:w-[30rem] bg-white shadow-[-10px_0_20px_rgba(0,0,0,0.12)] transform translate-x-full transition-transform duration-300 z-[1000] flex flex-col border-l border-slate-200">
+        <div class="px-4 py-3 bg-purple-600 text-white flex justify-between items-center shadow-sm z-10">
+            <div class="flex items-center gap-2 font-bold">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI 연구 보조원</span>
+            </div>
+            <button onclick="toggleAIChat()" class="hover:bg-purple-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="chatBody" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col scroll-smooth"></div>
+
+        <div class="p-3 border-t border-slate-200 bg-white">
+            <div class="relative">
+                <input type="text" id="chatInput" onkeypress="handleChatSubmit(event)" placeholder="역사적 배경이나 추가 정보를 물어보세요..." class="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow bg-slate-50">
+                <button onclick="handleChatSubmit()" class="absolute right-2 top-2 w-8 h-8 bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+            <div class="text-[10px] text-center text-slate-400 mt-2">
+                Gemini AI가 제공하는 정보는 참고용이며 교차 검증이 필요합니다.
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="./env-config.js"></script>
+
+    <script>
+        let rawData = [];
+        let map;
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let chatHistory = [];
+        let isChatOpen = false;
+        let selectedTownName = null;
+        let selectedItemId = null;
+        let markersLayer = null;
+        let linksLayer = null;
+
+        const revealZoom = 7;
+        const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
+        const spreadsheetId = window.APP_CONFIG?.spreadsheetId || '';
+
+        let townIndex = new Map();
+        let orgIndex = new Map();
+        let personIndex = new Map();
+        let townNetworkCounts = new Map();
+        let idIndex = new Map();
+
+        function csvToArray(text) {
+            text = String(text || '').replace(/^\uFEFF/, '');
+            const rows = [];
+            let row = [];
+            let cell = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                const next = text[i + 1];
+
+                if (c === '"') {
+                    if (inQuotes && next === '"') {
+                        cell += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (c === ',' && !inQuotes) {
+                    row.push(cell);
+                    cell = '';
+                } else if ((c === '\n' || c === '\r') && !inQuotes) {
+                    if (c === '\r' && next === '\n') i++;
+                    row.push(cell);
+                    rows.push(row);
+                    row = [];
+                    cell = '';
+                } else {
+                    cell += c;
+                }
+            }
+
+            if (cell.length || row.length) {
+                row.push(cell);
+                rows.push(row);
+            }
+
+            return rows.filter(r => r.some(v => String(v || '').trim() !== ''));
+        }
+
+        function normalizeHeader(value) {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[\s\-_·.()]+/g, '');
+        }
+
+        function buildHeaderMap(headers) {
+            const map = new Map();
+            headers.forEach((h, idx) => {
+                const key = normalizeHeader(h);
+                if (key && !map.has(key)) map.set(key, idx);
+            });
+            return map;
+        }
+
+        function getValue(row, headerMap, aliases, fallbackIndex = -1) {
+            for (const alias of aliases) {
+                const idx = headerMap.get(normalizeHeader(alias));
+                if (idx !== undefined && idx !== null) {
+                    const value = row[idx];
+                    if (value !== undefined && value !== null && String(value).trim() !== '') {
+                        return String(value).trim();
+                    }
+                }
+            }
+            if (fallbackIndex >= 0 && row[fallbackIndex] !== undefined && row[fallbackIndex] !== null) {
+                const value = String(row[fallbackIndex]).trim();
+                if (value !== '') return value;
+            }
+            return '';
+        }
+
+        function toNumber(value) {
+            if (value === undefined || value === null) return NaN;
+            const n = parseFloat(String(value).replace(/,/g, '').trim());
+            return Number.isFinite(n) ? n : NaN;
+        }
+
+        function normalizePrecision(value) {
+            const p = String(value || '').trim().toLowerCase();
+            const allowed = ['exact', 'street', 'town', 'city', 'region', 'unknown'];
+            return allowed.includes(p) ? p : 'unknown';
+        }
+
+        function precisionLabel(value) {
+            const p = normalizePrecision(value);
+            const labels = {
+                exact: '정확',
+                street: '도로',
+                town: '마을',
+                city: '도시',
+                region: '권역',
+                unknown: '미상'
+            };
+            return labels[p];
+        }
+
+        function precisionClass(value) {
+            return `precision-${normalizePrecision(value)}`;
+        }
+
+        function safeText(value, fallback = '미상') {
+            const text = String(value || '').trim();
+            return text || fallback;
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getSheetUrl(gid) {
+            return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
+        }
+
+        function getRowLocation(row, headerMap, fallbackLatIndex, fallbackLngIndex) {
+            const lat = toNumber(getValue(row, headerMap, ['lat', 'latitude', '위도'], fallbackLatIndex));
+            const lng = toNumber(getValue(row, headerMap, ['lng', 'lon', 'longitude', '경도'], fallbackLngIndex));
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+            if (lat === 0 && lng === 0) return null;
+            return { lat, lng };
+        }
+
+        async function loadGoogleSheetsData() {
+            if (!spreadsheetId) {
+                document.getElementById('dataHealthText').textContent = '시트 ID 없음';
+                return;
+            }
+
+            const sources = [
+                { type: '마을', gid: '0' },
+                { type: '조직', gid: '1633831664' },
+                { type: '인물', gid: '997795861' }
+            ];
+
+            let nextId = 1;
+            const updated = [];
+            const townCoords = new Map();
+
+            for (const source of sources) {
+                try {
+                    const response = await fetch(getSheetUrl(source.gid));
+                    if (!response.ok) continue;
+
+                    const records = csvToArray(await response.text());
+                    if (!records.length) continue;
+
+                    const headerMap = buildHeaderMap(records[0]);
+
+                    for (let i = 1; i < records.length; i++) {
+                        const row = records[i];
+                        if (!row || !row.some(v => String(v || '').trim() !== '')) continue;
+
+                        if (source.type === '마을') {
+                            const name = getValue(row, headerMap, ['name', '마을명', '지역명'], 0);
+                            if (!name) continue;
+
+                            const description = getValue(row, headerMap, ['description', 'desc', '설명'], 1);
+                            const population = getValue(row, headerMap, ['population', '인구', '인원'], 2);
+                            const founded = getValue(row, headerMap, ['start_year', 'startyear', '시작연도'], 3);
+                            const dissolved = getValue(row, headerMap, ['end_year', 'endyear', '종료연도'], 4);
+                            const location = getRowLocation(row, headerMap, 5, 6);
+                            const sourceText = getValue(row, headerMap, ['source', '출처'], 7);
+                            const author = getValue(row, headerMap, ['creator', 'author', '작성자'], 8);
+                            const locationPrecision = normalizePrecision(getValue(row, headerMap, ['location_precision', 'precision', '위치정밀도', 'locationprecision'], 9));
+
+                            const item = {
+                                id: nextId++,
+                                type: '마을',
+                                name,
+                                description: [
+                                    population ? `[인구: ${population}]` : '',
+                                    description
+                                ].filter(Boolean).join(' ').trim(),
+                                founded,
+                                dissolved,
+                                lat: location ? location.lat : NaN,
+                                lng: location ? location.lng : NaN,
+                                source: sourceText,
+                                author,
+                                locationPrecision,
+                                relatedTown: '',
+                                relatedOrg: '',
+                                orgType: '',
+                                nationality: '',
+                                job: ''
+                            };
+
+                            if (location) townCoords.set(name, location);
+                            updated.push(item);
+                            continue;
+                        }
+
+                        if (source.type === '조직') {
+                            const name = getValue(row, headerMap, ['name', '조직명'], 0);
+                            if (!name) continue;
+
+                            const description = getValue(row, headerMap, ['description', 'desc', '설명'], 1);
+                            const founded = getValue(row, headerMap, ['start_year', 'startyear', '시작연도'], 2);
+                            const dissolved = getValue(row, headerMap, ['end_year', 'endyear', '종료연도'], 3);
+                            const relatedTown = getValue(row, headerMap, ['related_town', 'relatedtown', '소속마을', 'town'], 4);
+                            const sourceText = getValue(row, headerMap, ['source', '출처'], 5);
+                            const author = getValue(row, headerMap, ['creator', 'author', '작성자'], 6);
+                            const locationPrecision = normalizePrecision(getValue(row, headerMap, ['location_precision', 'precision', '위치정밀도', 'locationprecision'], 7));
+                            const orgType = getValue(row, headerMap, ['type', '조직유형', '유형'], 8);
+                            const location = getRowLocation(row, headerMap, 9, 10);
+
+                            const item = {
+                                id: nextId++,
+                                type: '조직',
+                                name,
+                                description,
+                                founded,
+                                dissolved,
+                                lat: location && ['exact', 'street'].includes(locationPrecision) ? location.lat : NaN,
+                                lng: location && ['exact', 'street'].includes(locationPrecision) ? location.lng : NaN,
+                                source: sourceText,
+                                author,
+                                locationPrecision,
+                                relatedTown,
+                                relatedOrg: '',
+                                orgType,
+                                nationality: '',
+                                job: ''
+                            };
+                            updated.push(item);
+                            continue;
+                        }
+
+                        if (source.type === '인물') {
+                            const name = getValue(row, headerMap, ['name', '인물명'], 0);
+                            if (!name) continue;
+
+                            const description = getValue(row, headerMap, ['description', 'desc', '설명'], 1);
+                            const founded = getValue(row, headerMap, ['start_year', 'startyear', '시작연도'], 2);
+                            const dissolved = getValue(row, headerMap, ['end_year', 'endyear', '종료연도'], 3);
+                            const relatedTown = getValue(row, headerMap, ['related_town', 'relatedtown', '소속마을', 'town'], 4);
+                            const relatedOrg = getValue(row, headerMap, ['related_organization', 'relatedorganization', 'related_org', '소속조직', 'organization'], 5);
+                            const sourceText = getValue(row, headerMap, ['source', '출처'], 6);
+                            const author = getValue(row, headerMap, ['creator', 'author', '작성자'], 7);
+                            const locationPrecision = normalizePrecision(getValue(row, headerMap, ['location_precision', 'precision', '위치정밀도', 'locationprecision'], 8));
+                            const nationality = getValue(row, headerMap, ['nationality', '국적'], 9);
+                            const job = getValue(row, headerMap, ['job', '직업', '직분'], 10);
+                            const location = getRowLocation(row, headerMap, 11, 12);
+
+                            const item = {
+                                id: nextId++,
+                                type: '인물',
+                                name,
+                                description,
+                                founded,
+                                dissolved,
+                                lat: location && ['exact', 'street'].includes(locationPrecision) ? location.lat : NaN,
+                                lng: location && ['exact', 'street'].includes(locationPrecision) ? location.lng : NaN,
+                                source: sourceText,
+                                author,
+                                locationPrecision,
+                                relatedTown,
+                                relatedOrg,
+                                orgType: '',
+                                nationality,
+                                job
+                            };
+                            updated.push(item);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`${source.type} 파싱 실패`, error);
+                }
+            }
+
+            rawData = updated;
+            buildIndexes();
+            document.getElementById('dataHealthText').textContent = `${rawData.length}건 로드됨`;
+        }
+
+        function buildIndexes() {
+            townIndex = new Map();
+            orgIndex = new Map();
+            personIndex = new Map();
+            idIndex = new Map();
+            townNetworkCounts = new Map();
+
+            for (const item of rawData) {
+                idIndex.set(item.id, item);
+                if (item.type === '마을') townIndex.set(item.name, item);
+                if (item.type === '조직') orgIndex.set(item.name, item);
+                if (item.type === '인물') personIndex.set(item.name, item);
+            }
+
+            for (const town of townIndex.values()) {
+                townNetworkCounts.set(town.name, new Set());
+            }
+
+            for (const item of rawData) {
+                if (item.type === '조직' && item.relatedTown && townNetworkCounts.has(item.relatedTown)) {
+                    townNetworkCounts.get(item.relatedTown).add(item.id);
+                }
+
+                if (item.type === '인물') {
+                    const townName = resolvePersonTown(item);
+                    if (townName && townNetworkCounts.has(townName)) {
+                        townNetworkCounts.get(townName).add(item.id);
+                    }
+                }
+            }
+
+            // 조직도 마을 네트워크 총합에 포함되도록 확장
+            for (const person of personIndex.values()) {
+                const linkedTown = resolvePersonTown(person);
+                if (linkedTown && townNetworkCounts.has(linkedTown)) {
+                    townNetworkCounts.get(linkedTown).add(person.id);
+                }
+            }
+        }
+
+        function resolvePersonTown(person) {
+            if (person.relatedTown) return person.relatedTown;
+            if (person.relatedOrg) {
+                const org = orgIndex.get(person.relatedOrg);
+                if (org && org.relatedTown) return org.relatedTown;
+            }
+            return '';
+        }
+
+        function resolveItemTown(item) {
+            if (item.type === '마을') return item.name;
+            if (item.type === '조직') return item.relatedTown || '';
+            if (item.type === '인물') return resolvePersonTown(item);
+            return '';
+        }
+
+        function getVisibleItems() {
+            return rawData.filter(item => {
+                const typeMatch = currentFilter === 'all' || item.type === currentFilter;
+                const searchValue = [
+                    item.name,
+                    item.description,
+                    item.relatedTown,
+                    item.relatedOrg,
+                    item.orgType,
+                    item.nationality,
+                    item.job,
+                    item.locationPrecision
+                ].join(' ').toLowerCase();
+
+                return typeMatch && searchValue.includes(currentSearch);
+            });
+        }
+
+        function getTownChildCount(townName) {
+            const set = townNetworkCounts.get(townName);
+            return set ? set.size : 0;
+        }
+
+        function getZoomLevel() {
+            return map ? map.getZoom() : revealZoom;
+        }
+
+        function isChildVisible(item) {
+            return item.type !== '마을' && getZoomLevel() >= revealZoom;
+        }
+
+        function precisionBadgeHtml(item) {
+            const label = precisionLabel(item.locationPrecision);
+            return `<span class="sidebar-badge ${precisionClass(item.locationPrecision)}">${label}</span>`;
+        }
+
+        function getTypeBadge(item) {
+            if (item.type === '마을') return `<span class="sidebar-badge bg-orange-50 text-orange-700 border-orange-200">마을</span>`;
+            if (item.type === '조직') return `<span class="sidebar-badge bg-blue-50 text-blue-700 border-blue-200">조직</span>`;
+            return `<span class="sidebar-badge bg-green-50 text-green-700 border-green-200">인물</span>`;
+        }
+
+        function createIconHtml(item, meta = {}) {
+            const isTown = item.type === '마을';
+            const precision = normalizePrecision(item.locationPrecision);
+            const count = isTown ? getTownChildCount(item.name) : 0;
+            const linked = meta.linked || false;
+            const floating = meta.floating || false;
+            const selected = meta.selected || false;
+            const highlightClass = selected ? 'network-highlight' : '';
+            const ring = linked ? '<div class="pulse"></div>' : '';
+
+            if (isTown) {
+                return `
+                    <div class="node-card node-town ${highlightClass}">
+                        <div class="node-shell">
+                            ${ring}
+                            <div class="node-core">
+                                <i class="fa-solid fa-house"></i>
+                            </div>
+                            <div class="node-count">${count}</div>
+                        </div>
+                        <div class="node-label">${escapeHtml(item.name)}</div>
+                        <div class="node-meta ${precisionClass(precision)}">${precisionLabel(precision)}</div>
+                    </div>
+                `;
+            }
+
+            const icon = item.type === '조직' ? 'fa-users' : 'fa-user';
+            const colorType = item.type === '조직' ? 'org' : 'person';
+            const orgLine = item.type === '조직' && item.orgType ? `<div class="node-meta">${escapeHtml(item.orgType)}</div>` : '';
+            const extraLine = item.type === '인물'
+                ? `<div class="node-meta">${[item.nationality, item.job].filter(Boolean).map(escapeHtml).join(' · ') || '정보 없음'}</div>`
+                : orgLine;
+
+            return `
+                <div class="node-card node-${colorType} node-floating ${highlightClass}">
+                    <div class="node-shell">
+                        ${ring}
+                        <div class="node-core">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                    </div>
+                    <div class="node-label">${escapeHtml(item.name)}</div>
+                    <div class="node-meta ${precisionClass(precision)}">${precisionLabel(precision)} · ${floating ? '관계망' : '직접'}</div>
+                    ${extraLine}
+                </div>
+            `;
+        }
+
+        function shouldShowExactNode(item) {
+            const precision = normalizePrecision(item.locationPrecision);
+            return ['exact', 'street'].includes(precision) && Number.isFinite(item.lat) && Number.isFinite(item.lng);
+        }
+
+        function getAnchorCoordsForItem(item, positionMap) {
+            if (item.type === '조직') {
+                const town = townIndex.get(item.relatedTown);
+                if (town && positionMap.has(town.id)) return positionMap.get(town.id);
+            }
+
+            if (item.type === '인물') {
+                if (item.relatedOrg) {
+                    const org = orgIndex.get(item.relatedOrg);
+                    if (org && positionMap.has(org.id)) return positionMap.get(org.id);
+                }
+                const townName = resolvePersonTown(item);
+                if (townName) {
+                    const town = townIndex.get(townName);
+                    if (town && positionMap.has(town.id)) return positionMap.get(town.id);
+                }
+            }
+
+            return null;
+        }
+
+        function createFloatingPosition(anchorLatLng, seed, groupSize = 1, index = 0) {
+            const zoom = getZoomLevel();
+            const point = map.latLngToLayerPoint(anchorLatLng);
+            const angle = (seed * 137.5 + index * 53.2) * Math.PI / 180;
+            const radius = 26 + Math.min(groupSize, 9) * 4 + index * 6;
+            const x = point.x + Math.cos(angle) * radius;
+            const y = point.y + Math.sin(angle) * radius;
+            return map.layerPointToLatLng(L.point(x, y));
+        }
+
+        function getVisibleItemsByZoom() {
+            const showChildren = getZoomLevel() >= revealZoom;
+            return getVisibleItems().filter(item => item.type === '마을' || showChildren);
+        }
+
+        function renderData() {
+            if (!map) return;
+
+            const listContainer = document.getElementById('dataList');
+            const filtered = getVisibleItems();
+            const showChildren = getZoomLevel() >= revealZoom;
+            const mapItems = filtered.filter(item => item.type === '마을' || showChildren);
+
+            listContainer.innerHTML = '';
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="p-8 text-center text-slate-400 text-sm flex flex-col gap-2 justify-center items-center h-full list-empty rounded-2xl">
+                        <i class="fa-regular fa-face-smile text-xl"></i>
+                        조건에 맞는 데이터가 없습니다.
+                    </div>`;
+                document.getElementById('resultCount').textContent = '총 0건';
+                clearMapLayers();
+                return;
+            }
+
+            const grouped = [];
+            if (selectedTownName && currentFilter === 'all') {
+                const townItem = townIndex.get(selectedTownName);
+                const children = rawData.filter(d => d.type !== '마을' && resolveItemTown(d) === selectedTownName);
+                const childIds = new Set(children.map(d => d.id));
+                const remaining = filtered.filter(d => d.id !== townItem?.id && !childIds.has(d.id));
+                if (townItem && filtered.some(d => d.id === townItem.id)) grouped.push(townItem);
+                grouped.push(...children.filter(c => filtered.some(d => d.id === c.id)));
+                grouped.push(...remaining);
+            } else {
+                grouped.push(...filtered);
+            }
+
+            grouped.forEach(item => {
+                const isChild = item.type !== '마을' && selectedTownName && resolveItemTown(item) === selectedTownName;
+                const relatedTown = resolveItemTown(item);
+                const card = document.createElement('div');
+                card.className = `p-3 mb-2 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all ${item.id === selectedItemId || item.name === selectedTownName ? 'selected-card' : ''} ${isChild ? 'network-child-card' : ''}`;
+
+                let subInfo = '';
+                if (item.type === '마을') {
+                    subInfo = `
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            <span class="sidebar-badge ${precisionClass(item.locationPrecision)}">${precisionLabel(item.locationPrecision)}</span>
+                            <span class="sidebar-badge bg-orange-50 text-orange-700 border-orange-200"><i class="fa-solid fa-diagram-project"></i> 연결 ${getTownChildCount(item.name)}개</span>
+                        </div>
+                    `;
+                } else if (item.type === '조직') {
+                    subInfo = `
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            ${precisionBadgeHtml(item)}
+                            ${item.orgType ? `<span class="sidebar-badge bg-blue-50 text-blue-700 border-blue-200"><i class="fa-solid fa-tag"></i> ${escapeHtml(item.orgType)}</span>` : ''}
+                        </div>
+                    `;
+                } else {
+                    subInfo = `
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            ${precisionBadgeHtml(item)}
+                            ${item.nationality ? `<span class="sidebar-badge bg-green-50 text-green-700 border-green-200"><i class="fa-solid fa-globe"></i> ${escapeHtml(item.nationality)}</span>` : ''}
+                            ${item.job ? `<span class="sidebar-badge bg-emerald-50 text-emerald-700 border-emerald-200"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>` : ''}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-3 mb-1">
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-slate-800 font-serif ${isChild ? 'text-base' : 'text-lg'} truncate">
+                                ${isChild ? '<i class="fa-solid fa-arrow-turn-up rotate-90 mr-1 text-slate-400"></i>' : ''}
+                                ${escapeHtml(item.name)}
+                            </h3>
+                            <div class="flex items-center gap-2 mt-1">
+                                ${getTypeBadge(item)}
+                                ${relatedTown ? `<span class="text-[10px] text-slate-500">연결: ${escapeHtml(relatedTown)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0">${getTypeBadge(item)}</div>
+                    </div>
+
+                    ${subInfo}
+
+                    <p class="text-xs text-slate-500 mb-2 clamp-2">${escapeHtml(item.description)}</p>
+
+                    <div class="flex justify-between items-end text-[10px] text-slate-400 gap-2">
+                        <span><i class="fa-regular fa-clock"></i> ${safeText(item.founded)} ~ ${safeText(item.dissolved)}</span>
+                        <button onclick="event.stopPropagation(); askAIAboutById(${item.id})" class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 transition-colors bg-purple-50 px-2 py-1 rounded-lg border border-purple-200 flex items-center gap-1">
+                            <i class="fa-solid fa-sparkles"></i> AI 해설
+                        </button>
+                    </div>
+                `;
+
+                card.onclick = () => focusOnMap(item);
+                listContainer.appendChild(card);
+            });
+
+            document.getElementById('resultCount').textContent = `총 ${filtered.length}건`;
+            drawMap(mapItems);
+        }
+
+        function clearMapLayers() {
+            if (markersLayer) markersLayer.clearLayers();
+            if (linksLayer) linksLayer.clearLayers();
+        }
+
+        function drawMap(items) {
+            if (!map) return;
+            if (!markersLayer || !linksLayer) {
+                markersLayer = L.layerGroup().addTo(map);
+                linksLayer = L.layerGroup().addTo(map);
+            }
+
+            clearMapLayers();
+
+            const visibleSet = new Set(items.map(item => item.id));
+            const positionMap = new Map();
+            const markerMap = new Map();
+            const showChildren = getZoomLevel() >= revealZoom;
+
+            const towns = items.filter(item => item.type === '마을' && Number.isFinite(item.lat) && Number.isFinite(item.lng));
+            const orgs = items.filter(item => item.type === '조직');
+            const people = items.filter(item => item.type === '인물');
+
+            // 1) 마을은 항상 직접 좌표로 배치
+            for (const town of towns) {
+                positionMap.set(town.id, L.latLng(town.lat, town.lng));
+            }
+
+            // 2) 조직: exact/street면 정확한 좌표, 아니면 related_town 주변에 붕붕 떠서 배치
+            const orgGroups = new Map();
+            for (const org of orgs) {
+                const exact = shouldShowExactNode(org);
+                let pos = null;
+
+                if (exact) {
+                    pos = L.latLng(org.lat, org.lng);
+                } else {
+                    const town = townIndex.get(org.relatedTown);
+                    if (town && positionMap.has(town.id)) {
+                        const key = `town:${town.name}`;
+                        if (!orgGroups.has(key)) orgGroups.set(key, []);
+                        orgGroups.get(key).push(org);
+                    }
+                }
+
+                if (pos) positionMap.set(org.id, pos);
+            }
+
+            for (const [key, group] of orgGroups.entries()) {
+                const townName = key.slice(5);
+                const town = townIndex.get(townName);
+                if (!town || !positionMap.has(town.id)) continue;
+                const anchor = positionMap.get(town.id);
+                group.forEach((org, idx) => {
+                    const floating = createFloatingPosition(anchor, org.id * 3, group.length, idx);
+                    positionMap.set(org.id, floating);
+                });
+            }
+
+            // 3) 인물: exact/street면 정확한 좌표, 아니면 related_organization > related_town 순으로 연결
+            const personGroups = new Map();
+            for (const person of people) {
+                const exact = shouldShowExactNode(person);
+                let pos = null;
+
+                if (exact) {
+                    pos = L.latLng(person.lat, person.lng);
+                } else {
+                    let anchorKey = '';
+                    let anchorTownName = '';
+
+                    if (person.relatedOrg) {
+                        const org = orgIndex.get(person.relatedOrg);
+                        if (org && positionMap.has(org.id)) {
+                            anchorKey = `org:${org.name}`;
+                        }
+                    }
+
+                    if (!anchorKey) {
+                        const townName = resolvePersonTown(person);
+                        if (townName) {
+                            const town = townIndex.get(townName);
+                            if (town && positionMap.has(town.id)) {
+                                anchorKey = `town:${town.name}`;
+                                anchorTownName = town.name;
+                            }
+                        }
+                    }
+
+                    if (anchorKey) {
+                        if (!personGroups.has(anchorKey)) personGroups.set(anchorKey, []);
+                        personGroups.get(anchorKey).push(person);
+                    }
+                }
+
+                if (pos) positionMap.set(person.id, pos);
+            }
+
+            for (const [key, group] of personGroups.entries()) {
+                const [kind, name] = key.split(':');
+                let anchor = null;
+                if (kind === 'org') {
+                    const org = orgIndex.get(name);
+                    if (org && positionMap.has(org.id)) anchor = positionMap.get(org.id);
+                } else if (kind === 'town') {
+                    const town = townIndex.get(name);
+                    if (town && positionMap.has(town.id)) anchor = positionMap.get(town.id);
+                }
+
+                if (!anchor) continue;
+
+                group.forEach((person, idx) => {
+                    const floating = createFloatingPosition(anchor, person.id * 5, group.length, idx);
+                    positionMap.set(person.id, floating);
+                });
+            }
+
+            // 4) 링크 우선 그리기
+            for (const item of items) {
+                if (item.type === '마을') continue;
+                if (!positionMap.has(item.id)) continue;
+
+                const position = positionMap.get(item.id);
+                const linkedTownName = resolveItemTown(item);
+
+                const isExact = shouldShowExactNode(item);
+                const linked = selectedTownName && linkedTownName === selectedTownName;
+                const selected = item.id === selectedItemId || item.name === selectedTownName || linked;
+
+                const marker = L.marker(position, {
+                    icon: L.divIcon({
+                        html: createIconHtml(item, {
+                            floating: !isExact,
+                            linked,
+                            selected
+                        }),
+                        className: '',
+                        iconSize: [130, 118],
+                        iconAnchor: [65, 98],
+                        popupAnchor: [0, -78]
+                    }),
+                    riseOnHover: true
+                }).addTo(markersLayer);
+
+                marker.on('click', () => {
+                    selectedItemId = item.id;
+                    if (item.type === '마을') {
+                        selectedTownName = item.name;
+                    } else {
+                        selectedTownName = resolveItemTown(item) || selectedTownName;
+                    }
+                    focusOnMap(item, { fromMarker: true });
+                });
+
+                marker.bindPopup(buildPopupHtml(item, isExact));
+                markerMap.set(item.id, marker);
+
+                // 관계선
+                if (!isExact) {
+                    const anchorTargets = [];
+                    if (item.type === '조직' && item.relatedTown) {
+                        const town = townIndex.get(item.relatedTown);
+                        if (town && positionMap.has(town.id)) {
+                            anchorTargets.push({ id: town.id, label: town.name, type: 'town' });
+                        }
+                    }
+
+                    if (item.type === '인물') {
+                        if (item.relatedOrg) {
+                            const org = orgIndex.get(item.relatedOrg);
+                            if (org && positionMap.has(org.id)) {
+                                anchorTargets.push({ id: org.id, label: org.name, type: 'org' });
+                            }
+                        }
+                        const townName = resolvePersonTown(item);
+                        if (townName) {
+                            const town = townIndex.get(townName);
+                            if (town && positionMap.has(town.id)) {
+                                if (!anchorTargets.some(t => t.id === town.id)) {
+                                    anchorTargets.push({ id: town.id, label: town.name, type: 'town' });
+                                }
+                            }
+                        }
+                    }
+
+                    anchorTargets.forEach((target, idx) => {
+                        const start = positionMap.get(item.id);
+                        const end = positionMap.get(target.id);
+                        if (!start || !end) return;
+
+                        const line = L.polyline([start, end], {
+                            color: target.type === 'town' ? '#94a3b8' : '#60a5fa',
+                            weight: target.type === 'town' ? 1.5 : 1.8,
+                            opacity: 0.58,
+                            dashArray: target.type === 'town' ? '4 7' : '3 6',
+                            lineCap: 'round'
+                        }).addTo(linksLayer);
+
+                        line.bindTooltip(`${escapeHtml(item.name)} ↔ ${escapeHtml(target.label)}`, {
+                            direction: 'center',
+                            opacity: 0.9,
+                            sticky: true,
+                            className: 'text-xs'
+                        });
+                    });
+                }
+            }
+
+            // 5) 마을은 마지막에 그려서 레이어 우선순위 확보
+            for (const town of towns) {
+                const position = positionMap.get(town.id);
+                if (!position) continue;
+
+                const linked = selectedTownName === town.name;
+                const marker = L.marker(position, {
+                    icon: L.divIcon({
+                        html: createIconHtml(town, {
+                            linked,
+                            selected: linked
+                        }),
+                        className: '',
+                        iconSize: [140, 128],
+                        iconAnchor: [70, 104],
+                        popupAnchor: [0, -84]
+                    }),
+                    riseOnHover: true
+                }).addTo(markersLayer);
+
+                marker.on('click', () => {
+                    selectedItemId = town.id;
+                    selectedTownName = town.name;
+                    focusOnMap(town, { fromMarker: true });
+                });
+
+                marker.bindPopup(buildPopupHtml(town, true));
+                markerMap.set(town.id, marker);
+            }
+
+            // 선택 대상 팝업 재오픈
+            if (selectedItemId && markerMap.has(selectedItemId)) {
+                const selectedMarker = markerMap.get(selectedItemId);
+                setTimeout(() => selectedMarker.openPopup(), 80);
+            } else if (selectedTownName) {
+                const town = townIndex.get(selectedTownName);
+                if (town && markerMap.has(town.id)) {
+                    setTimeout(() => markerMap.get(town.id).openPopup(), 80);
+                }
+            }
+        }
+
+        function buildPopupHtml(item, isExact) {
+            const relatedTown = resolveItemTown(item);
+            const linkedOrg = item.type === '인물' && item.relatedOrg ? orgIndex.get(item.relatedOrg) : null;
+            const childCount = item.type === '마을' ? getTownChildCount(item.name) : null;
+
+            const relationBlocks = [];
+            if (item.type === '마을') {
+                relationBlocks.push(`<div class="text-xs text-slate-600"><b>연결된 노드:</b> ${childCount}개</div>`);
+            }
+            if (item.type === '조직' && item.orgType) {
+                relationBlocks.push(`<div class="text-xs text-slate-600"><b>유형:</b> ${escapeHtml(item.orgType)}</div>`);
+            }
+            if (item.type === '인물') {
+                if (item.nationality) relationBlocks.push(`<div class="text-xs text-slate-600"><b>국적:</b> ${escapeHtml(item.nationality)}</div>`);
+                if (item.job) relationBlocks.push(`<div class="text-xs text-slate-600"><b>직업:</b> ${escapeHtml(item.job)}</div>`);
+            }
+
+            const relationLine = [];
+            if (relatedTown) relationLine.push(`소속마을: ${escapeHtml(relatedTown)}`);
+            if (linkedOrg && linkedOrg.name) relationLine.push(`연결조직: ${escapeHtml(linkedOrg.name)}`);
+
+            return `
+                <div class="custom-popup w-72">
+                    <div class="text-[10px] text-slate-500 mb-1">${escapeHtml(item.type)} ${relationLine.length ? `· ${relationLine.join(' · ')}` : ''}</div>
+                    <div class="title">${escapeHtml(item.name)}</div>
+                    <div class="meta">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border ${precisionClass(item.locationPrecision)}">
+                            <i class="fa-solid fa-location-dot"></i> ${precisionLabel(item.locationPrecision)}
+                        </span>
+                        <span class="ml-2"><i class="fa-regular fa-clock"></i> ${safeText(item.founded)} ~ ${safeText(item.dissolved)}</span>
+                    </div>
+                    <div class="desc mb-3">${escapeHtml(item.description || '') || '설명이 없습니다.'}</div>
+                    <div class="space-y-1 mb-3">
+                        ${relationBlocks.join('')}
+                    </div>
+                    <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex justify-between items-end gap-2">
+                        <div class="leading-relaxed">
+                            <strong>출처:</strong> ${safeText(item.source, '자체조사')}<br>
+                            <strong>작성자:</strong> ${safeText(item.author, '연구팀')}
+                        </div>
+                        <button onclick="askAIAboutById(${item.id})" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded-lg text-[10px] border border-purple-200 transition-colors flex-shrink-0">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> AI 해설
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function focusOnMap(item, options = {}) {
+            const markerZoom = item.type === '마을' ? Math.max(6, revealZoom - 1) : revealZoom + 1;
+            const position = (() => {
+                if (Number.isFinite(item.lat) && Number.isFinite(item.lng) && item.lat !== 0 && item.lng !== 0) {
+                    return L.latLng(item.lat, item.lng);
+                }
+                if (item.type === '조직') {
+                    const town = townIndex.get(item.relatedTown);
+                    if (town && Number.isFinite(town.lat) && Number.isFinite(town.lng)) return L.latLng(town.lat, town.lng);
+                }
+                if (item.type === '인물') {
+                    if (item.relatedOrg) {
+                        const org = orgIndex.get(item.relatedOrg);
+                        if (org && Number.isFinite(org.lat) && Number.isFinite(org.lng)) return L.latLng(org.lat, org.lng);
+                    }
+                    const townName = resolvePersonTown(item);
+                    if (townName) {
+                        const town = townIndex.get(townName);
+                        if (town && Number.isFinite(town.lat) && Number.isFinite(town.lng)) return L.latLng(town.lat, town.lng);
+                    }
+                }
+                return null;
+            })();
+
+            selectedItemId = item.id;
+            if (item.type === '마을') {
+                selectedTownName = item.name;
+            } else {
+                selectedTownName = resolveItemTown(item) || selectedTownName;
+            }
+
+            renderData();
+
+            if (position) {
+                if (window.innerWidth < 768) {
+                    document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+                }
+                map.setView(position, markerZoom, { animate: true, duration: 0.9 });
+            }
+
+            if (!options.fromMarker) {
+                setTimeout(() => {
+                    const marker = findMarkerById(item.id);
+                    if (marker) marker.openPopup();
+                }, 220);
+            }
+        }
+
+        function findMarkerById(id) {
+            let found = null;
+            if (!markersLayer) return null;
+            markersLayer.eachLayer(layer => {
+                if (layer instanceof L.Marker && layer.getLatLng) {
+                    const iconHtml = layer.options?.icon?._html || '';
+                }
+            });
+
+            // popup reopen uses selection state instead of direct map layer access
+            return null;
+        }
+
+        function handleSearch(e) {
+            currentSearch = String(e.target.value || '').trim().toLowerCase();
+            if (!currentSearch) {
+                selectedTownName = null;
+                selectedItemId = null;
+            }
+            renderData();
+        }
+
+        function handleFilter(e, allBtns) {
+            allBtns.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            e.currentTarget.classList.add('active');
+
+            currentFilter = e.currentTarget.getAttribute('data-type');
+            selectedTownName = null;
+            selectedItemId = null;
+            renderData();
+        }
+
+        async function fetchLatestAndRender() {
+            await loadGoogleSheetsData();
+            renderData();
+        }
+
+        async function syncData() {
+            const btn = document.getElementById('syncBtn') || document.getElementById('syncBtnMobile');
+            const allBtns = [document.getElementById('syncBtn'), document.getElementById('syncBtnMobile')].filter(Boolean);
+            allBtns.forEach(el => {
+                el.disabled = true;
+                el.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+            });
+
+            try {
+                await fetchLatestAndRender();
+                alert('구글 스프레드시트 최신 데이터가 반영되었습니다.');
+            } catch (err) {
+                console.error(err);
+                alert('동기화에 실패했습니다.');
+            } finally {
+                allBtns.forEach(el => {
+                    el.disabled = false;
+                    el.innerHTML = `<i class="fa-brands fa-google"></i>`;
+                });
+            }
+        }
+
+        function toggleAIChat() {
+            const panel = document.getElementById('aiChatPanel');
+            isChatOpen = !isChatOpen;
+            if (isChatOpen) {
+                panel.classList.remove('translate-x-full');
+                if (chatHistory.length === 0) {
+                    addMessageToUI('assistant', "안녕하세요! '코리안타운 DB' 연구 보조원입니다. 마을을 먼저 보고, 확대하면 조직과 인물의 관계망이 드러납니다. 궁금한 점을 물어보세요.");
+                }
+            } else {
+                panel.classList.add('translate-x-full');
+            }
+        }
+
+        function askAIAboutById(id) {
+            const item = idIndex.get(id);
+            if (!item) return;
+            if (!isChatOpen) toggleAIChat();
+
+            const townName = resolveItemTown(item);
+            const town = townName ? townIndex.get(townName) : null;
+            const relatedOrg = item.type === '인물' && item.relatedOrg ? orgIndex.get(item.relatedOrg) : null;
+            const contextParts = [
+                `유형: ${item.type}`,
+                `위치정밀도: ${item.locationPrecision}`,
+                `설명: ${item.description || '없음'}`
+            ];
+
+            if (town) contextParts.push(`연결 마을: ${town.name}`);
+            if (item.type === '조직' && item.orgType) contextParts.push(`조직 유형: ${item.orgType}`);
+            if (item.type === '인물') {
+                if (item.nationality) contextParts.push(`국적: ${item.nationality}`);
+                if (item.job) contextParts.push(`직업: ${item.job}`);
+                if (relatedOrg) contextParts.push(`관련 조직: ${relatedOrg.name}`);
+            }
+
+            const prompt = `'${item.name}'에 대해 역사학적 맥락과 관계망을 설명해줘. 다음 기초 정보도 참고해: ${contextParts.join(' / ')}.`;
+            addMessageToUI('user', `'${item.name}'의 관계망과 역사적 배경을 설명해줘.`);
+            fetchGeminiResponse(prompt);
+        }
+
+        function handleChatSubmit(event) {
+            if (event && event.type === 'keypress' && event.key !== 'Enter') return;
+            const inputEl = document.getElementById('chatInput');
+            const message = String(inputEl.value || '').trim();
+            if (!message) return;
+            inputEl.value = '';
+            addMessageToUI('user', message);
+            fetchGeminiResponse(message);
+        }
+
+        function parseSimpleMarkdown(text) {
+            let html = String(text || '');
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            html = html.replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-slate-200 rounded text-[11px]">$1</code>');
+            html = html.replace(/\n/g, '<br>');
+            return html;
+        }
+
+        function addMessageToUI(role, text) {
+            const chatBody = document.getElementById('chatBody');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex gap-3 mb-4 ${role === 'user' ? 'flex-row-reverse' : ''}`;
+
+            const avatarClass = role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-purple-100 text-purple-600 border border-purple-200';
+            const avatarIcon = role === 'user' ? 'fa-user' : 'fa-robot';
+            const bubbleClass = role === 'user' ? 'bg-primary text-white rounded-l-lg rounded-br-lg' : 'bg-slate-100 text-slate-800 rounded-r-lg rounded-bl-lg border border-slate-200';
+            const parsedText = role === 'assistant' ? parseSimpleMarkdown(text) : escapeHtml(text).replace(/\n/g, '<br>');
+
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm ${avatarClass}">
+                    <i class="fa-solid ${avatarIcon}"></i>
+                </div>
+                <div class="p-3 max-w-[80%] text-sm shadow-sm ${bubbleClass} leading-relaxed">
+                    ${parsedText}
+                </div>
+            `;
+
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) loadingIndicator.remove();
+            chatBody.appendChild(msgDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function showLoading() {
+            const chatBody = document.getElementById('chatBody');
+            const msgDiv = document.createElement('div');
+            msgDiv.id = 'loadingIndicator';
+            msgDiv.className = 'flex gap-3 mb-4';
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm bg-purple-100 text-purple-600 border border-purple-200">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="p-3 bg-slate-100 text-slate-500 rounded-r-lg rounded-bl-lg border border-slate-200 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> 관계망 사료 교차 검증 중...
+                </div>
+            `;
+            chatBody.appendChild(msgDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        async function fetchGeminiResponse(userMessage) {
+            chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+            showLoading();
+
+            if (!geminiApiKey) {
+                addMessageToUI('assistant', 'Gemini API 키가 설정되지 않았습니다. env-config.js를 확인하세요.');
+                return;
+            }
+
+            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 수석 역사학자이자 AI 연구원입니다. 사라진 한인 마을(공간), 독립운동 조직, 인물 간의 네트워크와 위상 관계를 설명합니다. 전체 데이터 정보: ${JSON.stringify(rawData)}. 질문에 사료적 근거와 학술적 맥락을 더해 풍성하게 답변하세요.`;
+            const payload = {
+                contents: chatHistory,
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates[0].content) {
+                    const aiResponseText = result.candidates[0].content.parts[0].text;
+                    chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+                    addMessageToUI('assistant', aiResponseText);
+                } else if (result.error && result.error.code === 403) {
+                    addMessageToUI('assistant', "⚠️ API 접근 권한이 거부되었습니다. Google Cloud 콘솔에서 사용 중인 API 키의 제한을 확인하세요.");
+                } else {
+                    addMessageToUI('assistant', '자료를 분석하는 중에 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                console.error(error);
+                addMessageToUI('assistant', '네트워크 통신 오류가 발생했습니다.');
+            }
+        }
+
+        function adjustMapPadding() {
+            if (!map) return;
+            const leftWidth = window.innerWidth >= 768 ? 420 : 0;
+            map.setPadding([20, 20, 20, 20]);
+            if (leftWidth) {
+                // leaflet padding just to keep fit behave well
+            }
+        }
+
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: true,
+                preferCanvas: false
+            }).setView([43.0, 132.0], 5);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 18,
+                minZoom: 2
+            }).addTo(map);
+
+            markersLayer = L.layerGroup().addTo(map);
+            linksLayer = L.layerGroup().addTo(map);
+
+            map.on('zoomend', () => {
+                document.getElementById('zoomHintText').textContent = map.getZoom() >= revealZoom ? '조직·인물 노출 중' : '줌 7 이상에서 관계망 표시';
+                renderData();
+            });
+
+            map.on('moveend', () => {
+                // floating nodes depend on current projected coordinates; re-render on pan keeps network tidy
+                if (map.getZoom() >= revealZoom) {
+                    renderData();
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                clearTimeout(window.__mapResizeTimer);
+                window.__mapResizeTimer = setTimeout(() => {
+                    if (map) renderData();
+                }, 120);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            initMap();
+
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => handleFilter(e, filterBtns));
+            });
+
+            await fetchLatestAndRender();
+            setInterval(fetchLatestAndRender, 30000);
+        });
+    </script>
+</body>
+</html>
