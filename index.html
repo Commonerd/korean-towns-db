@@ -219,7 +219,7 @@
             <div class="flex-1 overflow-y-auto p-2" id="dataList">
                 <div class="p-8 text-center text-slate-400 text-sm flex flex-col gap-2 justify-center items-center h-full">
                     <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary"></i>
-                    구글 시트 데이터를 불러오는 중...
+                    DB 데이터를 불러오는 중...
                 </div>
             </div>
 
@@ -342,7 +342,7 @@
             return '';
         }
 
-        /* ====== 구글 시트 데이터 로드 ====== */
+        /* ====== DB 데이터 로드 ====== */
         async function loadGoogleSheetsData() {
             const spreadsheetId = window.APP_CONFIG?.spreadsheetId || '';
             if (!spreadsheetId) return;
@@ -472,7 +472,7 @@
             btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 동기화 중...`;
             try {
                 await fetchLatestAndRender();
-                showToast('구글 스프레드시트 최신 데이터가 반영되었습니다.');
+                showToast('DB의 최신 데이터가 반영되었습니다.');
             } catch (err) {
                 showToast('동기화에 실패했습니다.', true);
             } finally {
