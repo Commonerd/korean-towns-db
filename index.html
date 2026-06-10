@@ -245,12 +245,6 @@
                 <div class="legend-row text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200" style="font-size:10px;">
                     <i class="fa-solid fa-circle-info"></i> 점선 = 소속
                 </div>
-                <div class="mt-2 pt-2 border-t border-slate-200">
-                    <label class="flex items-center gap-2 cursor-pointer text-[11px]">
-                        <input type="checkbox" id="labelToggle">
-                        <span>노드 이름 표시</span>
-                    </label>
-                </div>
             </div>
         </div>
 
@@ -297,10 +291,9 @@
         let chatHistory = [];
         let isChatOpen = false;
         let selectedTownName = null;
-        let showNodeLabels = false; // 노드 레이블 항상 표시 여부 (줌 레벨과 무관하게)
 
         /* 2계층 표시 임계 줌 */
-        const ZOOM_DETAIL_THRESHOLD = 15;
+        const ZOOM_DETAIL_THRESHOLD = 14;
 
         const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
 
@@ -520,10 +513,6 @@
                 updateZoomHint();
                 renderMap();
             });
-            document.getElementById('labelToggle').addEventListener('change', (e) => {
-                showNodeLabels = e.target.checked;
-                renderMap();
-            });
 
             await fetchLatestAndRender();
             updateZoomHint();
@@ -579,27 +568,30 @@
         // 노드 레이블 추가 (항상 표시 옵션)
         function addNodeLabel(lat, lng, text) {
 
-            if (!showNodeLabels) return;
+            if (map.getZoom() < ZOOM_DETAIL_THRESHOLD) return;
 
             const label = L.marker([lat, lng], {
                 interactive: false,
                 icon: L.divIcon({
                     className: '',
                     html: `
-                        <div style="
-                            background:rgba(255,255,255,.95);
-                            border:1px solid #cbd5e1;
-                            border-radius:6px;
-                            padding:2px 6px;
-                            font-size:11px;
-                            font-weight:600;
-                            white-space:nowrap;
-                            box-shadow:0 1px 4px rgba(0,0,0,.15);
-                        ">
-                            ${escapeHtml(text)}
-                        </div>
+                    <div style="
+                        background:rgba(255,255,255,.92);
+                        border:1px solid rgba(203,213,225,.9);
+                        border-radius:6px;
+                        padding:2px 6px;
+
+                        font-size:12px;
+                        font-weight:700;
+                        color:#111827;
+
+                        white-space:nowrap;
+                        box-shadow:0 1px 4px rgba(0,0,0,.15);
+                    ">
+                        ${escapeHtml(text)}
+                    </div>
                     `,
-                    iconAnchor: [0, -16]
+                    iconAnchor: [12, -22]
                 })
             });
 
@@ -735,7 +727,6 @@
             const filteredData = getFilteredData();
             const zoom = map.getZoom();
             const isDetailMode = zoom >= ZOOM_DETAIL_THRESHOLD;
-            showNodeLabels = isDetailMode;
 
             /* 필터 모드별 처리:
                - currentFilter === 'all' 이고 줌이 낮으면 → 마을만 표시
