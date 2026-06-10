@@ -767,9 +767,6 @@
                 markersLayer.addLayer(marker);
                 markers.push(marker);
 
-                /* 네트워크 라인 */
-                const color = item.type === '조직' ? '#2563eb' : '#16a34a';
-                linesLayer.addLayer(line);
             });
             drawRelationshipLines();
         }
