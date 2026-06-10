@@ -243,7 +243,13 @@
                 <div class="legend-row"><span class="legend-dot" style="background:#2563eb"></span> 조직 (Organization)</div>
                 <div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> 인물 (Person)</div>
                 <div class="legend-row text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200" style="font-size:10px;">
-                    <i class="fa-solid fa-circle-info"></i> 점선 = 위치불명·마을소속
+                    <i class="fa-solid fa-circle-info"></i> 점선 = 소속
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-200">
+                    <label class="flex items-center gap-2 cursor-pointer text-[11px]">
+                        <input type="checkbox" id="labelToggle">
+                        <span>노드 이름 표시</span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -291,6 +297,7 @@
         let chatHistory = [];
         let isChatOpen = false;
         let selectedTownName = null;
+        let showNodeLabels = false; // 노드 레이블 항상 표시 여부 (줌 레벨과 무관하게)
 
         /* 2계층 표시 임계 줌 */
         const ZOOM_DETAIL_THRESHOLD = 15;
@@ -513,6 +520,10 @@
                 updateZoomHint();
                 renderMap();
             });
+            document.getElementById('labelToggle').addEventListener('change', (e) => {
+                showNodeLabels = e.target.checked;
+                renderMap();
+            });
 
             await fetchLatestAndRender();
             updateZoomHint();
@@ -563,6 +574,36 @@
                 html, className: isFloating ? 'floating-marker' : '',
                 iconSize: [size+8, size+8], iconAnchor: [(size+8)/2, (size+8)/2], popupAnchor: [0, -size/2 - 4]
             });
+        }
+
+        // 노드 레이블 추가 (항상 표시 옵션)
+        function addNodeLabel(lat, lng, text) {
+
+            if (!showNodeLabels) return;
+
+            const label = L.marker([lat, lng], {
+                interactive: false,
+                icon: L.divIcon({
+                    className: '',
+                    html: `
+                        <div style="
+                            background:rgba(255,255,255,.95);
+                            border:1px solid #cbd5e1;
+                            border-radius:6px;
+                            padding:2px 6px;
+                            font-size:11px;
+                            font-weight:600;
+                            white-space:nowrap;
+                            box-shadow:0 1px 4px rgba(0,0,0,.15);
+                        ">
+                            ${escapeHtml(text)}
+                        </div>
+                    `,
+                    iconAnchor: [0, -16]
+                })
+            });
+
+            markersLayer.addLayer(label);
         }
 
         /* ====== 필터링 (사이드바 리스트용) ====== */
@@ -694,6 +735,7 @@
             const filteredData = getFilteredData();
             const zoom = map.getZoom();
             const isDetailMode = zoom >= ZOOM_DETAIL_THRESHOLD;
+            showNodeLabels = isDetailMode;
 
             /* 필터 모드별 처리:
                - currentFilter === 'all' 이고 줌이 낮으면 → 마을만 표시
@@ -719,6 +761,12 @@
                 attachPopupAndEvents(marker, item);
                 markersLayer.addLayer(marker);
                 markers.push(marker);
+
+                addNodeLabel(
+                    item.lat,
+                    item.lng,
+                    item.name
+                );
             });
 
             /* 2. 조직/인물 표시 */
@@ -735,6 +783,13 @@
                     attachPopupAndEvents(marker, item);
                     markersLayer.addLayer(marker);
                     markers.push(marker);
+
+                    addNodeLabel(
+                        item.lat,
+                        item.lng,
+                        item.name
+                    );
+
                     return;
                 }
 
@@ -766,6 +821,12 @@
                 attachPopupAndEvents(marker, item);
                 markersLayer.addLayer(marker);
                 markers.push(marker);
+
+                addNodeLabel(
+                    pos[0],
+                    pos[1],
+                    item.name
+                );
 
             });
             drawRelationshipLines();
@@ -884,7 +945,7 @@
             }
 
             const popupContent = `
-                <div class="custom-popup w-64">
+                <div class="custom-popup max-w-[320px]">
                     <div class="text-[10px] text-slate-500 mb-1">${item.type}${item.relatedTown ? ` · 소속: ${escapeHtml(item.relatedTown)}` : ''}</div>
                     <div class="title">${escapeHtml(item.name)}</div>
                     <div class="meta"><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || '미상')} ~ ${escapeHtml(item.dissolved || '미상')}</div>
@@ -892,12 +953,12 @@
                     <div class="desc mb-2">${escapeHtml(item.description) || '<span class="italic text-slate-400">설명 없음</span>'}</div>
                     ${item.relatedOrg ? `<div class="text-[11px] text-purple-700 mb-1"><i class="fa-solid fa-sitemap"></i> 소속조직: ${escapeHtml(item.relatedOrg)}</div>` : ''}
                     ${relationsHtml}
-                    <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex justify-between items-end gap-2">
-                        <div>
+                    <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex flex-col gap-2">
+                        <div class="break-words overflow-hidden">
                             <strong>출처:</strong> ${escapeHtml(item.source || '자체조사')}<br>
                             <strong>작성자:</strong> ${escapeHtml(item.author || '연구팀')}
                         </div>
-                        <button onclick="askAIAboutById(${item.id})" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
+                        <button onclick="askAIAboutById(${item.id})" class="w-full bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> AI 해설
                         </button>
                     </div>
