@@ -155,43 +155,6 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-
-        /* 연도 슬라이더 썸 */
-        #yearThumbMin, #yearThumbMax {
-            transition: box-shadow 0.15s, transform 0.1s;
-        }
-        #yearThumbMin:hover, #yearThumbMax:hover {
-            transform: translateY(-50%) translateX(-50%) scale(1.2);
-        }
-        #yearThumbMin:active, #yearThumbMax:active {
-            transform: translateY(-50%) translateX(-50%) scale(1.1);
-            box-shadow: 0 0 0 4px rgba(30,58,138,0.18);
-        }
-
-        /* 다크맵 슬라이더 */
-        #darkMapSlider::-webkit-slider-thumb {
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: #6366f1;
-            border: 2px solid white;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-            cursor: pointer;
-            -webkit-appearance: none;
-        }
-        #darkMapSlider::-webkit-slider-runnable-track {
-            height: 6px; border-radius: 4px;
-            background: linear-gradient(to right, #fbbf24, #6366f1);
-        }
-        #darkMapSlider::-moz-range-thumb {
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: #6366f1; border: 2px solid white;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer;
-        }
-        #darkMapSlider::-moz-range-track {
-            height: 6px; border-radius: 4px;
-            background: linear-gradient(to right, #fbbf24, #6366f1);
-        }
     </style>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
@@ -288,38 +251,6 @@
                     </button>
                 </div>
 
-                <!-- ===== 연도 필터 ===== -->
-                <div class="mt-3 flex items-center gap-2">
-                    <button id="yearFilterToggle" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-all text-xs font-medium flex-shrink-0">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> 연도 필터
-                    </button>
-                    <span id="yearRangeLabel" class="text-[10px] text-slate-400">1860 – 2026</span>
-                </div>
-                <div id="yearSliderPanel" style="max-height:0; opacity:0; overflow:hidden; transition: max-height 0.3s ease, opacity 0.3s ease;">
-                    <div class="pt-3 pb-1 px-1">
-                        <div class="flex justify-between text-[11px] font-bold text-primary mb-2">
-                            <span id="yearLabelMin">1860</span>
-                            <span id="yearLabelMax">2026</span>
-                        </div>
-                        <!-- 커스텀 듀얼 슬라이더 -->
-                        <div id="yearRangeSlider" class="relative h-6 flex items-center select-none" style="cursor:pointer;">
-                            <!-- 트랙 배경 -->
-                            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-slate-200"></div>
-                            <!-- 선택 구간 채움 -->
-                            <div id="yearTrackFill" class="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-primary" style="left:0%; width:100%;"></div>
-                            <!-- 최소 썸 -->
-                            <div id="yearThumbMin" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg" style="left:0%;"></div>
-                            <!-- 최대 썸 -->
-                            <div id="yearThumbMax" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg" style="left:100%;"></div>
-                        </div>
-                        <div class="flex justify-between text-[9px] text-slate-400 mt-0.5 px-1">
-                            <span id="yearTickMin"></span>
-                            <span class="text-center text-slate-300">드래그하여 기간 설정</span>
-                            <span id="yearTickMax"></span>
-                        </div>
-                    </div>
-                </div>
-
                 <div id="selectionBanner" class="hidden mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs flex items-center justify-between">
                     <span class="text-blue-800"><i class="fa-solid fa-circle-nodes mr-1"></i> <b id="selectedTownLabel"></b> 관계망 보기 중</span>
                     <button onclick="clearSelection()" class="text-blue-600 hover:text-blue-800 hover:bg-blue-100 px-2 py-0.5 rounded">
@@ -347,33 +278,6 @@
             <div id="zoomHint" class="zoom-hint">
                 <i class="fa-solid fa-magnifying-glass-plus mr-1"></i>
                 지도를 더 확대하면 마을에 연결된 조직·인물이 펼쳐집니다
-            </div>
-
-            <!-- 다크맵 투명도 컨트롤 -->
-            <div id="darkMapControl" class="absolute top-12 right-3 z-[500] bg-white bg-opacity-95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg px-3 py-2.5" style="min-width:200px;">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                        <i class="fa-solid fa-moon text-indigo-500"></i> 지도 스타일
-                    </span>
-                    <label class="relative inline-flex items-center cursor-pointer select-none">
-                    <input type="checkbox" id="mapStyleToggle" class="sr-only peer" checked onchange="handleStyleToggle(this)">
-                    <div class="w-24 h-5 bg-slate-200 rounded-full peer peer-focus:ring-1 peer-focus:ring-indigo-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-[46px] after:transition-all peer-checked:bg-indigo-600 flex items-center justify-between px-2 text-[9px] font-bold text-slate-400">
-                        <span class="peer-checked:text-white z-10 pl-0.5">케플러식</span>
-                        <span class="peer-checked:text-slate-400 z-10 pr-1">일반식</span>
-                    </div>
-                </label>
-                    <span id="darkMapPctLabel" class="text-[10px] text-slate-400 font-mono">0%</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-sun text-amber-400 text-xs flex-shrink-0"></i>
-                    <input id="darkMapSlider" type="range" min="0" max="1" step="0.01" value="0"
-                        class="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
-                        style="accent-color:#6366f1;">
-                    <i class="fa-solid fa-moon text-indigo-500 text-xs flex-shrink-0"></i>
-                </div>
-                <div class="flex justify-between text-[9px] text-slate-400 mt-1">
-                    <span>밝음</span><span>Kepler 스타일</span>
-                </div>
             </div>
 
             <div class="map-legend">
@@ -423,8 +327,7 @@
         /* ====== 상태 ====== */
         let rawData = [];
         let map;
-        let townClusterLayer;      // 마을 클러스터
-        let markersLayer;          // 상세 마커 그룹
+        let townClusterLayer;      // 마을 클러스터\n        let markersLayer;          // 상세 마커 그룹
         let linesLayer;            // 네트워크 라인 그룹
         let markers = [];          // 마커 객체 캐시 (id 추적용)
         let currentFilter = 'all';
@@ -432,19 +335,6 @@
         let chatHistory = [];
         let isChatOpen = false;
         let selectedTownName = null;
-
-        /* ====== 연도 필터 상태 ====== */
-        let yearFilterMin = 1860;
-        let yearFilterMax = 2026;
-        let yearRangeMin = 1860;
-        let yearRangeMax = 2026;
-        let yearFilterEnabled = false;
-
-        /* ====== 지도 스타일 ====== */
-        let darkMapOpacity = 0;   // 0 = 완전 밝은 지도, 1 = 완전 어두운 지도
-        let lightTileLayer = null;
-        let darkTileLayer = null;
-        let useKeplerStyle = true;   // 기본값 = 케플러식
 
         /* 2계층 표시 임계 줌 */
         const ZOOM_DETAIL_THRESHOLD = 10;
@@ -617,23 +507,6 @@
 
         async function fetchLatestAndRender() {
             await loadGoogleSheetsData();
-            /* 연도 범위 자동 감지 */
-            const years = rawData.flatMap(d => [parseInt(d.founded), parseInt(d.dissolved)]).filter(y => y && y > 1000 && y < 2100);
-            if (years.length > 0) {
-                const detectedMin = Math.min(...years);
-                const detectedMax = Math.max(...years);
-                yearRangeMin = detectedMin;
-                yearRangeMax = detectedMax;
-                yearFilterMin = detectedMin;
-                yearFilterMax = detectedMax;
-                /* 슬라이더 레이블 갱신 */
-                const minLabel = document.getElementById('yearLabelMin');
-                const maxLabel = document.getElementById('yearLabelMax');
-                const rangeLabel = document.getElementById('yearRangeLabel');
-                if (minLabel) minLabel.textContent = yearFilterMin;
-                if (maxLabel) maxLabel.textContent = yearFilterMax;
-                if (rangeLabel) rangeLabel.textContent = `${yearRangeMin} – ${yearRangeMax}`;
-            }
             renderData();
         }
 
@@ -667,19 +540,9 @@
         /* ====== 초기화 ====== */
         window.addEventListener('DOMContentLoaded', async () => {
             map = L.map('map', { zoomControl: true }).setView([43.0, 132.0], 5);
-
-            /* 밝은 타일 (OpenStreetMap) */
-            lightTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors',
-                maxZoom: 18, minZoom: 2,
-                opacity: 1
-            }).addTo(map);
-
-            /* 어두운 타일 (CartoDB Dark Matter) — 초기 opacity 0 */
-            darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-                maxZoom: 19, minZoom: 2,
-                opacity: 0
+                maxZoom: 18, minZoom: 2
             }).addTo(map);
 
             townClusterLayer = L.markerClusterGroup({
@@ -706,15 +569,6 @@
             document.getElementById('searchInput').addEventListener('input', handleSearch);
             const filterBtns = document.querySelectorAll('.filter-btn');
             filterBtns.forEach(btn => btn.addEventListener('click', (e) => handleFilter(e, filterBtns)));
-
-            /* 연도 슬라이더 초기화 */
-            initYearSlider();
-
-            /* 지도 어두움 슬라이더 */
-            document.getElementById('darkMapSlider').addEventListener('input', function() {
-                darkMapOpacity = parseFloat(this.value);
-                applyMapStyle();
-            });
 
             /* 줌 변경시 지도 재구성 (2계층 토글) */
             map.on('zoomend', () => {
@@ -808,139 +662,6 @@
             markersLayer.addLayer(label);
         }
 
-        /* ====== 연도 슬라이더 ====== */
-        function initYearSlider() {
-            const slider = document.getElementById('yearRangeSlider');
-            const minThumb = document.getElementById('yearThumbMin');
-            const maxThumb = document.getElementById('yearThumbMax');
-            const minLabel = document.getElementById('yearLabelMin');
-            const maxLabel = document.getElementById('yearLabelMax');
-            const track = document.getElementById('yearTrackFill');
-            const toggleBtn = document.getElementById('yearFilterToggle');
-
-            function updateSlider() {
-                const range = yearRangeMax - yearRangeMin;
-                const minPct = ((yearFilterMin - yearRangeMin) / range) * 100;
-                const maxPct = ((yearFilterMax - yearRangeMin) / range) * 100;
-                minLabel.textContent = yearFilterMin;
-                maxLabel.textContent = yearFilterMax;
-                track.style.left = minPct + '%';
-                track.style.width = (maxPct - minPct) + '%';
-                minThumb.style.left = minPct + '%';
-                maxThumb.style.left = maxPct + '%';
-            }
-
-            function startDrag(e, isMin) {
-                e.preventDefault();
-                const sliderRect = slider.getBoundingClientRect();
-                const range = yearRangeMax - yearRangeMin;
-
-                function onMove(ev) {
-                    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-                    let pct = Math.max(0, Math.min(1, (clientX - sliderRect.left) / sliderRect.width));
-                    let val = Math.round(yearRangeMin + pct * range);
-                    if (isMin) {
-                        yearFilterMin = Math.min(val, yearFilterMax - 1);
-                    } else {
-                        yearFilterMax = Math.max(val, yearFilterMin + 1);
-                    }
-                    updateSlider();
-                    if (yearFilterEnabled) renderData();
-                }
-                function onUp() {
-                    document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('touchmove', onMove);
-                    document.removeEventListener('mouseup', onUp);
-                    document.removeEventListener('touchend', onUp);
-                }
-                document.addEventListener('mousemove', onMove);
-                document.addEventListener('touchmove', onMove, { passive: false });
-                document.addEventListener('mouseup', onUp);
-                document.addEventListener('touchend', onUp);
-            }
-
-            minThumb.addEventListener('mousedown', e => startDrag(e, true));
-            minThumb.addEventListener('touchstart', e => startDrag(e, true), { passive: false });
-            maxThumb.addEventListener('mousedown', e => startDrag(e, false));
-            maxThumb.addEventListener('touchstart', e => startDrag(e, false), { passive: false });
-
-            toggleBtn.addEventListener('click', function() {
-                yearFilterEnabled = !yearFilterEnabled;
-                const panel = document.getElementById('yearSliderPanel');
-                if (yearFilterEnabled) {
-                    toggleBtn.classList.add('bg-primary', 'text-white');
-                    toggleBtn.classList.remove('bg-white', 'text-slate-600');
-                    panel.style.maxHeight = '80px';
-                    panel.style.opacity = '1';
-                } else {
-                    toggleBtn.classList.remove('bg-primary', 'text-white');
-                    toggleBtn.classList.add('bg-white', 'text-slate-600');
-                    panel.style.maxHeight = '0';
-                    panel.style.opacity = '0';
-                }
-                renderData();
-            });
-
-            updateSlider();
-        }
-
-        /* ====== 지도 스타일 적용 ====== */
-        function applyMapStyle() {
-            if (useKeplerStyle) {
-                // 기존 방식 (케플러식)
-                if (lightTileLayer) lightTileLayer.setOpacity(1 - darkMapOpacity);
-                if (darkTileLayer) darkTileLayer.setOpacity(darkMapOpacity);
-            } else {
-                // 일반식
-                if (lightTileLayer) lightTileLayer.setOpacity(1);
-                if (darkTileLayer) darkTileLayer.setOpacity(darkMapOpacity);
-            }
-
-            /* 퍼센트 레이블 */
-            const pctLabel = document.getElementById('darkMapPctLabel');
-            if (pctLabel) pctLabel.textContent = Math.round(darkMapOpacity * 100) + '%';
-
-            /* 다크맵 컨트롤 패널 색상 반응형 */
-            const ctrl = document.getElementById('darkMapControl');
-            if (ctrl) {
-                if (darkMapOpacity > 0.5) {
-                    ctrl.style.background = 'rgba(15,23,42,0.90)';
-                    ctrl.style.borderColor = 'rgba(255,255,255,0.08)';
-                    ctrl.querySelectorAll('.text-slate-700, .text-slate-400, .text-slate-500').forEach(el => {
-                        el.style.color = darkMapOpacity > 0.7 ? '#94a3b8' : '';
-                    });
-                } else {
-                    ctrl.style.background = 'rgba(255,255,255,0.95)';
-                    ctrl.style.borderColor = '#e2e8f0';
-                }
-            }
-
-            /* 범례 / 줌힌트 색상 반응형 */
-            const mapLegend = document.querySelector('.map-legend');
-            const zoomHint = document.getElementById('zoomHint');
-            if (darkMapOpacity > 0.5) {
-                mapLegend.style.background = 'rgba(15,23,42,0.90)';
-                mapLegend.style.borderColor = 'rgba(255,255,255,0.1)';
-                mapLegend.style.color = '#cbd5e1';
-                mapLegend.querySelectorAll('.legend-row').forEach(r => r.style.color = '#94a3b8');
-                mapLegend.querySelector('.font-bold').style.color = '#e2e8f0';
-                zoomHint.style.background = 'rgba(2,6,23,0.90)';
-            } else {
-                mapLegend.style.background = 'rgba(255,255,255,0.96)';
-                mapLegend.style.borderColor = '#e2e8f0';
-                mapLegend.style.color = '#334155';
-                mapLegend.querySelectorAll('.legend-row').forEach(r => r.style.color = '');
-                mapLegend.querySelector('.font-bold').style.color = '#334155';
-                zoomHint.style.background = 'rgba(15,23,42,0.85)';
-            }
-        }
-
-        // ====== 케플러식 / 일반식 토글 ====== */
-        function handleStyleToggle(el) {
-            useKeplerStyle = el.checked;
-            applyMapStyle();
-        }
-
         /* ====== 필터링 (사이드바 리스트용) ====== */
         function getFilteredData() {
             return rawData.filter(item => {
@@ -950,20 +671,7 @@
                     item.orgType, item.nationality, item.job, item.relatedOrg
                 ].filter(Boolean).join(' ').toLowerCase();
                 const matchSearch = !currentSearch || haystack.includes(currentSearch);
-
-                /* 연도 필터 */
-                let matchYear = true;
-                if (yearFilterEnabled) {
-                    const founded = parseInt(item.founded) || null;
-                    const dissolved = parseInt(item.dissolved) || null;
-                    if (founded || dissolved) {
-                        const itemStart = founded || (dissolved ? dissolved - 50 : yearRangeMin);
-                        const itemEnd = dissolved || (founded ? founded + 50 : yearRangeMax);
-                        matchYear = itemStart <= yearFilterMax && itemEnd >= yearFilterMin;
-                    }
-                }
-
-                return matchType && matchSearch && matchYear;
+                return matchType && matchSearch;
             });
         }
 
