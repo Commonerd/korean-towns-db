@@ -293,13 +293,13 @@
                     <button id="yearFilterToggle" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-all text-xs font-medium flex-shrink-0">
                         <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> 연도 필터
                     </button>
-                    <span id="yearRangeLabel" class="text-[10px] text-slate-400">1860 – 1950</span>
+                    <span id="yearRangeLabel" class="text-[10px] text-slate-400">1860 – 2026</span>
                 </div>
                 <div id="yearSliderPanel" style="max-height:0; opacity:0; overflow:hidden; transition: max-height 0.3s ease, opacity 0.3s ease;">
                     <div class="pt-3 pb-1 px-1">
                         <div class="flex justify-between text-[11px] font-bold text-primary mb-2">
                             <span id="yearLabelMin">1860</span>
-                            <span id="yearLabelMax">1950</span>
+                            <span id="yearLabelMax">2026</span>
                         </div>
                         <!-- 커스텀 듀얼 슬라이더 -->
                         <div id="yearRangeSlider" class="relative h-6 flex items-center select-none" style="cursor:pointer;">
@@ -350,11 +350,18 @@
             </div>
 
             <!-- 다크맵 투명도 컨트롤 -->
-            <div id="darkMapControl" class="absolute top-12 right-3 z-[500] bg-white bg-opacity-95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg px-3 py-2.5" style="min-width:180px;">
+            <div id="darkMapControl" class="absolute top-12 right-3 z-[500] bg-white bg-opacity-95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg px-3 py-2.5" style="min-width:200px;">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                         <i class="fa-solid fa-moon text-indigo-500"></i> 지도 스타일
                     </span>
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                    <input type="checkbox" id="mapStyleToggle" class="sr-only peer" checked onchange="handleStyleToggle(this)">
+                    <div class="w-24 h-5 bg-slate-200 rounded-full peer peer-focus:ring-1 peer-focus:ring-indigo-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-[46px] after:transition-all peer-checked:bg-indigo-600 flex items-center justify-between px-2 text-[9px] font-bold text-slate-400">
+                        <span class="peer-checked:text-white z-10 pl-0.5">케플러식</span>
+                        <span class="peer-checked:text-slate-400 z-10 pr-1">일반식</span>
+                    </div>
+                </label>
                     <span id="darkMapPctLabel" class="text-[10px] text-slate-400 font-mono">0%</span>
                 </div>
                 <div class="flex items-center gap-2">
@@ -428,15 +435,16 @@
 
         /* ====== 연도 필터 상태 ====== */
         let yearFilterMin = 1860;
-        let yearFilterMax = getCurrentYear();
+        let yearFilterMax = 2026;
         let yearRangeMin = 1860;
-        let yearRangeMax = getCurrentYear();
+        let yearRangeMax = 2026;
         let yearFilterEnabled = false;
 
         /* ====== 지도 스타일 ====== */
         let darkMapOpacity = 0;   // 0 = 완전 밝은 지도, 1 = 완전 어두운 지도
         let lightTileLayer = null;
         let darkTileLayer = null;
+        let useKeplerStyle = true;   // 기본값 = 케플러식
 
         /* 2계층 표시 임계 줌 */
         const ZOOM_DETAIL_THRESHOLD = 10;
@@ -878,8 +886,15 @@
 
         /* ====== 지도 스타일 적용 ====== */
         function applyMapStyle() {
-            if (lightTileLayer) lightTileLayer.setOpacity(1 - darkMapOpacity);
-            if (darkTileLayer) darkTileLayer.setOpacity(darkMapOpacity);
+            if (useKeplerStyle) {
+                // 기존 방식 (케플러식)
+                if (lightTileLayer) lightTileLayer.setOpacity(1 - darkMapOpacity);
+                if (darkTileLayer) darkTileLayer.setOpacity(darkMapOpacity);
+            } else {
+                // 일반식
+                if (lightTileLayer) lightTileLayer.setOpacity(1);
+                if (darkTileLayer) darkTileLayer.setOpacity(darkMapOpacity);
+            }
 
             /* 퍼센트 레이블 */
             const pctLabel = document.getElementById('darkMapPctLabel');
@@ -918,6 +933,12 @@
                 mapLegend.querySelector('.font-bold').style.color = '#334155';
                 zoomHint.style.background = 'rgba(15,23,42,0.85)';
             }
+        }
+
+        // ====== 케플러식 / 일반식 토글 ====== */
+        function handleStyleToggle(el) {
+            useKeplerStyle = el.checked;
+            applyMapStyle();
         }
 
         /* ====== 필터링 (사이드바 리스트용) ====== */
