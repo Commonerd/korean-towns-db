@@ -1,1670 +1,1214 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>코리안타운 DB - 기억의 복원</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코리안타운 DB — 세계 속 한인 마을의 과거와 현재를 지도 위에</title>
+<meta name="description" content="코리안타운 DB는 세계 각지 한인 마을과 단체, 사람들의 기록을 하나의 데이터베이스로 잇는 재외동포 역사 인프라 프로젝트입니다.">
 
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Noto+Serif+KR:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Noto Sans KR"', 'sans-serif'],
-                        serif: ['"Noto Serif KR"', 'serif'],
-                    },
-                    colors: {
-                        primary: '#1e3a8a',
-                        secondary: '#b45309',
-                        bgLight: '#f8fafc',
-                    }
-                }
-            }
-        }
-    </script>
+<style>
+/* ============================================================
+   Design tokens
+   ============================================================ */
+:root{
+  --navy:#1e3a8a;
+  --navy-deep:#0f1c3f;
+  --amber:#b45309;
+  --amber-soft:#f2e9da;
+  --paper:#f8fafc;
+  --paper-warm:#faf7f1;
+  --ink:#1c2333;
+  --ink-soft:#55607a;
+  --ink-faint:#8b93a7;
+  --line:#e2e4ea;
 
-    <style>
-        body { background-color: #f8fafc; overflow: hidden; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  --town:#ea580c;
+  --org:#2563eb;
+  --person:#16a34a;
 
-        /* Leaflet 팝업 */
-        .leaflet-popup-content-wrapper { border-radius: 10px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18); }
-        .leaflet-popup-content { margin: 14px 16px; font-family: 'Noto Sans KR', sans-serif; }
-        .leaflet-popup-tip { box-shadow: none; }
-        .custom-popup .title { font-family: 'Noto Serif KR', serif; font-size: 1.05rem; font-weight: 700; color: #1e3a8a; margin-bottom: 4px; line-height: 1.3; }
-        .custom-popup .meta { font-size: 0.72rem; color: #64748b; margin-bottom: 8px; }
-        .custom-popup .desc { font-size: 0.82rem; color: #334155; line-height: 1.5; }
-        .custom-popup .chip {
-            display: inline-flex; align-items: center; gap: 4px;
-            font-size: 10px; padding: 2px 8px; border-radius: 999px;
-            border: 1px solid; margin-right: 4px; margin-bottom: 4px;
-            font-weight: 500;
-        }
+  --font-display:'Noto Serif KR', serif;
+  --font-body:'Noto Sans KR', sans-serif;
+  --font-mono:'JetBrains Mono', monospace;
 
-        /* 선택된 마을 네트워크 하이라이트 */
-        .selected-card {
-            border-color: #1e3a8a !important;
-            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%) !important;
-            box-shadow: 0 6px 16px rgba(30, 58, 138, 0.18) !important;
-        }
-        .network-child-card {
-            border-color: #cbd5e1 !important;
-            background-color: #fafafa !important;
-            margin-left: 1.25rem !important;
-            border-left: 4px solid #b45309 !important;
-        }
-
-        /* 마커 뱃지 (관련 노드 개수) */
-        .town-badge {
-            position: absolute;
-            top: -6px; right: -6px;
-            min-width: 20px; height: 20px;
-            background: #b45309;
-            color: white;
-            font-size: 10px;
-            font-weight: 700;
-            border-radius: 999px;
-            display: flex; align-items: center; justify-content: center;
-            padding: 0 5px;
-            border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            pointer-events: none;
-        }
-
-        /* 부유 노드(zoom-in 시 펼쳐지는 child 마커) 펄스 애니메이션 */
-        @keyframes floatPop {
-            0% { transform: scale(0); opacity: 0; }
-            70% { transform: scale(1.12); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .floating-marker > div {
-            animation: floatPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        /* 네트워크 연결선 */
-        .network-line {
-            stroke-dasharray: 5, 6;
-            animation: dashFlow 1.2s linear infinite;
-        }
-        @keyframes dashFlow {
-            to { stroke-dashoffset: -22; }
-        }
-
-        /* 필터 버튼 활성 상태 */
-        .filter-btn.active {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.25);
-        }
-
-        /* 줌 가이드 안내 (지도 상단) */
-        .zoom-hint {
-            position: absolute;
-            top: 12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85);
-            color: white;
-            font-size: 11px;
-            padding: 6px 14px;
-            border-radius: 999px;
-            backdrop-filter: blur(6px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            z-index: 500;
-            pointer-events: none;
-            transition: opacity 0.4s;
-            white-space: nowrap;
-        }
-
-        /* 지도 범례 */
-        .map-legend {
-            position: absolute;
-            bottom: 18px;
-            right: 12px;
-            background: rgba(255,255,255,0.96);
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 10px 12px;
-            font-size: 11px;
-            color: #334155;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
-            z-index: 500;
-            min-width: 150px;
-            transition: opacity 0.25s ease, transform 0.25s ease;
-            transform-origin: bottom right;
-        }
-        .map-legend .legend-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
-        .map-legend .legend-dot { width: 12px; height: 12px; border-radius: 999px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); flex-shrink: 0; }
-
-        /* ====== 패널 토글(사이드바 / 범례 / 지도스타일) 공통 ====== */
-
-        /* 좌측 사이드바 접기: 폭(데스크톱)/높이(모바일)를 0으로 줄이고 내용은 숨김 */
-        aside.sidebar-collapsed {
-            width: 0 !important;
-            min-width: 0 !important;
-            border-right-width: 0 !important;
-            border-bottom-width: 0 !important;
-            overflow: hidden !important;
-        }
-        @media (max-width: 767px) {
-            aside.sidebar-collapsed { height: 0 !important; }
-        }
-        aside.sidebar-collapsed > * { opacity: 0; pointer-events: none; }
-
-        /* 사이드바 열고 닫는 플로팅 버튼 (지도 위, 좌측 상단 — Leaflet 줌 컨트롤 아래쪽에 배치해 겹치지 않도록 함) */
-        .sidebar-toggle-btn {
-            position: absolute;
-            top: 96px;
-            left: 12px;
-            z-index: 900;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.97);
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #1e3a8a;
-            font-size: 15px;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.2s;
-        }
-        .sidebar-toggle-btn:hover { background: #f1f5f9; }
-        .sidebar-toggle-btn:active { transform: scale(0.94); }
-
-        /* 패널(범례/지도스타일) 자체에 붙는 작은 접기 버튼 */
-        .panel-collapse-btn {
-            width: 22px;
-            height: 22px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            font-size: 11px;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-            flex-shrink: 0;
-        }
-        .panel-collapse-btn:hover { background: #f1f5f9; color: #475569; }
-
-        /* 범례/지도스타일 패널이 접혔을 때: 본문 숨기고 작은 pill 형태로 축소 */
-        .map-panel.collapsed .panel-body { display: none; }
-        .map-panel.collapsed {
-            padding: 8px 10px !important;
-            min-width: 0 !important;
-            cursor: pointer;
-        }
-        .map-panel.collapsed .panel-header-label { font-size: 11px; }
-        .map-panel.collapsed .panel-collapse-btn i { transform: rotate(180deg); }
-
-        .map-panel { transition: padding 0.2s ease; }
-        .panel-header-row {
-            display: flex; align-items: center; justify-content: space-between; gap: 8px;
-        }
-
-        /* 카드 메타 칩 */
-        .meta-chip {
-            display: inline-flex; align-items: center; gap: 3px;
-            font-size: 10px; padding: 2px 7px;
-            border-radius: 999px; border: 1px solid;
-            font-weight: 500; margin-right: 3px; margin-top: 3px;
-        }
-
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        /* 연도 슬라이더 썸 */
-        #yearThumbMin, #yearThumbMax {
-            transition: box-shadow 0.15s, transform 0.1s;
-        }
-        #yearThumbMin:hover, #yearThumbMax:hover {
-            transform: translateY(-50%) translateX(-50%) scale(1.2);
-        }
-        #yearThumbMin:active, #yearThumbMax:active {
-            transform: translateY(-50%) translateX(-50%) scale(1.1);
-            box-shadow: 0 0 0 4px rgba(30,58,138,0.18);
-        }
-
-        /* 다크맵 슬라이더 */
-        #darkMapSlider::-webkit-slider-thumb {
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: #6366f1;
-            border: 2px solid white;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-            cursor: pointer;
-            -webkit-appearance: none;
-        }
-        #darkMapSlider::-webkit-slider-runnable-track {
-            height: 6px; border-radius: 4px;
-            background: linear-gradient(to right, #fbbf24, #6366f1);
-        }
-        #darkMapSlider::-moz-range-thumb {
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: #6366f1; border: 2px solid white;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer;
-        }
-        #darkMapSlider::-moz-range-track {
-            height: 6px; border-radius: 4px;
-            background: linear-gradient(to right, #fbbf24, #6366f1);
-        }
-    </style>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-
-<style id="orange-cluster-theme">
-/* Orange-only cluster colors: small -> large */
-.marker-cluster,
-.marker-cluster div {
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    border-radius: 999px !important;
-    background-clip: padding-box !important;
+  --radius:16px;
+  --radius-sm:10px;
+  --shadow-sm:0 2px 10px -4px rgba(15,28,63,.10);
+  --shadow-md:0 14px 34px -14px rgba(15,28,63,.24);
+  --container:1180px;
 }
 
-.marker-cluster-small {
-    background-color: rgba(251, 146, 60, 0.35) !important; /* light orange */
+/* ============================================================
+   Reset & base
+   ============================================================ */
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0;
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
 }
-.marker-cluster-small div {
-    background-color: #fb923c !important; /* orange-400 */
+img,svg{ max-width:100%; display:block; }
+a{ color:inherit; text-decoration:none; }
+ul{ margin:0; padding:0; list-style:none; }
+h1,h2,h3,p{ margin:0; }
+section{ scroll-margin-top:76px; }
+button{ font:inherit; cursor:pointer; }
+
+::selection{ background:var(--amber-soft); color:var(--navy-deep); }
+
+:focus-visible{
+  outline:2px solid var(--amber);
+  outline-offset:3px;
+  border-radius:4px;
 }
 
-.marker-cluster-medium {
-    background-color: rgba(234, 88, 12, 0.35) !important; /* orange */
-}
-.marker-cluster-medium div {
-    background-color: #ea580c !important; /* orange-600 */
-}
-
-.marker-cluster-large {
-    background-color: rgba(194, 65, 12, 0.38) !important; /* deep orange */
-}
-.marker-cluster-large div {
-    background-color: #c2410c !important; /* orange-700 */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:0.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.001ms !important;
+    scroll-behavior:auto !important;
+  }
 }
 
-.marker-cluster-xlarge {
-    background-color: rgba(124, 45, 18, 0.42) !important; /* brownish orange */
+.wrap{
+  max-width:var(--container);
+  margin:0 auto;
+  padding:0 28px;
 }
-.marker-cluster-xlarge div {
-    background-color: #7c2d12 !important; /* brown */
+
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  font-weight:600;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--amber);
+  display:inline-flex;
+  align-items:center;
+  gap:.55em;
+  margin-bottom:.9rem;
+}
+.eyebrow::before{
+  content:"";
+  width:18px; height:1px;
+  background:var(--amber);
+  display:inline-block;
+}
+
+.section-head{
+  max-width:640px;
+  margin-bottom:2.6rem;
+}
+.section-head h2{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:clamp(1.6rem, 2.6vw + 1rem, 2.35rem);
+  line-height:1.3;
+  letter-spacing:-.01em;
+  color:var(--navy-deep);
+}
+.section-head p{
+  margin-top:.9rem;
+  font-size:1rem;
+  line-height:1.75;
+  color:var(--ink-soft);
+}
+
+.section{ padding:96px 0; }
+.section--tint{ background:var(--paper-warm); }
+.section--border-top{ border-top:1px solid var(--line); }
+
+/* buttons */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.55em;
+  padding:.85em 1.5em;
+  border-radius:999px;
+  font-size:.92rem;
+  font-weight:600;
+  border:1px solid transparent;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+  white-space:nowrap;
+}
+.btn:hover{ transform:translateY(-2px); }
+.btn--primary{
+  background:var(--navy);
+  color:#fff;
+  box-shadow:var(--shadow-sm);
+}
+.btn--primary:hover{ background:var(--navy-deep); box-shadow:var(--shadow-md); }
+.btn--ghost{
+  background:transparent;
+  color:var(--navy);
+  border-color:var(--line);
+}
+.btn--ghost:hover{ border-color:var(--navy); background:#fff; }
+.btn--sm{ padding:.6em 1.1em; font-size:.82rem; }
+
+/* reveal-on-scroll */
+.reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+.reveal.is-visible{ opacity:1; transform:none; }
+
+/* ============================================================
+   Header
+   ============================================================ */
+.site-header{
+  position:sticky; top:0; z-index:100;
+  background:rgba(248,250,252,.86);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.site-header .wrap{
+  height:76px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+}
+.brand{ display:flex; align-items:center; gap:.7rem; }
+.brand-mark{
+  width:38px; height:38px; border-radius:11px;
+  background:var(--navy);
+  position:relative;
+  flex-shrink:0;
+}
+.brand-mark::before{
+  content:"";
+  position:absolute; inset:9px;
+  border:2px solid #fff;
+  border-radius:50%;
+}
+.brand-mark::after{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  width:6px; height:6px; border-radius:50%;
+  background:var(--amber);
+  transform:translate(-50%,-50%);
+}
+.brand-text h2{
+  font-family:var(--font-display);
+  font-size:1.02rem;
+  font-weight:700;
+  color:var(--navy-deep);
+  line-height:1.2;
+}
+.brand-text span{
+  display:block;
+  font-family:var(--font-mono);
+  font-size:.66rem;
+  letter-spacing:.05em;
+  color:var(--ink-faint);
+}
+
+.main-nav{ display:flex; align-items:center; gap:2.1rem; }
+.main-nav ul{ display:flex; gap:1.7rem; }
+.main-nav a{
+  font-size:.88rem;
+  font-weight:500;
+  color:var(--ink-soft);
+  transition:color .15s ease;
+  position:relative;
+}
+.main-nav a:hover{ color:var(--navy); }
+
+.nav-actions{ display:flex; align-items:center; gap:.8rem; }
+.nav-toggle{
+  display:none;
+  width:40px; height:40px;
+  align-items:center; justify-content:center;
+  background:transparent; border:1px solid var(--line); border-radius:10px;
+  color:var(--navy-deep);
+}
+
+@media (max-width:900px){
+  .main-nav ul{ display:none; }
+  .nav-toggle{ display:flex; }
+  .site-header.nav-open .main-nav ul{
+    display:flex;
+    flex-direction:column;
+    position:absolute;
+    top:76px; left:0; right:0;
+    background:#fff;
+    padding:1.2rem 28px;
+    gap:1rem;
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-md);
+  }
+}
+@media (max-width:560px){
+  .nav-actions .btn span.long{ display:none; }
+}
+
+/* ============================================================
+   Hero
+   ============================================================ */
+.hero{
+  padding:88px 0 70px;
+  position:relative;
+}
+.hero .wrap{
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:3.5rem;
+  align-items:center;
+}
+.hero h1{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:clamp(2.1rem, 3.6vw + 1rem, 3.5rem);
+  line-height:1.28;
+  letter-spacing:-.01em;
+  color:var(--navy-deep);
+}
+.hero h1 .accent{ color:var(--amber); }
+.hero p.lede{
+  margin-top:1.4rem;
+  font-size:1.05rem;
+  line-height:1.8;
+  color:var(--ink-soft);
+  max-width:52ch;
+}
+.hero-ctas{
+  margin-top:2.1rem;
+  display:flex;
+  flex-wrap:wrap;
+  gap:.9rem;
+}
+
+.stat-row{
+  margin-top:2.6rem;
+  display:flex;
+  gap:2.2rem;
+  flex-wrap:wrap;
+}
+.stat-row .stat b{
+  display:block;
+  font-family:var(--font-mono);
+  font-size:1.5rem;
+  color:var(--navy);
+  font-weight:600;
+}
+.stat-row .stat span{
+  font-size:.8rem;
+  color:var(--ink-faint);
+}
+
+.hero-visual{ position:relative; }
+.hero-visual figcaption{
+  margin-top:.9rem;
+  text-align:center;
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  color:var(--ink-faint);
+  letter-spacing:.03em;
+}
+.hero-legend{
+  display:flex;
+  justify-content:center;
+  gap:1.4rem;
+  margin-top:.5rem;
+  font-size:.74rem;
+  color:var(--ink-soft);
+}
+.hero-legend span{ display:inline-flex; align-items:center; gap:.4em; }
+.hero-legend i{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+.route-line{ stroke-dasharray:6 7; animation:dashFlow 1.8s linear infinite; }
+@keyframes dashFlow{ to{ stroke-dashoffset:-26; } }
+.node-pulse{ animation:pulse 2.6s ease-in-out infinite; transform-origin:center; }
+.node-pulse.delay{ animation-delay:.9s; }
+@keyframes pulse{
+  0%,100%{ transform:scale(1); opacity:1; }
+  50%{ transform:scale(1.18); opacity:.82; }
+}
+
+@media (max-width:900px){
+  .hero .wrap{ grid-template-columns:1fr; }
+  .hero-visual{ order:-1; max-width:420px; margin:0 auto 1rem; }
+}
+
+/* ============================================================
+   Intro / project
+   ============================================================ */
+.intro-grid{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:3.2rem;
+  align-items:start;
+}
+.intro-grid .section-head{ margin-bottom:1.6rem; }
+.intro-copy p{
+  font-size:1rem;
+  line-height:1.85;
+  color:var(--ink-soft);
+  margin-bottom:1.2rem;
+}
+.intro-copy p:last-child{ margin-bottom:0; }
+.intro-copy strong{ color:var(--navy-deep); font-weight:600; }
+
+.preview-card{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  padding:18px;
+  box-shadow:var(--shadow-sm);
+}
+.preview-map{
+  border-radius:var(--radius-sm);
+  aspect-ratio:4/3;
+  background:
+    radial-gradient(circle at 30% 35%, rgba(30,58,138,.08), transparent 45%),
+    repeating-linear-gradient(0deg, #eef1f6 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, #eef1f6 0 1px, transparent 1px 26px),
+    #f4f6f9;
+  position:relative;
+  overflow:hidden;
+}
+.pin{
+  position:absolute;
+  width:11px; height:11px; border-radius:50%;
+  border:2px solid #fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.22);
+}
+.preview-card .cap-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:14px;
+  font-size:.74rem;
+  color:var(--ink-faint);
+}
+.cap-legend{ display:flex; gap:.9rem; }
+.cap-legend span{ display:inline-flex; align-items:center; gap:.35em; }
+.cap-legend i{ width:7px; height:7px; border-radius:50%; display:inline-block; }
+
+@media (max-width:900px){
+  .intro-grid{ grid-template-columns:1fr; }
+}
+
+/* ============================================================
+   Features
+   ============================================================ */
+.feature-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1.4rem;
+}
+.feature-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:1.7rem 1.5rem;
+  transition:box-shadow .2s ease, transform .2s ease;
+}
+.feature-card:hover{ box-shadow:var(--shadow-md); transform:translateY(-3px); }
+.feature-card .icon{
+  width:42px; height:42px;
+  border-radius:11px;
+  background:var(--amber-soft);
+  color:var(--amber);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.05rem;
+  margin-bottom:1.1rem;
+}
+.feature-card h3{
+  font-size:1.02rem;
+  font-weight:700;
+  color:var(--navy-deep);
+  margin-bottom:.55rem;
+}
+.feature-card p{
+  font-size:.88rem;
+  line-height:1.65;
+  color:var(--ink-soft);
+}
+
+@media (max-width:960px){
+  .feature-grid{ grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width:560px){
+  .feature-grid{ grid-template-columns:1fr; }
+}
+
+/* ============================================================
+   Roadmap
+   ============================================================ */
+.roadmap-intro{
+  max-width:640px;
+  margin-bottom:2.6rem;
+  color:var(--ink-soft);
+  line-height:1.8;
+}
+.phase-track{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:0;
+  position:relative;
+}
+.phase-track::before{
+  content:"";
+  position:absolute;
+  top:24px; left:0; right:0;
+  height:1px;
+  background:var(--line);
+}
+.phase{
+  position:relative;
+  padding:0 1.1rem 0 0;
+}
+.phase:first-child{ padding-left:0; }
+.phase-num{
+  width:48px; height:48px;
+  border-radius:50%;
+  background:#fff;
+  border:2px solid var(--navy);
+  color:var(--navy);
+  font-family:var(--font-mono);
+  font-weight:600;
+  display:flex; align-items:center; justify-content:center;
+  position:relative; z-index:2;
+  margin-bottom:1.1rem;
+}
+.phase.is-upcoming .phase-num{
+  border-color:var(--line);
+  color:var(--ink-faint);
+  background:var(--paper-warm);
+}
+.phase h3{
+  font-size:1rem;
+  font-weight:700;
+  color:var(--navy-deep);
+  margin-bottom:.4rem;
+}
+.phase .tag{
+  display:inline-block;
+  font-family:var(--font-mono);
+  font-size:.68rem;
+  letter-spacing:.04em;
+  padding:.22em .65em;
+  border-radius:999px;
+  margin-bottom:.7rem;
+  background:var(--amber-soft);
+  color:var(--amber);
+}
+.phase.is-upcoming .tag{ background:#eef0f4; color:var(--ink-faint); }
+.phase p{
+  font-size:.85rem;
+  line-height:1.65;
+  color:var(--ink-soft);
+}
+
+@media (max-width:900px){
+  .phase-track{ grid-template-columns:1fr; gap:2.2rem; }
+  .phase-track::before{ display:none; }
+  .phase{ padding:0 0 0 0; }
+}
+
+/* ============================================================
+   Progress log
+   ============================================================ */
+.log-list{ max-width:760px; }
+.log-item{
+  display:grid;
+  grid-template-columns:120px 1fr;
+  gap:1.6rem;
+  padding:1.5rem 0;
+  border-top:1px solid var(--line);
+}
+.log-item:last-child{ border-bottom:1px solid var(--line); }
+.log-date{
+  font-family:var(--font-mono);
+  font-size:.82rem;
+  color:var(--ink-faint);
+  padding-top:.2rem;
+}
+.log-tag{
+  display:inline-block;
+  font-family:var(--font-mono);
+  font-size:.66rem;
+  padding:.2em .6em;
+  border-radius:6px;
+  margin-bottom:.55rem;
+  background:#eef2ff;
+  color:var(--org);
+}
+.log-tag.data{ background:#fff3e8; color:var(--town); }
+.log-tag.talk{ background:#eafaf0; color:var(--person); }
+.log-tag.next{ background:var(--amber-soft); color:var(--amber); }
+.log-body p{
+  font-size:.92rem;
+  line-height:1.7;
+  color:var(--ink-soft);
+}
+
+@media (max-width:640px){
+  .log-item{ grid-template-columns:1fr; gap:.4rem; }
+}
+
+/* ============================================================
+   Data & methodology
+   ============================================================ */
+.data-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:2.6rem;
+}
+.model-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:1.6rem 1.7rem;
+  margin-bottom:1rem;
+}
+.model-card .dot-row{ display:flex; align-items:center; gap:.6em; margin-bottom:.6rem; }
+.model-card .dot{ width:10px; height:10px; border-radius:50%; }
+.model-card h4{ font-size:.98rem; font-weight:700; color:var(--navy-deep); }
+.model-card .fields{
+  font-family:var(--font-mono);
+  font-size:.78rem;
+  color:var(--ink-soft);
+  line-height:1.9;
+}
+
+.source-list li{
+  display:flex;
+  justify-content:space-between;
+  gap:1rem;
+  padding:.95rem 0;
+  border-top:1px solid var(--line);
+  font-size:.92rem;
+}
+.source-list li:last-child{ border-bottom:1px solid var(--line); }
+.source-list a{ color:var(--navy); font-weight:500; }
+.source-list a:hover{ text-decoration:underline; }
+.source-list .src-tag{
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  color:var(--ink-faint);
+  white-space:nowrap;
+}
+.copyright-note{
+  margin-top:1.4rem;
+  padding:1rem 1.2rem;
+  border-left:3px solid var(--amber);
+  background:var(--amber-soft);
+  font-size:.85rem;
+  line-height:1.7;
+  color:var(--navy-deep);
+  border-radius:0 8px 8px 0;
+}
+
+@media (max-width:900px){
+  .data-grid{ grid-template-columns:1fr; }
+}
+
+/* ============================================================
+   Team
+   ============================================================ */
+.team-intro{
+  max-width:680px;
+  color:var(--ink-soft);
+  line-height:1.8;
+  margin-bottom:2.8rem;
+}
+.team-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1.6rem;
+}
+.team-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:1.9rem 1.7rem;
+}
+.team-card .avatar{
+  width:52px; height:52px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:1.1rem;
+  color:#fff;
+  margin-bottom:1.1rem;
+}
+.team-card h3{
+  font-size:1.08rem;
+  font-weight:700;
+  color:var(--navy-deep);
+}
+.team-card .role{
+  font-family:var(--font-mono);
+  font-size:.74rem;
+  color:var(--amber);
+  margin:.3rem 0 .9rem;
+}
+.team-card p{
+  font-size:.88rem;
+  line-height:1.7;
+  color:var(--ink-soft);
+  margin-bottom:1.1rem;
+}
+.team-tags{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.team-tags span{
+  font-size:.72rem;
+  padding:.3em .7em;
+  border-radius:999px;
+  background:var(--paper-warm);
+  color:var(--ink-soft);
+  border:1px solid var(--line);
+}
+
+@media (max-width:900px){
+  .team-grid{ grid-template-columns:1fr; }
+}
+
+/* ============================================================
+   Join / contact
+   ============================================================ */
+.join-panel{
+  background:var(--navy-deep);
+  border-radius:24px;
+  padding:3.4rem 3rem;
+  color:#fff;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:2.6rem;
+}
+.join-panel .section-head h2{ color:#fff; }
+.join-panel .section-head p{ color:rgba(255,255,255,.72); }
+.join-panel .eyebrow{ color:#f5c98c; }
+.join-panel .eyebrow::before{ background:#f5c98c; }
+
+.join-list li{
+  display:flex;
+  gap:.9rem;
+  padding:1rem 0;
+  border-top:1px solid rgba(255,255,255,.14);
+  font-size:.9rem;
+  line-height:1.65;
+  color:rgba(255,255,255,.85);
+}
+.join-list li:last-child{ border-bottom:1px solid rgba(255,255,255,.14); }
+.join-list i{ color:#f5c98c; margin-top:.25rem; }
+.join-list b{ color:#fff; display:block; margin-bottom:.15rem; }
+
+.join-ctas{ display:flex; flex-wrap:wrap; gap:.8rem; margin-top:1.6rem; }
+.join-ctas .btn--ghost{ color:#fff; border-color:rgba(255,255,255,.3); }
+.join-ctas .btn--ghost:hover{ background:rgba(255,255,255,.08); border-color:#fff; }
+.contact-note{
+  margin-top:1rem;
+  font-size:.76rem;
+  color:rgba(255,255,255,.5);
+}
+
+@media (max-width:900px){
+  .join-panel{ grid-template-columns:1fr; padding:2.4rem 1.7rem; }
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+.site-footer{
+  border-top:1px solid var(--line);
+  padding:52px 0 34px;
+}
+.footer-top{
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:2rem;
+  padding-bottom:2rem;
+  border-bottom:1px solid var(--line);
+}
+.footer-brand p{
+  margin-top:.8rem;
+  font-size:.84rem;
+  color:var(--ink-faint);
+  max-width:34ch;
+  line-height:1.6;
+}
+.footer-links{ display:flex; gap:3.4rem; flex-wrap:wrap; }
+.footer-links h5{
+  font-family:var(--font-mono);
+  font-size:.7rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  margin-bottom:.9rem;
+}
+.footer-links li{ margin-bottom:.55rem; font-size:.85rem; }
+.footer-links a:hover{ color:var(--navy); }
+.footer-bottom{
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:.6rem;
+  padding-top:1.6rem;
+  font-size:.78rem;
+  color:var(--ink-faint);
 }
 </style>
-
 </head>
+<body>
 
-<body class="h-screen flex flex-col text-slate-800">
-
-    <header class="bg-white border-b border-slate-200 shadow-sm z-20 relative flex-shrink-0">
-        <div class="px-4 py-3 flex justify-between items-center max-w-full">
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-earth-asia text-primary text-2xl"></i>
-                <div>
-                    <h1 class="font-serif text-xl font-bold text-primary leading-tight">코리안타운 DB</h1>
-                    <p class="text-xs text-slate-500 tracking-wider">기억의 복원 : 세계 속 한인 마을의 과거와 현재를 지도 위에</p>
-                </div>
-            </div>
-
-            <div class="hidden sm:flex items-center gap-4">
-                <div class="text-xs text-right bg-slate-100 p-2 rounded-md border border-slate-200">
-                    <span class="block font-bold text-slate-600 mb-1"><i class="fa-solid fa-users mr-1"></i> 연구팀</span>
-                    <span class="text-slate-500">김슬기, 박영훈, 송영화</span>
-                </div>
-                <button id="syncBtn" onclick="syncData()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm">
-                    <i class="fa-brands fa-google"></i> 실시간 동기화
-                </button>
-                <button onclick="toggleAIChat()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI 보조원
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-
-        <aside id="sidebar" class="sidebar-collapsed w-full md:w-96 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_15px_-3px_rgba(0,0,0,0.1)] h-[40vh] md:h-full transition-[width,min-width] duration-[250ms] ease-in-out">
-
-            <div class="p-4 border-b border-slate-100 bg-slate-50">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-bold text-slate-500 flex items-center gap-1.5">
-                        <i class="fa-solid fa-magnifying-glass text-primary"></i> 검색 &amp; 필터
-                    </span>
-                    <button id="sidebarCollapseBtn" onclick="toggleSidebar()" title="검색 패널 숨기기" class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors">
-                        <i class="fa-solid fa-angles-left"></i>
-                    </button>
-                </div>
-                <div class="relative mb-3">
-                    <input type="text" id="searchInput" placeholder="이름, 지역, 직업, 국적, 설명으로 검색..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow">
-                    <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400"></i>
-                </div>
-
-                <div class="flex gap-2 text-xs font-medium" id="filterContainer">
-                    <button class="filter-btn active px-3 py-1.5 rounded-full border border-primary bg-primary text-white transition-all" data-type="all">전체보기</button>
-                    <button class="filter-btn px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-all" data-type="마을">
-                        <i class="fa-solid fa-house text-orange-600 mr-1"></i> 마을
-                    </button>
-                    <button class="filter-btn px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-all" data-type="조직">
-                        <i class="fa-solid fa-users text-blue-600 mr-1"></i> 조직
-                    </button>
-                    <button class="filter-btn px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-all" data-type="인물">
-                        <i class="fa-solid fa-user text-green-600 mr-1"></i> 인물
-                    </button>
-                </div>
-
-                <!-- ===== 연도 필터 ===== -->
-                <div class="mt-3 flex items-center gap-2">
-                    <button id="yearFilterToggle" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 transition-all text-xs font-medium flex-shrink-0">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> 연도 필터
-                    </button>
-                    <span id="yearRangeLabel" class="text-[10px] text-slate-400">1860 – 2026</span>
-                </div>
-                <div id="yearSliderPanel" style="max-height:0; opacity:0; overflow:hidden; transition: max-height 0.3s ease, opacity 0.3s ease;">
-                    <div class="pt-3 pb-1 px-1">
-                        <div class="flex justify-between text-[11px] font-bold text-primary mb-2">
-                            <span id="yearLabelMin">1860</span>
-                            <span id="yearLabelMax">2026</span>
-                        </div>
-                        <!-- 커스텀 듀얼 슬라이더 -->
-                        <div id="yearRangeSlider" class="relative h-6 flex items-center select-none" style="cursor:pointer;">
-                            <!-- 트랙 배경 -->
-                            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-slate-200"></div>
-                            <!-- 선택 구간 채움 -->
-                            <div id="yearTrackFill" class="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-primary" style="left:0%; width:100%;"></div>
-                            <!-- 최소 썸 -->
-                            <div id="yearThumbMin" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg" style="left:0%;"></div>
-                            <!-- 최대 썸 -->
-                            <div id="yearThumbMax" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg" style="left:100%;"></div>
-                        </div>
-                        <div class="flex justify-between text-[9px] text-slate-400 mt-0.5 px-1">
-                            <span id="yearTickMin"></span>
-                            <span class="text-center text-slate-300">드래그하여 기간 설정</span>
-                            <span id="yearTickMax"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="selectionBanner" class="hidden mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs flex items-center justify-between">
-                    <span class="text-blue-800"><i class="fa-solid fa-circle-nodes mr-1"></i> <b id="selectedTownLabel"></b> 관계망 보기 중</span>
-                    <button onclick="clearSelection()" class="text-blue-600 hover:text-blue-800 hover:bg-blue-100 px-2 py-0.5 rounded">
-                        <i class="fa-solid fa-xmark"></i> 해제
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto p-2" id="dataList">
-                <div class="p-8 text-center text-slate-400 text-sm flex flex-col gap-2 justify-center items-center h-full">
-                    <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary"></i>
-                    DB 데이터를 불러오는 중...
-                </div>
-            </div>
-
-            <div class="p-2 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 flex justify-between items-center">
-                <span id="resultCount">총 0건</span>
-                <span>DB v1.1 (Phase 2)</span>
-            </div>
-        </aside>
-
-        <div class="flex-1 relative h-[60vh] md:h-full">
-            <div id="map" class="absolute inset-0 z-0"></div>
-
-            <!-- 사이드바(검색 패널) 토글 버튼: 항상 지도 좌상단에 떠있음 -->
-            <button id="sidebarToggleBtn" onclick="toggleSidebar()" title="검색 패널 열기/닫기" class="sidebar-toggle-btn">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-
-            <div id="zoomHint" class="zoom-hint">
-                <i class="fa-solid fa-magnifying-glass-plus mr-1"></i>
-                지도를 더 확대하면 마을에 연결된 조직·인물이 펼쳐집니다
-            </div>
-
-            <!-- 다크맵 투명도 컨트롤 -->
-            <div id="darkMapControl" class="map-panel collapsed absolute top-3 right-3 z-[500] bg-white bg-opacity-95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg px-3 py-2.5" style="min-width:180px;">
-                <div class="panel-header-row mb-2">
-                    <span class="panel-header-label text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                        <i class="fa-solid fa-moon text-indigo-500"></i> 지도 스타일
-                    </span>
-                    <div class="flex items-center gap-1.5">
-                        <span id="darkMapPctLabel" class="text-[10px] text-slate-400 font-mono">0%</span>
-                        <span class="panel-collapse-btn" onclick="togglePanel('darkMapControl')" title="지도 스타일 패널 접기/펼치기">
-                            <i class="fa-solid fa-chevron-up"></i>
-                        </span>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-sun text-amber-400 text-xs flex-shrink-0"></i>
-                        <input id="darkMapSlider" type="range" min="0" max="1" step="0.01" value="0"
-                            class="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
-                            style="accent-color:#6366f1;">
-                        <i class="fa-solid fa-moon text-indigo-500 text-xs flex-shrink-0"></i>
-                    </div>
-                    <div class="flex justify-between text-[9px] text-slate-400 mt-1">
-                        <span>밝음</span><span>어두움</span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="mapLegend" class="map-panel collapsed map-legend">
-                <div class="panel-header-row mb-1.5">
-                    <span class="panel-header-label font-bold text-slate-700 text-[11px]"><i class="fa-solid fa-map-location-dot mr-1 text-primary"></i> 범례</span>
-                    <span class="panel-collapse-btn" onclick="togglePanel('mapLegend')" title="범례 접기/펼치기">
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </span>
-                </div>
-                <div class="panel-body">
-                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c"></span> 마을 (Town)</div>
-                    <div class="legend-row"><span class="legend-dot" style="background:#2563eb"></span> 조직 (Organization)</div>
-                    <div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> 인물 (Person)</div>
-                    <div class="legend-row text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200" style="font-size:10px;">
-                        <i class="fa-solid fa-circle-info"></i> 점선 = 소속
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <div id="aiChatPanel" class="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-[-10px_0_20px_rgba(0,0,0,0.1)] transform translate-x-full transition-transform duration-300 z-[1000] flex flex-col border-l border-slate-200">
-        <div class="px-4 py-3 bg-purple-600 text-white flex justify-between items-center shadow-sm z-10">
-            <div class="flex items-center gap-2 font-bold">
-                <i class="fa-solid fa-robot"></i>
-                <span>AI 연구 보조원</span>
-            </div>
-            <button onclick="toggleAIChat()" class="hover:bg-purple-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <div id="chatBody" class="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col scroll-smooth"></div>
-
-        <div class="p-3 border-t border-slate-200 bg-white">
-            <div class="relative">
-                <input type="text" id="chatInput" onkeypress="handleChatSubmit(event)" placeholder="역사적 배경이나 추가 정보를 물어보세요..." class="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow bg-slate-50">
-                <button onclick="handleChatSubmit()" class="absolute right-2 top-2 w-8 h-8 bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white rounded flex items-center justify-center transition-colors">
-                    <i class="fa-solid fa-paper-plane text-xs"></i>
-                </button>
-            </div>
-            <div class="text-[10px] text-center text-slate-400 mt-2">
-                Gemini AI가 제공하는 정보는 참고용으로 교차 검증이 필요합니다.
-            </div>
-        </div>
+<header class="site-header" id="siteHeader">
+  <div class="wrap">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div class="brand-text">
+        <h2>코리안타운 DB</h2>
+        <span>KOREAN DIASPORA RESEARCH TEAM</span>
+      </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="./env-config.js"></script>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="#project">프로젝트</a></li>
+        <li><a href="#features">기능</a></li>
+        <li><a href="#roadmap">로드맵</a></li>
+        <li><a href="#log">진행기록</a></li>
+        <li><a href="#data">데이터</a></li>
+        <li><a href="#team">연구팀</a></li>
+        <li><a href="#join">참여하기</a></li>
+      </ul>
+    </nav>
 
-    <script>
-        /* ====== 상태 ====== */
-        let rawData = [];
-        let map;
-        let townClusterLayer;      // 마을 클러스터
-        let markersLayer;          // 상세 마커 그룹
-        let linesLayer;            // 네트워크 라인 그룹
-        let markers = [];          // 마커 객체 캐시 (id 추적용)
-        let currentFilter = 'all';
-        let currentSearch = '';
-        let chatHistory = [];
-        let isChatOpen = false;
-        let selectedTownName = null;
+    <div class="nav-actions">
+      <a class="btn btn--primary btn--sm" href="https://korean-towns-db.vercel.app/map" target="_blank" rel="noopener">
+        <i class="fa-solid fa-map-location-dot"></i><span class="long">&nbsp;지도 보기</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="메뉴 열기" aria-expanded="false">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </div>
+</header>
 
-        /* ====== 연도 필터 상태 ====== */
-        let yearFilterMin = 1860;
-        let yearFilterMax = 2026;
-        let yearRangeMin = 1860;
-        let yearRangeMax = 2026;
-        let yearFilterEnabled = false;
+<main>
 
-        /* ====== 지도 스타일 ====== */
-        let darkMapOpacity = 0;   // 0 = 완전 밝은 지도, 1 = 완전 어두운 지도
-        let lightTileLayer = null;
-        let darkTileLayer = null;
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="hero">
+    <div class="wrap">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">재외동포 역사 데이터베이스 · Digital Humanities</p>
+        <h1>세계 속 한인 마을의<br><span class="accent">과거와 현재</span>를<br>지도 위에</h1>
+        <p class="lede">코리안타운 DB는 지도를 그리는 프로젝트가 아니라, 세계 곳곳에 흩어진 한인 마을과 단체, 사람들의 기록을 하나의 데이터베이스로 잇는 작업입니다. 연구자 세 명이 매달 조금씩 모아온 사료가, 지도 위에서 다시 연결됩니다.</p>
+        <div class="hero-ctas">
+          <a class="btn btn--primary" href="https://korean-towns-db.vercel.app/map" target="_blank" rel="noopener">
+            지도로 보기 <i class="fa-solid fa-arrow-right"></i>
+          </a>
+          <a class="btn btn--ghost" href="#team">연구팀 소개 보기</a>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><b>140+</b><span>확보된 마을·단체 데이터</span></div>
+          <div class="stat"><b>1860–</b><span>연구 대상 시기 (근현대)</span></div>
+          <div class="stat"><b>3</b><span>참여 연구자</span></div>
+        </div>
+      </div>
 
-        /* 2계층 표시 임계 줌 */
-        const ZOOM_DETAIL_THRESHOLD = 10;
+      <figure class="hero-visual reveal">
+        <svg viewBox="0 0 560 420" role="img" aria-label="한반도에서 연해주, 미주 서부로 이어지는 1단계 데이터 연결망과, 일본·중국으로 이어질 예정인 다음 단계를 보여주는 도식">
+          <path class="route-line" d="M150,235 L378,96" fill="none" stroke="var(--navy)" stroke-width="2"/>
+          <path class="route-line" d="M150,235 L392,352" fill="none" stroke="var(--navy)" stroke-width="2"/>
+          <path d="M150,235 L486,192" fill="none" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 6"/>
+          <path d="M150,235 L486,300" fill="none" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 6"/>
 
-        const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
+          <circle class="node-pulse" cx="378" cy="96" r="23" fill="var(--amber)"/>
+          <text x="378" y="100" text-anchor="middle" font-family="Noto Sans KR" font-size="12" font-weight="700" fill="#fff">연해주</text>
 
-        /* ====== CSV 파서 ====== */
-        function csvToArray(text) {
-            let c = '', r = [];
-            let q = false;
-            let row = [''];
-            for (let i = 0; i < text.length; i++) {
-                c = text[i];
-                let next = text[i + 1];
-                if (c === '"') {
-                    if (q && next === '"') { row[row.length - 1] += '"'; i++; }
-                    else { q = !q; }
-                } else if (c === ',') {
-                    if (q) row[row.length - 1] += c;
-                    else row.push('');
-                } else if (c === '\r' || c === '\n') {
-                    if (c === '\r' && next === '\n') i++;
-                    if (q) row[row.length - 1] += c;
-                    else { r.push(row); row = ['']; }
-                } else {
-                    row[row.length - 1] += c;
-                }
-            }
-            if (row.length > 1 || row[0] !== '') r.push(row);
-            return r;
+          <circle class="node-pulse delay" cx="392" cy="352" r="23" fill="var(--amber)"/>
+          <text x="392" y="356" text-anchor="middle" font-family="Noto Sans KR" font-size="12" font-weight="700" fill="#fff">미주서부</text>
+
+          <circle cx="486" cy="192" r="17" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4"/>
+          <text x="486" y="196" text-anchor="middle" font-family="Noto Sans KR" font-size="11" fill="#8b93a7">일본</text>
+
+          <circle cx="486" cy="300" r="17" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4"/>
+          <text x="486" y="304" text-anchor="middle" font-family="Noto Sans KR" font-size="11" fill="#8b93a7">중국</text>
+
+          <circle cx="150" cy="235" r="30" fill="var(--navy)"/>
+          <text x="150" y="240" text-anchor="middle" font-family="Noto Serif KR" font-size="13" font-weight="700" fill="#fff">한반도</text>
+        </svg>
+        <figcaption>PHASE 01 데이터 연결망 · 진행 중인 지역과 다음 단계</figcaption>
+        <div class="hero-legend">
+          <span><i style="background:var(--amber)"></i>진행 중</span>
+          <span><i style="background:#c7cdda"></i>다음 단계 예정</span>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ PROJECT / INTRO ============ -->
+  <section class="section section--border-top" id="project">
+    <div class="wrap intro-grid">
+      <div>
+        <div class="section-head reveal">
+          <p class="eyebrow">프로젝트 소개</p>
+          <h2>데이터가 지도보다 먼저입니다</h2>
+        </div>
+        <div class="intro-copy reveal">
+          <p>해외 한인 마을에 관한 정보는 지금까지 논문과 사료집, 신문, 회고록 속에 따로따로 흩어져 있었습니다. <strong>코리안타운 DB</strong>는 이 기록들을 마을·조직·인물이라는 하나의 구조로 모아, 연구자와 교육기관, 재외동포 사회가 함께 검색하고 인용할 수 있는 공공 데이터 인프라를 만듭니다.</p>
+          <p>지도는 이 데이터를 보여주는 하나의 창일 뿐입니다. 실제 자산은 시간이 지날수록 두꺼워지는 데이터베이스 그 자체이며, 앞으로 연구와 교육, 전시, 오픈데이터로 계속 재사용될 것입니다.</p>
+        </div>
+      </div>
+
+      <div class="preview-card reveal">
+        <div class="preview-map">
+          <span class="pin" style="left:28%; top:32%; background:var(--town);"></span>
+          <span class="pin" style="left:52%; top:22%; background:var(--org);"></span>
+          <span class="pin" style="left:64%; top:55%; background:var(--town);"></span>
+          <span class="pin" style="left:40%; top:64%; background:var(--person);"></span>
+          <span class="pin" style="left:78%; top:38%; background:var(--person);"></span>
+          <span class="pin" style="left:20%; top:70%; background:var(--org);"></span>
+        </div>
+        <div class="cap-row">
+          <span>지도 화면 미리보기 (예시)</span>
+          <div class="cap-legend">
+            <span><i style="background:var(--town)"></i>마을</span>
+            <span><i style="background:var(--org)"></i>조직</span>
+            <span><i style="background:var(--person)"></i>인물</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
+  <section class="section section--tint" id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">무엇을 할 수 있나요</p>
+        <h2>지도 하나로, 세 단계의 기록을 봅니다</h2>
+        <p>플랫폼보다 데이터가 먼저라는 원칙 아래, 협업과 검증을 돕는 기능부터 만들었습니다.</p>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card reveal">
+          <div class="icon"><i class="fa-solid fa-sitemap"></i></div>
+          <h3>마을 → 조직 → 인물</h3>
+          <p>지도를 확대하면 마을에 속한 단체와 사람이 자연스럽게 펼쳐집니다. 메인은 언제나 마을입니다.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+          <h3>있는 그대로의 불확실함</h3>
+          <p>정확한 번지수부터 대략적인 지역까지, 위치정확도 필드로 사료의 한계를 감추지 않고 보여줍니다.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <h3>시간을 넘겨보는 지도</h3>
+          <p>연도 필터와 다크모드로 마을이 생기고 사라진 흐름을 직접 훑어봅니다.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="icon"><i class="fa-solid fa-users-gear"></i></div>
+          <h3>구글시트로 협업</h3>
+          <p>개발 지식 없이도 시트에 한 줄을 더하면 지도에 바로 반영됩니다. 연구자 누구나 참여할 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROADMAP ============ -->
+  <section class="section" id="roadmap">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">데이터 수집 로드맵</p>
+        <h2>좁게 시작해, 단계적으로 넓힙니다</h2>
+      </div>
+      <p class="roadmap-intro reveal">러시아, 미국, 일본, 식민지기와 현대를 한꺼번에 다루지 않습니다. 우선 러시아 극동과 미국 서부부터 채우고, 이후 단계적으로 넓혀갑니다.</p>
+
+      <div class="phase-track">
+        <div class="phase reveal">
+          <div class="phase-num">01</div>
+          <span class="tag">진행 중</span>
+          <h3>러시아 극동 · 미국 서부</h3>
+          <p>1906년 연해주 한인마을 분포도, 1922년 조선인촌락 및 인구조사서, 캘리포니아 센서스 자료를 중심으로 마을과 조직 데이터를 채우고 있습니다.</p>
+        </div>
+        <div class="phase is-upcoming reveal">
+          <div class="phase-num">02</div>
+          <span class="tag">예정</span>
+          <h3>일본</h3>
+          <p>식민지기 도항과 정착 관련 사료를 중심으로 다음 지역을 준비합니다.</p>
+        </div>
+        <div class="phase is-upcoming reveal">
+          <div class="phase-num">03</div>
+          <span class="tag">예정</span>
+          <h3>중국</h3>
+          <p>만주 지역 이주와 정착 기록을 축적할 예정입니다.</p>
+        </div>
+        <div class="phase is-upcoming reveal">
+          <div class="phase-num">04</div>
+          <span class="tag">예정</span>
+          <h3>유럽</h3>
+          <p>비교적 최근 형성된 유럽 내 한인 공동체까지 범위를 넓힙니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROGRESS LOG ============ -->
+  <section class="section section--tint" id="log">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">진행 기록</p>
+        <h2>만든 지 두 달, 조금씩 쌓이는 중입니다</h2>
+      </div>
+
+      <div class="log-list">
+        <div class="log-item reveal">
+          <div class="log-date">2026.06.09</div>
+          <div class="log-body">
+            <span class="log-tag data">데이터모델</span>
+            <p>마을·조직·인물 3단계 구조를 정하고, 코리안타운 DB 첫 화면을 열었습니다.</p>
+          </div>
+        </div>
+        <div class="log-item reveal">
+          <div class="log-date">2026.07.09</div>
+          <div class="log-body">
+            <span class="log-tag data">기능</span>
+            <p>위치정확도, 연도 필터, 다크모드, 2계층 클러스터링을 더하고 확보 데이터가 140건을 넘었습니다.</p>
+          </div>
+        </div>
+        <div class="log-item reveal">
+          <div class="log-date">2026.07.09</div>
+          <div class="log-body">
+            <span class="log-tag talk">발표</span>
+            <p>인천 송도에서 열린 세계역사학회(WHA)에서 연구를 발표하고, 국사편찬위원회 자료 이용 허가 절차를 시작했습니다.</p>
+          </div>
+        </div>
+        <div class="log-item reveal">
+          <div class="log-date">2026.08.13</div>
+          <div class="log-body">
+            <span class="log-tag next">예정</span>
+            <p>세 번째 모임 — 운테르베르거 지도 데이터 정리와 랜딩페이지 다듬기가 예정되어 있습니다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DATA & METHODOLOGY ============ -->
+  <section class="section" id="data">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">데이터와 방법론</p>
+        <h2>출처가 곧 데이터의 중심입니다</h2>
+        <p>같은 마을도 일본·러시아·한국 자료마다 이름이 다릅니다. 그래서 모든 항목은 출처를 기준으로 서로 연결됩니다.</p>
+      </div>
+
+      <div class="data-grid">
+        <div>
+          <div class="model-card reveal">
+            <div class="dot-row"><span class="dot" style="background:var(--town)"></span><h4>마을 Town</h4></div>
+            <div class="fields">이름 · 설명 · 인구 · 성립/소멸연도<br>위도·경도 · 위치정확도 · 출처</div>
+          </div>
+          <div class="model-card reveal">
+            <div class="dot-row"><span class="dot" style="background:var(--org)"></span><h4>조직 Organization</h4></div>
+            <div class="fields">이름 · 종류 · 설립/해체연도<br>관련 마을 · 출처</div>
+          </div>
+          <div class="model-card reveal">
+            <div class="dot-row"><span class="dot" style="background:var(--person)"></span><h4>인물 Person</h4></div>
+            <div class="fields">이름 · 국적 · 직업<br>관련 마을 · 관련 조직 · 출처</div>
+          </div>
+        </div>
+
+        <div class="reveal">
+          <ul class="source-list">
+            <li>
+              <a href="https://www.data.go.kr/data/15070379/fileData.do" target="_blank" rel="noopener">독립기념관 해외사적지 데이터셋</a>
+              <span class="src-tag">data.go.kr</span>
+            </li>
+            <li>
+              <a href="https://db.history.go.kr/id/haf_012_0330" target="_blank" rel="noopener">국사편찬위원회 한국사데이터베이스</a>
+              <span class="src-tag">db.history.go.kr</span>
+            </li>
+            <li>
+              <a href="https://www.okpedia.kr/" target="_blank" rel="noopener">세계한민족문화대전</a>
+              <span class="src-tag">okpedia.kr</span>
+            </li>
+            <li>
+              <a href="https://www.prlib.ru/item/686907" target="_blank" rel="noopener">러시아국립도서관 · 연해주 한인마을 분포도(1906)</a>
+              <span class="src-tag">prlib.ru</span>
+            </li>
+            <li>
+              <a href="https://www.hansang.net/businessInfo/businessCompanyList.do" target="_blank" rel="noopener">한상넷 동포기업정보</a>
+              <span class="src-tag">hansang.net</span>
+            </li>
+          </ul>
+
+          <div class="copyright-note">
+            모든 자료는 출처를 명확히 표기합니다. 독립기념관 공공데이터는 상업적 이용 제한이 없으며, 국사편찬위원회 자료는 상업적 이용에 대한 정식 허가를 별도로 협의하고 있습니다.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TEAM ============ -->
+  <section class="section section--tint" id="team">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">연구팀</p>
+        <h2>성균관대 대학원 연구자 세 명이 모였습니다</h2>
+      </div>
+      <p class="team-intro reveal">2026년 6월, 각자의 학위논문과 연구를 우선하되 한 달에 한 번 모여 데이터를 더하기로 했습니다. <strong>코리안 디아스포라 연구팀</strong>이라는 이름은 그렇게 생겼습니다.</p>
+
+      <div class="team-grid">
+        <div class="team-card reveal">
+          <div class="avatar" style="background:var(--navy);">송</div>
+          <h3>송영화</h3>
+          <p class="role">기획 · 데이터 총괄</p>
+          <p>러시아 연해주 한인마을(미하일로브카 일대)을 연구하며, 프로젝트 전체 기획과 학술논문 집필, 대외 협의를 맡고 있습니다. 2026년 세계역사학회(WHA) 인천 대회에서 관련 연구를 발표했습니다.</p>
+          <div class="team-tags">
+            <span>연해주 한인마을</span><span>WHA 2026 발표</span><span>논문 집필 총괄</span>
+          </div>
+        </div>
+
+        <div class="team-card reveal">
+          <div class="avatar" style="background:var(--amber);">김</div>
+          <h3>김슬기</h3>
+          <p class="role">사료 · 기관 협력</p>
+          <p>사할린 한인마을 사료를 정리하며, 근대 시기 인물들의 러시아·일본 이동 경로를 연구합니다. 국사편찬위원회와의 자료 이용 협의를 담당합니다.</p>
+          <div class="team-tags">
+            <span>사할린 한인마을</span><span>AES 학회 발표 예정</span><span>국편 협력</span>
+          </div>
+        </div>
+
+        <div class="team-card reveal">
+          <div class="avatar" style="background:var(--person);">박</div>
+          <h3>박영훈</h3>
+          <p class="role">미주 데이터 · 조직 분류</p>
+          <p>하와이와 미국 본토의 한인 이주사(1900년대~1950년대)로 박사논문을 준비하며, 캘리포니아 센서스 기반 마을 데이터와 재미 한인단체 정보를 정리합니다.</p>
+          <div class="team-tags">
+            <span>하와이·미주 이주사</span><span>박사과정</span><span>캘리포니아 센서스</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ JOIN / CONTACT ============ -->
+  <section class="section" id="join">
+    <div class="wrap">
+      <div class="join-panel reveal">
+        <div>
+          <p class="eyebrow">참여하기</p>
+          <h2>함께 채워갈 분을 찾습니다</h2>
+          <p>연구와 본업에 지장을 주지 않는 선에서, 작지만 꾸준한 협업을 이어가고 있습니다.</p>
+          <div class="join-ctas">
+            <a class="btn btn--primary" href="https://korean-towns-db.vercel.app/map" target="_blank" rel="noopener">지도 보기</a>
+            <a class="btn btn--ghost" href="mailto:contact@koreantown-db.example">문의하기</a>
+          </div>
+          <p class="contact-note">* 연락처는 실제 팀 이메일 주소로 교체해 주세요.</p>
+        </div>
+
+        <ul class="join-list">
+          <li>
+            <i class="fa-solid fa-book-bookmark"></i>
+            <div><b>사료 · 데이터 제보</b>지역 전문가와 사료 소장자의 제보를 기다립니다.</div>
+          </li>
+          <li>
+            <i class="fa-solid fa-graduation-cap"></i>
+            <div><b>연구 · 교육 활용</b>인용, 데이터 다운로드, 공동연구 문의를 환영합니다.</div>
+          </li>
+          <li>
+            <i class="fa-solid fa-seedling"></i>
+            <div><b>후원 준비 중</b>지속가능한 운영을 위한 크라우드펀딩을 준비하고 있습니다.</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div class="brand-text">
+            <h2>코리안타운 DB</h2>
+            <span>KOREAN DIASPORA RESEARCH TEAM</span>
+          </div>
+        </div>
+        <p>Mapping the Global Korean Diaspora, One Community at a Time. 이 페이지는 진행 중인 연구 프로젝트를 소개합니다.</p>
+      </div>
+
+      <div class="footer-links">
+        <div>
+          <h5>바로가기</h5>
+          <ul>
+            <li><a href="#project">프로젝트</a></li>
+            <li><a href="#roadmap">로드맵</a></li>
+            <li><a href="#team">연구팀</a></li>
+            <li><a href="https://korean-towns-db.vercel.app/" target="_blank" rel="noopener">지도 보기</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>참고자료</h5>
+          <ul>
+            <li><a href="https://www.data.go.kr/data/15070379/fileData.do" target="_blank" rel="noopener">독립기념관 데이터셋</a></li>
+            <li><a href="https://db.history.go.kr/id/haf_012_0330" target="_blank" rel="noopener">국사편찬위원회 DB</a></li>
+            <li><a href="https://www.prlib.ru/item/686907" target="_blank" rel="noopener">러시아국립도서관</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© <span id="year"></span> 코리안 디아스포라 연구팀</span>
+      <span>기획 및 제작 · 김슬기, 박영훈, 송영화</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var header = document.getElementById('siteHeader');
+  var toggle = document.getElementById('navToggle');
+  toggle.addEventListener('click', function(){
+    var open = header.classList.toggle('nav-open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.querySelectorAll('.main-nav a').forEach(function(a){
+    a.addEventListener('click', function(){
+      header.classList.remove('nav-open');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  var yearEl = document.getElementById('year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reveals = document.querySelectorAll('.reveal');
+  if (prefersReduced || !('IntersectionObserver' in window)) {
+    reveals.forEach(function(el){ el.classList.add('is-visible'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
         }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(function(el){ io.observe(el); });
+  }
+})();
+</script>
 
-        /* 헤더 → 인덱스 맵 (대소문자/공백 무시, 별칭 지원) */
-        function buildHeaderMap(headerRow) {
-            const map = {};
-            headerRow.forEach((h, i) => {
-                const key = (h || '').toString().trim().toLowerCase().replace(/\s+/g, '_');
-                if (key) map[key] = i;
-            });
-            return map;
-        }
-        function getCol(row, map, ...aliases) {
-            for (const a of aliases) {
-                const idx = map[a];
-                if (idx !== undefined && row[idx] !== undefined) {
-                    return (row[idx] || '').toString().trim();
-                }
-            }
-            return '';
-        }
-
-        /* ====== DB 데이터 로드 ====== */
-        async function loadGoogleSheetsData() {
-            const spreadsheetId = window.APP_CONFIG?.spreadsheetId || '';
-            if (!spreadsheetId) return;
-
-            const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv`;
-            const targets = [
-                { type: '마을', gid: '0' },
-                { type: '조직', gid: '1633831664' },
-                { type: '인물', gid: '997795861' }
-            ];
-
-            let globalId = 1;
-            const updatedData = [];
-            const townCoords = {};
-
-            /* 1단계: 마을 먼저 */
-            try {
-                const townTarget = targets.find(t => t.type === '마을');
-                const response = await fetch(`${baseUrl}&gid=${townTarget.gid}`);
-                if (response.ok) {
-                    const records = csvToArray(await response.text());
-                    if (records.length > 0) {
-                        const headerMap = buildHeaderMap(records[0]);
-                        for (let i = 1; i < records.length; i++) {
-                            const row = records[i];
-                            const name = getCol(row, headerMap, 'name', 'village_name', '이름');
-                            if (!name) continue;
-
-                            const lat = parseFloat(getCol(row, headerMap, 'lat', 'latitude', '위도')) || 0;
-                            const lng = parseFloat(getCol(row, headerMap, 'lng', 'lon', 'longitude', '경도')) || 0;
-                            if (lat && lng) townCoords[name] = { lat, lng };
-
-                            let desc = getCol(row, headerMap, 'description', 'desc', '설명');
-                            const population = getCol(row, headerMap, 'population', '인구');
-                            if (population) desc = `[인구: ${population}] ` + desc;
-
-                            updatedData.push({
-                                id: globalId++,
-                                type: '마을',
-                                name,
-                                description: desc,
-                                founded: getCol(row, headerMap, 'start_year', 'founded', '설립'),
-                                dissolved: getCol(row, headerMap, 'end_year', 'dissolved', '소멸'),
-                                lat, lng,
-                                source: getCol(row, headerMap, 'source', '출처'),
-                                author: getCol(row, headerMap, 'creator', 'author', '작성자'),
-                                relatedTown: '',
-                                relatedOrg: '',
-                                locationPrecision: (getCol(row, headerMap, 'location_precision', 'precision') || 'town').toLowerCase()
-                            });
-                        }
-                    }
-                }
-            } catch (e) { console.error('마을 파싱 실패', e); }
-
-            /* 2단계: 조직 & 인물 */
-            for (const target of targets) {
-                if (target.type === '마을') continue;
-                try {
-                    const response = await fetch(`${baseUrl}&gid=${target.gid}`);
-                    if (!response.ok) continue;
-                    const records = csvToArray(await response.text());
-                    if (records.length === 0) continue;
-                    const headerMap = buildHeaderMap(records[0]);
-
-                    for (let i = 1; i < records.length; i++) {
-                        const row = records[i];
-                        const name = getCol(row, headerMap, 'name', '이름');
-                        if (!name) continue;
-
-                        const precision = (getCol(row, headerMap, 'location_precision', 'precision') || 'unknown').toLowerCase();
-                        const relatedTown = getCol(row, headerMap, 'related_town', '소속마을');
-                        const ownLat = parseFloat(getCol(row, headerMap, 'lat', 'latitude', '위도')) || 0;
-                        const ownLng = parseFloat(getCol(row, headerMap, 'lng', 'lon', 'longitude', '경도')) || 0;
-
-                        const isPrecise = (precision === 'exact' || precision === 'street');
-
-                        /* 정확위치: 자체 lat/lng가 있으면 사용, 없으면 마을 좌표 fallback */
-                        let lat = 0, lng = 0;
-                        if (isPrecise && ownLat && ownLng) {
-                            lat = ownLat; lng = ownLng;
-                        } else if (townCoords[relatedTown]) {
-                            lat = townCoords[relatedTown].lat;
-                            lng = townCoords[relatedTown].lng;
-                        } else if (ownLat && ownLng) {
-                            lat = ownLat; lng = ownLng;
-                        }
-
-                        const item = {
-                            id: globalId++,
-                            type: target.type,
-                            name,
-                            description: getCol(row, headerMap, 'description', 'desc', '설명'),
-                            founded: getCol(row, headerMap, 'start_year', '설립'),
-                            dissolved: getCol(row, headerMap, 'end_year', '소멸'),
-                            lat, lng,
-                            relatedTown,
-                            relatedOrg: '',
-                            source: getCol(row, headerMap, 'source', '출처'),
-                            author: getCol(row, headerMap, 'creator', 'author', '작성자'),
-                            locationPrecision: precision,
-                            isPrecise
-                        };
-
-                        if (target.type === '조직') {
-                            item.orgType = getCol(row, headerMap, 'type', 'organization_type', '유형');
-                        } else if (target.type === '인물') {
-                            item.relatedOrg = getCol(row, headerMap, 'related_organization', 'related_org', '소속조직');
-                            item.nationality = getCol(row, headerMap, 'nationality', '국적');
-                            item.job = getCol(row, headerMap, 'job', 'occupation', '직업');
-                        }
-                        updatedData.push(item);
-                    }
-                } catch (error) { console.error(`${target.type} 파싱 실패`, error); }
-            }
-            rawData = updatedData;
-        }
-
-        async function fetchLatestAndRender() {
-            await loadGoogleSheetsData();
-            /* 연도 범위 자동 감지 */
-            const years = rawData.flatMap(d => [parseInt(d.founded), parseInt(d.dissolved)]).filter(y => y && y > 1000 && y < 2100);
-            if (years.length > 0) {
-                const detectedMin = Math.min(...years);
-                const detectedMax = Math.max(...years);
-                yearRangeMin = detectedMin;
-                yearRangeMax = detectedMax;
-                yearFilterMin = detectedMin;
-                yearFilterMax = detectedMax;
-                /* 슬라이더 레이블 갱신 */
-                const minLabel = document.getElementById('yearLabelMin');
-                const maxLabel = document.getElementById('yearLabelMax');
-                const rangeLabel = document.getElementById('yearRangeLabel');
-                if (minLabel) minLabel.textContent = yearFilterMin;
-                if (maxLabel) maxLabel.textContent = yearFilterMax;
-                if (rangeLabel) rangeLabel.textContent = `${yearRangeMin} – ${yearRangeMax}`;
-            }
-            renderData();
-        }
-
-        async function syncData() {
-            const btn = document.getElementById('syncBtn');
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 동기화 중...`;
-            try {
-                await fetchLatestAndRender();
-                showToast('DB의 최신 데이터가 반영되었습니다.');
-            } catch (err) {
-                showToast('동기화에 실패했습니다.', true);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-brands fa-google"></i> 실시간 동기화`;
-            }
-        }
-
-        function showToast(msg, isError=false) {
-            const toast = document.createElement('div');
-            toast.style.cssText = `position:fixed; top:80px; right:20px; z-index:9999;
-                background:${isError ? '#dc2626' : '#16a34a'}; color:white;
-                padding:10px 18px; border-radius:8px; font-size:13px;
-                box-shadow:0 8px 20px rgba(0,0,0,0.2); opacity:0; transition:opacity 0.3s;`;
-            toast.textContent = msg;
-            document.body.appendChild(toast);
-            requestAnimationFrame(() => toast.style.opacity = '1');
-            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 2600);
-        }
-
-        /* ====== 초기화 ====== */
-        window.addEventListener('DOMContentLoaded', async () => {
-            map = L.map('map', {
-                zoomControl: true,
-                worldCopyJump: true,      // 경도 -180/180 경계에서 지도가 끊겨 보이지 않도록
-                minZoom: 2,
-                maxBounds: [[-85, -Infinity], [85, Infinity]], // 위/아래 여백(빈 영역) 방지
-                maxBoundsViscosity: 0.6
-            }).setView([43.0, 132.0], 5);
-
-            /* 밝은 타일 (OpenStreetMap) */
-            lightTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
-                maxZoom: 18, minZoom: 2,
-                opacity: 1,
-                noWrap: false
-            }).addTo(map);
-
-            /* 어두운 타일 (CartoDB Dark Matter) — 초기 opacity 0 */
-            darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-                maxZoom: 19, minZoom: 2,
-                opacity: 0,
-                noWrap: false
-            }).addTo(map);
-
-            townClusterLayer = L.markerClusterGroup({
-                disableClusteringAtZoom: 10,
-                showCoverageOnHover: false,
-                iconCreateFunction: function(cluster) {
-                    const count = cluster.getChildCount();
-                    let cls = 'marker-cluster-small';
-                    if (count >= 20) cls = 'marker-cluster-xlarge';
-                    else if (count >= 10) cls = 'marker-cluster-large';
-                    else if (count >= 5) cls = 'marker-cluster-medium';
-                    return L.divIcon({
-                        html: `<div><span>${count}</span></div>`,
-                        className: `marker-cluster ${cls}`,
-                        iconSize: L.point(40, 40)
-                    });
-                }
-            });
-            map.addLayer(townClusterLayer);
-
-            markersLayer = L.layerGroup().addTo(map);
-            linesLayer = L.layerGroup().addTo(map);
-
-            document.getElementById('searchInput').addEventListener('input', handleSearch);
-            const filterBtns = document.querySelectorAll('.filter-btn');
-            filterBtns.forEach(btn => btn.addEventListener('click', (e) => handleFilter(e, filterBtns)));
-
-            /* 연도 슬라이더 초기화 */
-            initYearSlider();
-
-            /* 사이드바 토글 버튼: 최초 접힘 상태에 맞춰 강조 표시 및 타이틀 설정 */
-            const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
-            if (sidebarToggleBtn) {
-                sidebarToggleBtn.classList.add('ring-2', 'ring-primary');
-                sidebarToggleBtn.title = '검색 패널 열기';
-            }
-
-            /* 지도 어두움 슬라이더 */
-            document.getElementById('darkMapSlider').addEventListener('input', function() {
-                darkMapOpacity = parseFloat(this.value);
-                applyMapStyle();
-            });
-
-            /* 줌 변경시 지도 재구성 (2계층 토글) */
-            map.on('zoomend', () => {
-                updateZoomHint();
-                renderMap();
-            });
-
-            /* ====== 레이아웃/크기 변화 시 지도 빈 영역(회색 타일) 방지 ====== */
-            // 1) 폰트/웹폰트 로딩, 브라우저 초기 레이아웃 계산 등으로 컨테이너 크기가
-            //    뒤늦게 확정되는 경우를 대비해 여러 시점에 invalidateSize를 호출한다.
-            requestAnimationFrame(() => map.invalidateSize());
-            setTimeout(() => map.invalidateSize(), 150);
-            setTimeout(() => map.invalidateSize(), 500);
-            window.addEventListener('load', () => map.invalidateSize());
-            if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(() => map.invalidateSize());
-            }
-
-            // 2) 브라우저 창 크기 변경 시 지도 크기 재계산
-            window.addEventListener('resize', () => map.invalidateSize());
-
-            // 3) 지도 컨테이너 자체의 크기 변화(사이드바 토글, 반응형 전환 등)를 감지
-            const mapEl = document.getElementById('map');
-            if (window.ResizeObserver && mapEl) {
-                const ro = new ResizeObserver(() => map.invalidateSize());
-                ro.observe(mapEl);
-            }
-
-            await fetchLatestAndRender();
-            updateZoomHint();
-            setInterval(fetchLatestAndRender, 30000);
-        });
-
-        function updateZoomHint() {
-            const hint = document.getElementById('zoomHint');
-            if (!map) return;
-            const z = map.getZoom();
-            if (z < ZOOM_DETAIL_THRESHOLD) {
-                hint.style.opacity = '1';
-                hint.innerHTML = `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 지도를 더 확대하면 조직·인물 노드가 펼쳐집니다 (현재 zoom ${z})`;
-            } else {
-                hint.style.opacity = '0.85';
-                hint.innerHTML = `<i class="fa-solid fa-circle-nodes mr-1"></i> 펼침 모드 · 마을 주변 조직·인물 표시 중 (zoom ${z})`;
-            }
-        }
-
-        /* ====== 아이콘 ====== */
-        function getIcon(type, opts = {}) {
-            const { isHighlighted=false, badgeCount=0, isFloating=false, isPrecise=true } = opts;
-            let color, iconClass;
-            if (type === '마을') { color = '#ea580c'; iconClass = 'fa-house'; }
-            else if (type === '조직') { color = '#2563eb'; iconClass = 'fa-users'; }
-            else if (type === '인물') { color = '#16a34a'; iconClass = 'fa-user'; }
-
-            const size = isHighlighted ? 38 : (type === '마을' ? 32 : (isFloating ? 24 : 28));
-            const border = isHighlighted ? '3px solid #fbbf24' : '2px solid white';
-            const shadow = isHighlighted
-                ? '0 0 14px rgba(251,191,36,0.9)'
-                : (isFloating ? '0 3px 10px rgba(0,0,0,0.25)' : '0 2px 6px rgba(0,0,0,0.3)');
-            const ringStyle = (!isPrecise && type !== '마을') ? 'outline: 2px dashed rgba(255,255,255,0.6); outline-offset:2px;' : '';
-
-            const badgeHtml = badgeCount > 0
-                ? `<div class="town-badge">${badgeCount}</div>`
-                : '';
-
-            const html = `
-                <div style="position:relative; width:${size}px; height:${size}px;">
-                    <div style="background-color:${color}; width:${size}px; height:${size}px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:${border}; box-shadow:${shadow}; ${ringStyle} transition: all 0.25s;" class="text-white">
-                        <i class="fa-solid ${iconClass}" style="font-size:${Math.round(size*0.42)}px;"></i>
-                    </div>
-                    ${badgeHtml}
-                </div>
-            `;
-            return L.divIcon({
-                html, className: isFloating ? 'floating-marker' : '',
-                iconSize: [size+8, size+8], iconAnchor: [(size+8)/2, (size+8)/2], popupAnchor: [0, -size/2 - 4]
-            });
-        }
-
-        // 노드 레이블 추가 (항상 표시 옵션)
-        function addNodeLabel(lat, lng, text) {
-
-            if (map.getZoom() < ZOOM_DETAIL_THRESHOLD) return;
-
-            const label = L.marker([lat, lng], {
-                interactive: false,
-                icon: L.divIcon({
-                    className: '',
-                    html: `
-                    <div style="
-                        background:none;
-                        border:none;
-                        padding:0;
-
-                        font-size:13px;
-                        font-weight:700;
-                        color:#475569;
-
-                        white-space:nowrap;
-                        text-shadow:
-                            0 0 3px #fff,
-                            0 0 6px #fff,
-                            0 0 8px #fff;
-                    ">
-                        ${escapeHtml(text)}
-                    </div>
-                    `,
-                    iconAnchor: [12, -22]
-                })
-            });
-
-            markersLayer.addLayer(label);
-        }
-
-        /* ====== 연도 슬라이더 ====== */
-        function initYearSlider() {
-            const slider = document.getElementById('yearRangeSlider');
-            const minThumb = document.getElementById('yearThumbMin');
-            const maxThumb = document.getElementById('yearThumbMax');
-            const minLabel = document.getElementById('yearLabelMin');
-            const maxLabel = document.getElementById('yearLabelMax');
-            const track = document.getElementById('yearTrackFill');
-            const toggleBtn = document.getElementById('yearFilterToggle');
-
-            function updateSlider() {
-                const range = yearRangeMax - yearRangeMin;
-                const minPct = ((yearFilterMin - yearRangeMin) / range) * 100;
-                const maxPct = ((yearFilterMax - yearRangeMin) / range) * 100;
-                minLabel.textContent = yearFilterMin;
-                maxLabel.textContent = yearFilterMax;
-                track.style.left = minPct + '%';
-                track.style.width = (maxPct - minPct) + '%';
-                minThumb.style.left = minPct + '%';
-                maxThumb.style.left = maxPct + '%';
-            }
-
-            function startDrag(e, isMin) {
-                e.preventDefault();
-                const sliderRect = slider.getBoundingClientRect();
-                const range = yearRangeMax - yearRangeMin;
-
-                function onMove(ev) {
-                    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-                    let pct = Math.max(0, Math.min(1, (clientX - sliderRect.left) / sliderRect.width));
-                    let val = Math.round(yearRangeMin + pct * range);
-                    if (isMin) {
-                        yearFilterMin = Math.min(val, yearFilterMax - 1);
-                    } else {
-                        yearFilterMax = Math.max(val, yearFilterMin + 1);
-                    }
-                    updateSlider();
-                    if (yearFilterEnabled) renderData();
-                }
-                function onUp() {
-                    document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('touchmove', onMove);
-                    document.removeEventListener('mouseup', onUp);
-                    document.removeEventListener('touchend', onUp);
-                }
-                document.addEventListener('mousemove', onMove);
-                document.addEventListener('touchmove', onMove, { passive: false });
-                document.addEventListener('mouseup', onUp);
-                document.addEventListener('touchend', onUp);
-            }
-
-            minThumb.addEventListener('mousedown', e => startDrag(e, true));
-            minThumb.addEventListener('touchstart', e => startDrag(e, true), { passive: false });
-            maxThumb.addEventListener('mousedown', e => startDrag(e, false));
-            maxThumb.addEventListener('touchstart', e => startDrag(e, false), { passive: false });
-
-            toggleBtn.addEventListener('click', function() {
-                yearFilterEnabled = !yearFilterEnabled;
-                const panel = document.getElementById('yearSliderPanel');
-                if (yearFilterEnabled) {
-                    toggleBtn.classList.add('bg-primary', 'text-white');
-                    toggleBtn.classList.remove('bg-white', 'text-slate-600');
-                    panel.style.maxHeight = '80px';
-                    panel.style.opacity = '1';
-                } else {
-                    toggleBtn.classList.remove('bg-primary', 'text-white');
-                    toggleBtn.classList.add('bg-white', 'text-slate-600');
-                    panel.style.maxHeight = '0';
-                    panel.style.opacity = '0';
-                }
-                renderData();
-            });
-
-            updateSlider();
-        }
-
-        /* ====== 지도 스타일 적용 ====== */
-        function applyMapStyle() {
-            if (lightTileLayer) lightTileLayer.setOpacity(1 - darkMapOpacity);
-            if (darkTileLayer) darkTileLayer.setOpacity(darkMapOpacity);
-
-            /* 퍼센트 레이블 */
-            const pctLabel = document.getElementById('darkMapPctLabel');
-            if (pctLabel) pctLabel.textContent = Math.round(darkMapOpacity * 100) + '%';
-
-            /* 다크맵 컨트롤 패널 색상 반응형 */
-            const ctrl = document.getElementById('darkMapControl');
-            if (ctrl) {
-                if (darkMapOpacity > 0.5) {
-                    ctrl.style.background = 'rgba(15,23,42,0.90)';
-                    ctrl.style.borderColor = 'rgba(255,255,255,0.08)';
-                    ctrl.querySelectorAll('.text-slate-700, .text-slate-400, .text-slate-500').forEach(el => {
-                        el.style.color = darkMapOpacity > 0.7 ? '#94a3b8' : '';
-                    });
-                } else {
-                    ctrl.style.background = 'rgba(255,255,255,0.95)';
-                    ctrl.style.borderColor = '#e2e8f0';
-                }
-            }
-
-            /* 범례 / 줌힌트 색상 반응형 */
-            const mapLegend = document.querySelector('.map-legend');
-            const zoomHint = document.getElementById('zoomHint');
-            if (darkMapOpacity > 0.5) {
-                mapLegend.style.background = 'rgba(15,23,42,0.90)';
-                mapLegend.style.borderColor = 'rgba(255,255,255,0.1)';
-                mapLegend.style.color = '#cbd5e1';
-                mapLegend.querySelectorAll('.legend-row').forEach(r => r.style.color = '#94a3b8');
-                mapLegend.querySelector('.font-bold').style.color = '#e2e8f0';
-                zoomHint.style.background = 'rgba(2,6,23,0.90)';
-            } else {
-                mapLegend.style.background = 'rgba(255,255,255,0.96)';
-                mapLegend.style.borderColor = '#e2e8f0';
-                mapLegend.style.color = '#334155';
-                mapLegend.querySelectorAll('.legend-row').forEach(r => r.style.color = '');
-                mapLegend.querySelector('.font-bold').style.color = '#334155';
-                zoomHint.style.background = 'rgba(15,23,42,0.85)';
-            }
-        }
-
-        /* ====== 필터링 (사이드바 리스트용) ====== */
-        function getFilteredData() {
-            return rawData.filter(item => {
-                const matchType = currentFilter === 'all' || item.type === currentFilter;
-                const haystack = [
-                    item.name, item.description, item.relatedTown,
-                    item.orgType, item.nationality, item.job, item.relatedOrg
-                ].filter(Boolean).join(' ').toLowerCase();
-                const matchSearch = !currentSearch || haystack.includes(currentSearch);
-
-                /* 연도 필터 */
-                let matchYear = true;
-                if (yearFilterEnabled) {
-                    const founded = parseInt(item.founded) || null;
-                    const dissolved = parseInt(item.dissolved) || null;
-                    if (founded || dissolved) {
-                        const itemStart = founded || (dissolved ? dissolved - 50 : yearRangeMin);
-                        const itemEnd = dissolved || (founded ? founded + 50 : yearRangeMax);
-                        matchYear = itemStart <= yearFilterMax && itemEnd >= yearFilterMin;
-                    }
-                }
-
-                return matchType && matchSearch && matchYear;
-            });
-        }
-
-        /* ====== 메인 렌더 ====== */
-        function renderData() {
-            renderSidebar();
-            renderMap();
-        }
-
-        /* --- 사이드바 --- */
-        function renderSidebar() {
-            const filteredData = getFilteredData();
-            const listContainer = document.getElementById('dataList');
-            listContainer.innerHTML = '';
-
-            /* 선택 배너 */
-            const banner = document.getElementById('selectionBanner');
-            if (selectedTownName) {
-                banner.classList.remove('hidden');
-                banner.classList.add('flex');
-                document.getElementById('selectedTownLabel').textContent = selectedTownName;
-            } else {
-                banner.classList.add('hidden');
-                banner.classList.remove('flex');
-            }
-
-            if (filteredData.length === 0) {
-                listContainer.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">
-                    <i class="fa-solid fa-folder-open text-2xl mb-2 text-slate-300 block"></i>
-                    검색 결과가 없습니다.
-                </div>`;
-                document.getElementById('resultCount').innerText = `총 0건`;
-                return;
-            }
-
-            /* 네트워크 트리 정렬 (마을 선택 시) */
-            let displayData = [...filteredData];
-            if (selectedTownName && currentFilter === 'all') {
-                const townItem = rawData.find(d => d.type === '마을' && d.name === selectedTownName);
-                const children = rawData.filter(d => d.type !== '마을' && d.relatedTown === selectedTownName);
-                displayData = displayData.filter(d => d.name !== selectedTownName && d.relatedTown !== selectedTownName);
-                if (townItem) displayData.unshift(townItem, ...children);
-            }
-
-            displayData.forEach(item => {
-                let badgeColor = '';
-                if (item.type === '마을') badgeColor = 'bg-orange-100 text-orange-800 border-orange-200';
-                else if (item.type === '조직') badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
-                else if (item.type === '인물') badgeColor = 'bg-green-100 text-green-800 border-green-200';
-
-                const isChild = selectedTownName && item.type !== '마을' && item.relatedTown === selectedTownName;
-                const isSelected = item.name === selectedTownName && item.type === '마을';
-
-                /* 마을이면 관련 노드 카운트 표시 */
-                let countChip = '';
-                if (item.type === '마을') {
-                    const cnt = rawData.filter(d => d.type !== '마을' && d.relatedTown === item.name).length;
-                    if (cnt > 0) countChip = `<span class="meta-chip" style="background:#fff7ed; color:#9a3412; border-color:#fed7aa;"><i class="fa-solid fa-diagram-project"></i> ${cnt}개 연결</span>`;
-                }
-
-                /* type/nationality/job 등 메타 칩 */
-                let extraChips = '';
-                if (item.type === '조직' && item.orgType) {
-                    extraChips += `<span class="meta-chip" style="background:#eff6ff; color:#1e40af; border-color:#bfdbfe;"><i class="fa-solid fa-tag"></i> ${escapeHtml(item.orgType)}</span>`;
-                }
-                if (item.type === '인물') {
-                    if (item.nationality) extraChips += `<span class="meta-chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-flag"></i> ${escapeHtml(item.nationality)}</span>`;
-                    if (item.job) extraChips += `<span class="meta-chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>`;
-                }
-                /* 정밀도 표시 (마을 제외 + town/city/region/unknown 일때) */
-                if (item.type !== '마을' && !item.isPrecise) {
-                    extraChips += `<span class="meta-chip" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" title="정확 좌표 없음 — 소속 마을에 부유 표시"><i class="fa-solid fa-location-crosshairs"></i> ${item.locationPrecision || 'unknown'}</span>`;
-                }
-
-                const card = document.createElement('div');
-                card.className = `p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all ${isSelected ? 'selected-card' : ''} ${isChild ? 'network-child-card' : ''}`;
-
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-1 gap-2">
-                        <h3 class="font-bold text-slate-800 font-serif ${isChild ? 'text-base' : 'text-lg'} flex-1 min-w-0 truncate">
-                            ${isChild ? '<i class="fa-solid fa-arrow-turn-up rotate-90 mr-1 text-slate-400"></i>' : ''}${escapeHtml(item.name)}
-                        </h3>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-medium ${badgeColor} flex-shrink-0">${item.type}</span>
-                    </div>
-                    <p class="text-xs text-slate-500 mb-2 line-clamp-2">${escapeHtml(item.description) || '<span class="italic text-slate-300">설명 없음</span>'}</p>
-                    <div class="flex flex-wrap mb-1">
-                        ${countChip}${extraChips}
-                    </div>
-                    ${item.relatedTown ? `<div class="text-[10px] text-primary font-medium mb-1"><i class="fa-solid fa-link"></i> 소속마을: ${escapeHtml(item.relatedTown)}</div>` : ''}
-                    ${item.relatedOrg ? `<div class="text-[10px] text-purple-700 font-medium mb-1"><i class="fa-solid fa-sitemap"></i> 소속조직: ${escapeHtml(item.relatedOrg)}</div>` : ''}
-                    <div class="flex justify-between items-end text-[10px] text-slate-400 mt-1">
-                        <span><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || '미상')} ~ ${escapeHtml(item.dissolved || '미상')}</span>
-                        <button onclick="event.stopPropagation(); askAIAboutById(${item.id})" class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 transition-colors bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
-                            <i class="fa-solid fa-sparkles"></i> AI 해설
-                        </button>
-                    </div>
-                `;
-                card.onclick = () => focusOnMap(item);
-                listContainer.appendChild(card);
-            });
-
-            document.getElementById('resultCount').innerText = `총 ${filteredData.length}건`;
-        }
-
-        function escapeHtml(s) {
-            if (s === null || s === undefined) return '';
-            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        }
-
-        /* --- 지도 마커 --- */
-        function renderMap() {
-            if (!map) return;
-            townClusterLayer.clearLayers();
-            markersLayer.clearLayers();
-            linesLayer.clearLayers();
-            markers = [];
-
-            const filteredData = getFilteredData();
-            const zoom = map.getZoom();
-            const isDetailMode = zoom >= ZOOM_DETAIL_THRESHOLD;
-
-            /* 필터 모드별 처리:
-               - currentFilter === 'all' 이고 줌이 낮으면 → 마을만 표시
-               - 줌이 detail 이상 → 마을 + (자체 좌표 있는 정확위치 노드) + (부유 노드)
-               - filter가 '조직'/'인물' 단독이면 줌과 상관없이 해당 타입만 표시 (단, 부유는 마을 좌표 활용)
-            */
-
-            const villagesAll = rawData.filter(d => d.type === '마을');
-            const villageMap = {};
-            villagesAll.forEach(v => { villageMap[v.name] = v; });
-
-            const filteredVillages = filteredData.filter(d => d.type === '마을');
-            const filteredOrgsPersons = filteredData.filter(d => d.type !== '마을');
-
-            /* 1. 마을 마커 */
-            filteredVillages.forEach(item => {
-                if (!item.lat || !item.lng) return;
-                const childCount = rawData.filter(d => d.type !== '마을' && d.relatedTown === item.name).length;
-                const isHighlighted = selectedTownName && item.name === selectedTownName;
-                const marker = L.marker([item.lat, item.lng], {
-                    icon: getIcon('마을', { isHighlighted, badgeCount: childCount, isPrecise: true })
-                });
-                attachPopupAndEvents(marker, item);
-                townClusterLayer.addLayer(marker);
-                markers.push(marker);
-
-                addNodeLabel(
-                    item.lat,
-                    item.lng,
-                    item.name
-                );
-            });
-
-            /* 2. 조직/인물 표시 */
-            filteredOrgsPersons.forEach(item => {
-                /* (a) 정확 위치(exact/street): 무조건 자신의 좌표에 표시 */
-                if (item.isPrecise && item.lat && item.lng) {
-                    /* 단, 'all'필터 + low zoom이면 숨김 (마을만 보이게) */
-                    if (currentFilter === 'all' && !isDetailMode) return;
-
-                    const isHighlighted = selectedTownName && item.relatedTown === selectedTownName;
-                    const marker = L.marker([item.lat, item.lng], {
-                        icon: getIcon(item.type, { isHighlighted, isPrecise: true })
-                    });
-                    attachPopupAndEvents(marker, item);
-                    markersLayer.addLayer(marker);
-                    markers.push(marker);
-
-                    addNodeLabel(
-                        item.lat,
-                        item.lng,
-                        item.name
-                    );
-
-                    return;
-                }
-
-                /* (b) 비정확 위치: 마을에 부유 표시 — 줌 임계 이상에서만 (또는 단독 필터일 때) */
-                const showFloating = isDetailMode || currentFilter === item.type;
-                if (!showFloating) return;
-
-                const parentVillage = villageMap[item.relatedTown];
-                if (!parentVillage || !parentVillage.lat || !parentVillage.lng) {
-                    /* 부모 마을도 좌표가 없으면 표시 불가 */
-                    return;
-                }
-
-                /* 같은 마을에 부유하는 다른 비정확 노드들 중 자신의 인덱스 계산 → 원형 배치 */
-                const siblings = rawData.filter(d =>
-                    d.type !== '마을' &&
-                    !d.isPrecise &&
-                    d.relatedTown === parentVillage.name
-                );
-                const idx = siblings.findIndex(s => s.id === item.id);
-                const total = siblings.length || 1;
-
-                const pos = computeFloatingLatLng(parentVillage, idx, total);
-
-                const isHighlighted = selectedTownName && item.relatedTown === selectedTownName;
-                const marker = L.marker(pos, {
-                    icon: getIcon(item.type, { isHighlighted, isFloating: true, isPrecise: false })
-                });
-                attachPopupAndEvents(marker, item);
-                markersLayer.addLayer(marker);
-                markers.push(marker);
-
-                addNodeLabel(
-                    pos[0],
-                    pos[1],
-                    item.name
-                );
-
-            });
-            drawRelationshipLines();
-        }
-
-        /* 부유 노드 좌표 계산 — 줌에 따라 반경 자동 조절 */
-        function computeFloatingLatLng(village, idx, total) {
-            const zoom = map.getZoom();
-            /* 줌이 클수록 화면상 같은 픽셀거리가 더 작은 위경도이므로 반경을 줄임 */
-            const baseRadiusDeg = 0.45;          // zoom 7 기준
-            const radius = baseRadiusDeg * Math.pow(0.55, Math.max(0, zoom - 7));
-            const angle = (idx / total) * Math.PI * 2 - Math.PI / 2; // 12시 방향부터
-            const dLat = radius * Math.sin(angle);
-            /* 위도가 높으면 경도 1도가 짧아지므로 경도 보정 */
-            const lonCorr = 1 / Math.max(0.2, Math.cos(village.lat * Math.PI / 180));
-            const dLng = radius * Math.cos(angle) * lonCorr;
-            return [village.lat + dLat, village.lng + dLng];
-        }
-
-        function drawRelationshipLines() {
-
-            const markerMap = {};
-
-            // 마을(클러스터 레이어) + 조직/인물(일반 레이어) 모두 포함
-            const collectMarkers = (layerGroup) => {
-                if (!layerGroup || !layerGroup.eachLayer) return;
-                layerGroup.eachLayer(layer => {
-                    if (layer && layer.itemId !== undefined && layer.itemId !== null) {
-                        markerMap[layer.itemId] = layer;
-                    }
-                });
-            };
-
-            collectMarkers(townClusterLayer);
-            collectMarkers(markersLayer);
-
-            rawData.forEach(item => {
-
-                const fromMarker = markerMap[item.id];
-                if (!fromMarker) return;
-
-                let target = null;
-                let color = '#64748b';
-
-                // 조직 → 마을
-                if (item.type === '조직' && item.relatedTown) {
-
-                    target = rawData.find(
-                        d => d.type === '마을' &&
-                        d.name === item.relatedTown
-                    );
-
-                    color = '#2563eb';
-                }
-
-                // 인물 → 조직 우선
-                else if (item.type === '인물') {
-
-                    if (item.relatedOrg) {
-
-                        target = rawData.find(
-                            d => d.type === '조직' &&
-                            d.name === item.relatedOrg
-                        );
-
-                        color = '#16a34a';
-                    }
-
-                    // 조직 없으면 마을
-                    if (!target && item.relatedTown) {
-
-                        target = rawData.find(
-                            d => d.type === '마을' &&
-                            d.name === item.relatedTown
-                        );
-
-                        color = '#16a34a';
-                    }
-                }
-
-                if (!target) return;
-
-                const toMarker = markerMap[target.id];
-                if (!toMarker) return;
-
-                const fromLatLng = fromMarker.getLatLng();
-                const toLatLng = toMarker.getLatLng();
-
-                const line = L.polyline(
-                    [fromLatLng, toLatLng],
-                    {
-                        color,
-                        weight: 2,
-                        opacity: 0.6,
-                        className: 'network-line'
-                    }
-                );
-
-                linesLayer.addLayer(line);
-            });
-        }
-
-        function attachPopupAndEvents(marker, item) {
-            /* 팝업 내용 구성 */
-            let extraMetaHtml = '';
-            if (item.type === '조직' && item.orgType) {
-                extraMetaHtml += `<span class="chip" style="background:#eff6ff; color:#1e40af; border-color:#bfdbfe;"><i class="fa-solid fa-tag"></i> ${escapeHtml(item.orgType)}</span>`;
-            }
-            if (item.type === '인물') {
-                if (item.nationality) extraMetaHtml += `<span class="chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-flag"></i> ${escapeHtml(item.nationality)}</span>`;
-                if (item.job) extraMetaHtml += `<span class="chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>`;
-            }
-            if (item.type !== '마을' && !item.isPrecise) {
-                extraMetaHtml += `<span class="chip" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" title="정확 좌표 없음 — 마을에 부유 표시"><i class="fa-solid fa-location-crosshairs"></i> ${escapeHtml(item.locationPrecision)}</span>`;
-            }
-
-            let relationsHtml = '';
-            if (item.type === '마을') {
-                const subOrgs = rawData.filter(d => d.type === '조직' && d.relatedTown === item.name);
-                const subPers = rawData.filter(d => d.type === '인물' && d.relatedTown === item.name);
-                if (subOrgs.length) relationsHtml += `<div class="text-[11px] text-blue-700 mt-1"><b><i class="fa-solid fa-users"></i> 관련 조직(${subOrgs.length}):</b> ${escapeHtml(subOrgs.map(d=>d.name).join(', '))}</div>`;
-                if (subPers.length) relationsHtml += `<div class="text-[11px] text-green-700 mt-0.5"><b><i class="fa-solid fa-user"></i> 관련 인물(${subPers.length}):</b> ${escapeHtml(subPers.map(d=>d.name).join(', '))}</div>`;
-            }
-
-            const popupContent = `
-                <div class="custom-popup max-w-[320px]">
-                    <div class="text-[10px] text-slate-500 mb-1">${item.type}${item.relatedTown ? ` · 소속: ${escapeHtml(item.relatedTown)}` : ''}</div>
-                    <div class="title">${escapeHtml(item.name)}</div>
-                    <div class="meta"><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || '미상')} ~ ${escapeHtml(item.dissolved || '미상')}</div>
-                    <div class="mb-2">${extraMetaHtml}</div>
-                    <div class="desc mb-2">${escapeHtml(item.description) || '<span class="italic text-slate-400">설명 없음</span>'}</div>
-                    ${item.relatedOrg ? `<div class="text-[11px] text-purple-700 mb-1"><i class="fa-solid fa-sitemap"></i> 소속조직: ${escapeHtml(item.relatedOrg)}</div>` : ''}
-                    ${relationsHtml}
-                    <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex flex-col gap-2">
-                        <div class="break-words overflow-hidden">
-                            <strong>출처:</strong> ${escapeHtml(item.source || '자체조사')}<br>
-                            <strong>작성자:</strong> ${escapeHtml(item.author || '연구팀')}
-                        </div>
-                        <button onclick="askAIAboutById(${item.id})" class="w-full bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> AI 해설
-                        </button>
-                    </div>
-                </div>
-            `;
-            marker.bindPopup(popupContent);
-            marker.itemId = item.id;
-
-            marker.on('click', () => {
-                if (item.type === '마을') selectedTownName = item.name;
-                else if (item.relatedTown) selectedTownName = item.relatedTown;
-                renderSidebar();
-                /* 마커 자체는 이미 클릭시 popup 자동 표시 */
-            });
-        }
-
-        /* ====== 포커스 ====== */
-        function focusOnMap(item) {
-            const lat = parseFloat(item.lat);
-            const lng = parseFloat(item.lng);
-
-            /* 마을이거나 정확 좌표가 있으면 그 위치로 */
-            let targetLat = lat, targetLng = lng;
-            let targetZoom = 8;
-
-            if (item.type !== '마을' && !item.isPrecise) {
-                /* 부유 노드는 부모 마을로 이동하면서 zoom-in (펼침 모드 보장) */
-                const parent = rawData.find(d => d.type === '마을' && d.name === item.relatedTown);
-                if (parent && parent.lat && parent.lng) {
-                    targetLat = parent.lat; targetLng = parent.lng;
-                    targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 8);
-                }
-            } else if (item.type === '마을') {
-                targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 8);
-            } else {
-                targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 9);
-            }
-
-            if (isNaN(targetLat) || isNaN(targetLng) || !targetLat || !targetLng) return;
-
-            if (window.innerWidth < 768) {
-                document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
-            }
-
-            if (item.type === '마을') selectedTownName = item.name;
-            else if (item.relatedTown) selectedTownName = item.relatedTown;
-
-            renderSidebar();
-            map.setView([targetLat, targetLng], targetZoom, { animate: true, duration: 0.8 });
-
-            /* renderMap은 zoomend 이벤트로 트리거 → 끝난 뒤 해당 항목 팝업 열기 */
-            const tryOpenPopup = () => {
-                const target = markers.find(m => m.itemId === item.id);
-                if (target) target.openPopup();
-            };
-            setTimeout(tryOpenPopup, 700);
-        }
-
-        function clearSelection() {
-            selectedTownName = null;
-            renderData();
-        }
-
-        function handleSearch(e) {
-            currentSearch = e.target.value.toLowerCase();
-            if (!currentSearch) selectedTownName = null;
-            renderData();
-        }
-
-        function handleFilter(e, allBtns) {
-            allBtns.forEach(btn => {
-                btn.classList.remove('bg-primary', 'text-white', 'active');
-                btn.classList.add('bg-white', 'text-slate-600');
-            });
-            e.currentTarget.classList.remove('bg-white', 'text-slate-600');
-            e.currentTarget.classList.add('bg-primary', 'text-white', 'active');
-
-            currentFilter = e.currentTarget.getAttribute('data-type');
-            selectedTownName = null;
-            renderData();
-        }
-
-        /* ====== 사이드바(검색 패널) 토글 ====== */
-        let isSidebarCollapsed = true; // 최초 로드 시 접힌 상태로 시작 (HTML의 sidebar-collapsed 클래스와 일치)
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const btn = document.getElementById('sidebarToggleBtn');
-            isSidebarCollapsed = !isSidebarCollapsed;
-            sidebar.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
-            // 지도 좌상단 토글 버튼은 사이드바가 접혔을 때만 눈에 띄게 강조
-            btn.classList.toggle('ring-2', isSidebarCollapsed);
-            btn.classList.toggle('ring-primary', isSidebarCollapsed);
-            btn.title = isSidebarCollapsed ? '검색 패널 열기' : '검색 패널 닫기';
-            // transition 종료 후에도 ResizeObserver가 처리하지만, 안전하게 한 번 더 호출
-            setTimeout(() => { if (map) map.invalidateSize(); }, 260);
-        }
-
-        /* ====== 범례 / 지도 스타일 패널 접기·펼치기 ====== */
-        function togglePanel(panelId) {
-            const panel = document.getElementById(panelId);
-            if (!panel) return;
-            panel.classList.toggle('collapsed');
-        }
-
-        /* ====== Gemini AI ====== */
-        function toggleAIChat() {
-            const panel = document.getElementById('aiChatPanel');
-            isChatOpen = !isChatOpen;
-            if (isChatOpen) {
-                panel.classList.remove('translate-x-full');
-                if (chatHistory.length === 0) {
-                    addMessageToUI('assistant', "안녕하세요! '코리안타운 DB' 연구 보조원입니다. 지도에서 마을을 클릭하시면 종속된 조직·인물 관계망이 펼쳐집니다. 궁금한 역사적 사실을 물어보세요!");
-                }
-            } else {
-                panel.classList.add('translate-x-full');
-            }
-        }
-
-        function askAIAboutById(id) {
-            const item = rawData.find(d => d.id === id);
-            if (!item) return;
-            if (!isChatOpen) toggleAIChat();
-
-            let relationContext = "";
-            if (item.type === '마을') {
-                const childOrgs = rawData.filter(d => d.type === '조직' && d.relatedTown === item.name).map(d => d.name);
-                const childPers = rawData.filter(d => d.type === '인물' && d.relatedTown === item.name).map(d => d.name);
-                relationContext = ` 이 마을에 종속된 조직: [${childOrgs.join(', ')}]. 인물: [${childPers.join(', ')}].`;
-            } else if (item.relatedTown) {
-                relationContext = ` 이 대상은 '${item.relatedTown}' 한인 마을 공간에 종속되어 활동했습니다.`;
-            }
-            let attrContext = '';
-            if (item.type === '조직' && item.orgType) attrContext += ` 조직 유형: ${item.orgType}.`;
-            if (item.type === '인물') {
-                if (item.nationality) attrContext += ` 국적: ${item.nationality}.`;
-                if (item.job) attrContext += ` 직업: ${item.job}.`;
-            }
-
-            const prompt = `'${item.name}'(${item.type})에 대해 학술적·역사적 배경을 자세히 설명해 줘. (DB 기초 정보: ${item.description}).${attrContext}${relationContext}`;
-            addMessageToUI('user', `'${item.name}' 관계망에 대해 자세한 학술 해설을 부탁합니다.`);
-            fetchGeminiResponse(prompt);
-        }
-
-        function handleChatSubmit(event) {
-            if (event && event.type === 'keypress' && event.key !== 'Enter') return;
-            const inputEl = document.getElementById('chatInput');
-            const message = inputEl.value.trim();
-            if (!message) return;
-            inputEl.value = '';
-            addMessageToUI('user', message);
-            fetchGeminiResponse(message);
-        }
-
-        function parseSimpleMarkdown(text) {
-            let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            html = html.replace(/\n/g, '<br>');
-            return html;
-        }
-
-        function addMessageToUI(role, text) {
-            const chatBody = document.getElementById('chatBody');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `flex gap-3 mb-4 ${role === 'user' ? 'flex-row-reverse' : ''}`;
-            const avatarClass = role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-purple-100 text-purple-600 border border-purple-200';
-            const avatarIcon = role === 'user' ? 'fa-user' : 'fa-robot';
-            const bubbleClass = role === 'user' ? 'bg-primary text-white rounded-l-lg rounded-br-lg' : 'bg-slate-100 text-slate-800 rounded-r-lg rounded-bl-lg border border-slate-200';
-            const parsedText = role === 'assistant' ? parseSimpleMarkdown(text) : escapeHtml(text);
-
-            msgDiv.innerHTML = `
-                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm ${avatarClass}">
-                    <i class="fa-solid ${avatarIcon}"></i>
-                </div>
-                <div class="p-3 max-w-[75%] text-sm shadow-sm ${bubbleClass} leading-relaxed">
-                    ${parsedText}
-                </div>
-            `;
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            if (loadingIndicator && role !== 'loading') loadingIndicator.remove();
-            chatBody.appendChild(msgDiv);
-            chatBody.scrollTop = chatBody.scrollHeight;
-        }
-
-        function showLoading() {
-            const chatBody = document.getElementById('chatBody');
-            const msgDiv = document.createElement('div');
-            msgDiv.id = 'loadingIndicator';
-            msgDiv.className = `flex gap-3 mb-4`;
-            msgDiv.innerHTML = `
-                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm bg-purple-100 text-purple-600 border border-purple-200">
-                    <i class="fa-solid fa-robot"></i>
-                </div>
-                <div class="p-3 bg-slate-100 text-slate-500 rounded-r-lg rounded-bl-lg border border-slate-200 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i> 관계망 사료 교차 검증 중...
-                </div>
-            `;
-            chatBody.appendChild(msgDiv);
-            chatBody.scrollTop = chatBody.scrollHeight;
-        }
-
-        async function fetchGeminiResponse(userMessage) {
-            chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
-            showLoading();
-
-            if (!geminiApiKey) {
-                addMessageToUI('assistant', 'Gemini API 키가 설정되지 않았습니다. env-config.js를 확인하세요.');
-                return;
-            }
-
-            const systemPrompt = `당신은 '코리안타운 DB - 기억의 복원' 프로젝트의 수석 역사학자이자 AI 연구원입니다. 사라진 한인 마을(공간), 독립운동 조직, 인물 간의 네트워크와 위상 관계를 설명합니다. 전체 데이터 정보: ${JSON.stringify(rawData)}. 질문에 사료적 근거와 학술적 맥락을 더해 풍성하게 답변하세요.`;
-            const payload = {
-                contents: chatHistory,
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-            };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-
-                if (result.candidates && result.candidates[0].content) {
-                    const aiResponseText = result.candidates[0].content.parts[0].text;
-                    chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
-                    addMessageToUI('assistant', aiResponseText);
-                } else if (result.error && result.error.code === 403) {
-                    addMessageToUI('assistant', "⚠️ <b>API 접근 권한 거부(403 Error)</b>: Google Cloud 콘솔의 'API 및 서비스 > 사용자 인증 정보'에서 사용 중인 API 키의 제한사항을 <b>'키 제한 안함'</b>으로 변경하거나, <b>'Generative Language API'</b>를 명시적으로 허용해 주셔야 해결됩니다.");
-                } else {
-                    addMessageToUI('assistant', "자료를 분석하는 중에 에러가 발생했습니다.");
-                }
-            } catch (error) {
-                addMessageToUI('assistant', "네트워크 통신 오류가 발생했습니다.");
-            }
-        }
-    </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
