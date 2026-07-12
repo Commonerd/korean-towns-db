@@ -178,6 +178,7 @@
 
         /* ====== 패널 토글(사이드바 / 범례 / 지도스타일) 공통 ====== */
 
+        /* 좌측 사이드바 접기: 폭(데스크톱)/높이(모바일)를 0으로 줄이고 내용은 숨김 */
         aside.sidebar-collapsed {
             width: 0 !important;
             min-width: 0 !important;
@@ -190,6 +191,7 @@
         }
         aside.sidebar-collapsed > * { opacity: 0; pointer-events: none; }
 
+        /* 사이드바 열고 닫는 플로팅 버튼 (지도 위, 좌측 상단 — Leaflet 줌 컨트롤 아래쪽에 배치해 겹치지 않도록 함) */
         .sidebar-toggle-btn {
             position: absolute;
             top: 96px;
@@ -212,6 +214,7 @@
         .sidebar-toggle-btn:hover { background: #f1f5f9; }
         .sidebar-toggle-btn:active { transform: scale(0.94); }
 
+        /* 패널(범례/지도스타일) 자체에 붙는 작은 접기 버튼 */
         .panel-collapse-btn {
             width: 22px;
             height: 22px;
@@ -227,6 +230,7 @@
         }
         .panel-collapse-btn:hover { background: #f1f5f9; color: #475569; }
 
+        /* 범례/지도스타일 패널이 접혔을 때: 본문 숨기고 작은 pill 형태로 축소 */
         .map-panel.collapsed .panel-body { display: none; }
         .map-panel.collapsed {
             padding: 8px 10px !important;
@@ -241,6 +245,7 @@
             display: flex; align-items: center; justify-content: space-between; gap: 8px;
         }
 
+        /* 카드 메타 칩 */
         .meta-chip {
             display: inline-flex; align-items: center; gap: 3px;
             font-size: 10px; padding: 2px 7px;
@@ -255,6 +260,7 @@
             overflow: hidden;
         }
 
+        /* 연도 슬라이더 썸 */
         #yearThumbMin, #yearThumbMax {
             transition: box-shadow 0.15s, transform 0.1s;
         }
@@ -266,6 +272,7 @@
             box-shadow: 0 0 0 4px rgba(30,58,138,0.18);
         }
 
+        /* 다크맵 슬라이더 */
         #darkMapSlider::-webkit-slider-thumb {
             width: 14px; height: 14px;
             border-radius: 50%;
@@ -295,6 +302,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
 <style id="orange-cluster-theme">
+/* Orange-only cluster colors: small -> large */
 .marker-cluster,
 .marker-cluster div {
     color: #ffffff !important;
@@ -304,31 +312,31 @@
 }
 
 .marker-cluster-small {
-    background-color: rgba(251, 146, 60, 0.35) !important;
+    background-color: rgba(251, 146, 60, 0.35) !important; /* light orange */
 }
 .marker-cluster-small div {
-    background-color: #fb923c !important; 
+    background-color: #fb923c !important; /* orange-400 */
 }
 
 .marker-cluster-medium {
-    background-color: rgba(234, 88, 12, 0.35) !important;
+    background-color: rgba(234, 88, 12, 0.35) !important; /* orange */
 }
 .marker-cluster-medium div {
-    background-color: #ea580c !important;
+    background-color: #ea580c !important; /* orange-600 */
 }
 
 .marker-cluster-large {
-    background-color: rgba(194, 65, 12, 0.38) !important; 
+    background-color: rgba(194, 65, 12, 0.38) !important; /* deep orange */
 }
 .marker-cluster-large div {
-    background-color: #c2410c !important;
+    background-color: #c2410c !important; /* orange-700 */
 }
 
 .marker-cluster-xlarge {
-    background-color: rgba(124, 45, 18, 0.42) !important;
+    background-color: rgba(124, 45, 18, 0.42) !important; /* brownish orange */
 }
 .marker-cluster-xlarge div {
-    background-color: #7c2d12 !important; 
+    background-color: #7c2d12 !important; /* brown */
 }
 </style>
 
@@ -375,7 +383,7 @@
                     </button>
                 </div>
                 <div class="relative mb-3">
-                    <input type="text" id="searchInput" placeholder="이름, 지역, 직업, 주소, 설명으로 검색..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow">
+                    <input type="text" id="searchInput" placeholder="이름, 지역, 직업, 국적, 설명으로 검색..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow">
                     <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400"></i>
                 </div>
 
@@ -407,9 +415,13 @@
                         </div>
                         <!-- 커스텀 듀얼 슬라이더 -->
                         <div id="yearRangeSlider" class="relative h-6 flex items-center select-none" style="cursor:pointer;">
+                            <!-- 트랙 배경 -->
                             <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-slate-200"></div>
+                            <!-- 선택 구간 채움 -->
                             <div id="yearTrackFill" class="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-primary" style="left:0%; width:100%;"></div>
+                            <!-- 최소 썸 -->
                             <div id="yearThumbMin" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg" style="left:0%;"></div>
+                            <!-- 최대 썸 -->
                             <div id="yearThumbMax" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg" style="left:100%;"></div>
                         </div>
                         <div class="flex justify-between text-[9px] text-slate-400 mt-0.5 px-1">
@@ -444,6 +456,7 @@
         <div class="flex-1 relative h-[60vh] md:h-full">
             <div id="map" class="absolute inset-0 z-0"></div>
 
+            <!-- 사이드바(검색 패널) 토글 버튼: 항상 지도 좌상단에 떠있음 -->
             <button id="sidebarToggleBtn" onclick="toggleSidebar()" title="검색 패널 열기/닫기" class="sidebar-toggle-btn">
                 <i class="fa-solid fa-bars"></i>
             </button>
@@ -453,6 +466,7 @@
                 지도를 더 확대하면 마을에 연결된 조직·인물이 펼쳐집니다
             </div>
 
+            <!-- 다크맵 투명도 컨트롤 -->
             <div id="darkMapControl" class="map-panel collapsed absolute top-3 right-3 z-[500] bg-white bg-opacity-95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg px-3 py-2.5" style="min-width:180px;">
                 <div class="panel-header-row mb-2">
                     <span class="panel-header-label text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
@@ -487,23 +501,11 @@
                     </span>
                 </div>
                 <div class="panel-body">
-                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c; border-radius:4px;"><i class="fa-solid fa-house-chimney" style="font-size:8px; color:white; display:block; margin:-1px 0 0 0px;"></i></span> 타운 (Town)</div>
-                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c; border-radius:4px;"><i class="fa-solid fa-house" style="font-size:8px; color:white; display:block; margin:-1px 0 0 0px;"></i></span> 빌리지 (Village)</div>
+                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c"></span> 마을 (Town)</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#2563eb"></span> 조직 (Organization)</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> 인물 (Person)</div>
-                    <div class="legend-row text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200" style="font-size:10px; line-height:1.5; display:block;">
-                        <div class="font-semibold text-slate-600 mb-1"><i class="fa-solid fa-gauge-high text-[9px]"></i> 위치 확실성 (Exact → Unknown)</div>
-                        <div class="flex items-center gap-1 mb-1">
-                            <span style="width:9px;height:9px;border-radius:50%;background:#334155;display:inline-block;"></span>
-                            <span style="width:9px;height:9px;border-radius:50%;background:#334155;opacity:0.8;display:inline-block;border:1px dashed #334155;"></span>
-                            <span style="width:10px;height:10px;border-radius:50%;background:#334155;opacity:0.65;display:inline-block;border:1px dashed #334155;"></span>
-                            <span style="width:12px;height:12px;border-radius:50%;background:#334155;opacity:0.5;display:inline-block;border:1px dashed #334155;"></span>
-                            <span style="width:14px;height:14px;border-radius:50%;background:#334155;opacity:0.42;display:inline-block;border:1px dashed #334155;"></span>
-                        </div>
-                        <div class="flex justify-between" style="font-size:9px;">
-                            <span>확실(Exact)</span><span>미상(Unknown)</span>
-                        </div>
-                        <div class="mt-1" style="font-size:9.5px;">점이 흐리고 테두리가 점선이며 주변 halo가 클수록, 위치 확실성이 낮은 기록입니다.</div>
+                    <div class="legend-row text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200" style="font-size:10px;">
+                        <i class="fa-solid fa-circle-info"></i> 점선 = 소속
                     </div>
                 </div>
             </div>
@@ -563,7 +565,7 @@
         let yearFilterEnabled = false;
 
         /* ====== 지도 스타일 ====== */
-        let darkMapOpacity = 0;   
+        let darkMapOpacity = 0;   // 0 = 완전 밝은 지도, 1 = 완전 어두운 지도
         let lightTileLayer = null;
         let darkTileLayer = null;
 
@@ -571,44 +573,6 @@
         const ZOOM_DETAIL_THRESHOLD = 10;
 
         const geminiApiKey = window.APP_CONFIG?.geminiApiKey || '';
-
-        /* ====== 위치 정확도(location_precision) 등급 ======
-           구글 시트의 towns/organizations/persons 시트가 공통으로 갖는 `location_precision` 필드.
-           - 마을(타운/빌리지) 시트: 이 필드 값이 'village'/'town'이면 그 자체로 정착지 규모(빌리지·타운)를 나타낸다.
-           - 조직/인물 시트: 좌표를 어느 단위까지 확정할 수 있는지(위치 확실성)를 나타낸다.
-           - 값의 정확도 순서는 Exact가 가장 확실하며, 뒤로 갈수록(= City, Region, Unknown) 점점 불확실해진다.
-             Exact를 제외하면 어떤 값도 100% 확정된 것은 아니다. */
-        const PRECISION_ORDER = ['exact', 'street', 'village', 'town', 'city', 'region', 'unknown'];
-        const PRECISION_INFO = {
-            exact:   { label: 'Exact · 정확 위치',    desc: '정확한 지점까지 고증되어 지도 좌표를 신뢰할 수 있습니다.' },
-            street:  { label: 'Street · 거리 단위',    desc: '거리(구역) 단위까지는 고증되었으나, 정확한 지점은 추정입니다.' },
-            village: { label: 'Village · 빌리지 단위', desc: '빌리지(소규모 정착지) 단위로 고증된 기록입니다.' },
-            town:    { label: 'Town · 타운 단위',      desc: '타운(행정구역) 단위로 고증되었으며, 그 안의 정확한 지점은 확정되지 않았습니다.' },
-            city:    { label: 'City · 도시 단위',      desc: '도시 단위로만 고증되어 정확한 위치는 불확실합니다.' },
-            region:  { label: 'Region · 지역 단위',    desc: '지역 단위로만 확인되어 위치 불확실성이 큽니다.' },
-            unknown: { label: 'Unknown · 미상',       desc: '현재로서는 위치를 특정할 수 없는 기록입니다.' }
-        };
-        /* 시트 담당자가 한글로 입력했을 경우를 대비한 보조 매핑 */
-        const PRECISION_KO_ALIASES = {
-            '정확': 'exact', '거리': 'street', '빌리지': 'village', '타운': 'town',
-            '도시': 'city', '지역': 'region', '미상': 'unknown', '불명': 'unknown'
-        };
-
-        function normalizePrecision(raw, fallback = 'unknown') {
-            const v = (raw || '').toString().trim().toLowerCase();
-            if (PRECISION_ORDER.includes(v)) return v;
-            if (PRECISION_KO_ALIASES[v]) return PRECISION_KO_ALIASES[v];
-            return fallback;
-        }
-        function getPrecisionRank(precisionKey) {
-            const idx = PRECISION_ORDER.indexOf(precisionKey);
-            return idx === -1 ? PRECISION_ORDER.length - 1 : idx;
-        }
-        /* 1(Exact, 가장 확실) ~ 0(Unknown, 가장 불확실) */
-        function getCertaintyScore(precisionKey) {
-            const rank = getPrecisionRank(precisionKey);
-            return 1 - (rank / (PRECISION_ORDER.length - 1));
-        }
 
         /* ====== CSV 파서 ====== */
         function csvToArray(text) {
@@ -692,34 +656,19 @@
                             const population = getCol(row, headerMap, 'population', '인구');
                             if (population) desc = `[인구: ${population}] ` + desc;
 
-                            // location_precision 필드 하나로 '빌리지/타운 규모 구분'과 '위치 확실성'을 함께 처리한다.
-                            // (수백 명 단위의 소규모 정착지는 'village'로 관리)
-                            const rawPrecision = getCol(row, headerMap, 'location_precision', 'precision', '위치_정확도', '정확도');
-                            const precision = normalizePrecision(rawPrecision, 'town');
-
-                            // 레거시 호환: 예전 방식(별도 규모/분류 열)으로 입력된 시트가 아직 남아있는 경우를 대비
-                            const legacyType = getCol(row, headerMap, 'settlement_type', '규모', '타운/빌리지', '분류').toLowerCase();
-                            const isVillage = precision === 'village' ||
-                                (precision !== 'town' && (legacyType.includes('빌리지') || legacyType === 'village'));
-
-                            const address = getCol(row, headerMap, 'address', '어드레스', '주소', '주소지');
-
                             updatedData.push({
                                 id: globalId++,
                                 type: '마을',
-                                settlementType: isVillage ? '빌리지' : '타운',
                                 name,
                                 description: desc,
                                 founded: getCol(row, headerMap, 'start_year', 'founded', '설립'),
                                 dissolved: getCol(row, headerMap, 'end_year', 'dissolved', '소멸'),
                                 lat, lng,
-                                address,
                                 source: getCol(row, headerMap, 'source', '출처'),
                                 author: getCol(row, headerMap, 'creator', 'author', '작성자'),
                                 relatedTown: '',
                                 relatedOrg: '',
-                                locationPrecision: precision,
-                                certaintyScore: getCertaintyScore(precision)
+                                locationPrecision: (getCol(row, headerMap, 'location_precision', 'precision') || 'town').toLowerCase()
                             });
                         }
                     }
@@ -741,8 +690,7 @@
                         const name = getCol(row, headerMap, 'name', '이름');
                         if (!name) continue;
 
-                        const rawPrecision = getCol(row, headerMap, 'location_precision', 'precision', '위치_정확도', '정확도');
-                        const precision = normalizePrecision(rawPrecision, 'unknown');
+                        const precision = (getCol(row, headerMap, 'location_precision', 'precision') || 'unknown').toLowerCase();
                         const relatedTown = getCol(row, headerMap, 'related_town', '소속마을');
                         const ownLat = parseFloat(getCol(row, headerMap, 'lat', 'latitude', '위도')) || 0;
                         const ownLng = parseFloat(getCol(row, headerMap, 'lng', 'lon', 'longitude', '경도')) || 0;
@@ -759,9 +707,6 @@
                         } else if (ownLat && ownLng) {
                             lat = ownLat; lng = ownLng;
                         }
-                        
-                        // 어드레스(조직/인물 시트 신설 필드) — 좌표 비정이 안 되어도 텍스트로 보존
-                        const address = getCol(row, headerMap, 'address', '어드레스', '주소', '주소지');
 
                         const item = {
                             id: globalId++,
@@ -776,9 +721,7 @@
                             source: getCol(row, headerMap, 'source', '출처'),
                             author: getCol(row, headerMap, 'creator', 'author', '작성자'),
                             locationPrecision: precision,
-                            isPrecise,
-                            address,
-                            certaintyScore: getCertaintyScore(precision)
+                            isPrecise
                         };
 
                         if (target.type === '조직') {
@@ -806,6 +749,7 @@
                 yearRangeMax = detectedMax;
                 yearFilterMin = detectedMin;
                 yearFilterMax = detectedMax;
+                /* 슬라이더 레이블 갱신 */
                 const minLabel = document.getElementById('yearLabelMin');
                 const maxLabel = document.getElementById('yearLabelMax');
                 const rangeLabel = document.getElementById('yearRangeLabel');
@@ -847,12 +791,13 @@
         window.addEventListener('DOMContentLoaded', async () => {
             map = L.map('map', {
                 zoomControl: true,
-                worldCopyJump: true,      
+                worldCopyJump: true,      // 경도 -180/180 경계에서 지도가 끊겨 보이지 않도록
                 minZoom: 2,
-                maxBounds: [[-85, -Infinity], [85, Infinity]], 
+                maxBounds: [[-85, -Infinity], [85, Infinity]], // 위/아래 여백(빈 영역) 방지
                 maxBoundsViscosity: 0.6
             }).setView([43.0, 132.0], 5);
 
+            /* 밝은 타일 (OpenStreetMap) */
             lightTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors',
                 maxZoom: 18, minZoom: 2,
@@ -860,6 +805,7 @@
                 noWrap: false
             }).addTo(map);
 
+            /* 어두운 타일 (CartoDB Dark Matter) — 초기 opacity 0 */
             darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
                 maxZoom: 19, minZoom: 2,
@@ -892,24 +838,31 @@
             const filterBtns = document.querySelectorAll('.filter-btn');
             filterBtns.forEach(btn => btn.addEventListener('click', (e) => handleFilter(e, filterBtns)));
 
+            /* 연도 슬라이더 초기화 */
             initYearSlider();
 
+            /* 사이드바 토글 버튼: 최초 접힘 상태에 맞춰 강조 표시 및 타이틀 설정 */
             const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
             if (sidebarToggleBtn) {
                 sidebarToggleBtn.classList.add('ring-2', 'ring-primary');
                 sidebarToggleBtn.title = '검색 패널 열기';
             }
 
+            /* 지도 어두움 슬라이더 */
             document.getElementById('darkMapSlider').addEventListener('input', function() {
                 darkMapOpacity = parseFloat(this.value);
                 applyMapStyle();
             });
 
+            /* 줌 변경시 지도 재구성 (2계층 토글) */
             map.on('zoomend', () => {
                 updateZoomHint();
                 renderMap();
             });
 
+            /* ====== 레이아웃/크기 변화 시 지도 빈 영역(회색 타일) 방지 ====== */
+            // 1) 폰트/웹폰트 로딩, 브라우저 초기 레이아웃 계산 등으로 컨테이너 크기가
+            //    뒤늦게 확정되는 경우를 대비해 여러 시점에 invalidateSize를 호출한다.
             requestAnimationFrame(() => map.invalidateSize());
             setTimeout(() => map.invalidateSize(), 150);
             setTimeout(() => map.invalidateSize(), 500);
@@ -917,7 +870,11 @@
             if (document.fonts && document.fonts.ready) {
                 document.fonts.ready.then(() => map.invalidateSize());
             }
+
+            // 2) 브라우저 창 크기 변경 시 지도 크기 재계산
             window.addEventListener('resize', () => map.invalidateSize());
+
+            // 3) 지도 컨테이너 자체의 크기 변화(사이드바 토글, 반응형 전환 등)를 감지
             const mapEl = document.getElementById('map');
             if (window.ResizeObserver && mapEl) {
                 const ro = new ResizeObserver(() => map.invalidateSize());
@@ -942,79 +899,71 @@
             }
         }
 
-        /* ====== 아이콘 설정 (위치 확실성 그라데이션 반영) ======
-           사료 간 '충돌 여부'라는 이진 플래그 대신, location_precision 등급에서 산출한
-           certaintyScore(1=Exact, 0=Unknown)를 이용해 아래 3가지를 연속적으로 변화시킨다.
-             1) 마커 불투명도  : 확실할수록 진하고, 불확실할수록 흐려짐
-             2) 테두리 스타일  : Exact만 실선, 그 외에는 모두 점선(완전히 확정된 값이 아님을 표시)
-             3) 불확실성 halo : 확실성이 낮을수록 마커 주변에 흐릿하게 번지는 원(추정 범위)이 커짐 */
+        /* ====== 아이콘 ====== */
         function getIcon(type, opts = {}) {
-            const { isHighlighted=false, badgeCount=0, isFloating=false, settlementType='타운', certaintyScore=1 } = opts;
+            const { isHighlighted=false, badgeCount=0, isFloating=false, isPrecise=true } = opts;
             let color, iconClass;
-
-            let size = isHighlighted ? 38 : (isFloating ? 24 : 28);
-            if (type === '마을') {
-                size = isHighlighted ? (settlementType === '빌리지' ? 34 : 38) : (settlementType === '빌리지' ? 28 : 32);
-                color = '#ea580c'; 
-                iconClass = settlementType === '빌리지' ? 'fa-house' : 'fa-house-chimney';
-            }
+            if (type === '마을') { color = '#ea580c'; iconClass = 'fa-house'; }
             else if (type === '조직') { color = '#2563eb'; iconClass = 'fa-users'; }
             else if (type === '인물') { color = '#16a34a'; iconClass = 'fa-user'; }
 
+            const size = isHighlighted ? 38 : (type === '마을' ? 32 : (isFloating ? 24 : 28));
+            const border = isHighlighted ? '3px solid #fbbf24' : '2px solid white';
             const shadow = isHighlighted
                 ? '0 0 14px rgba(251,191,36,0.9)'
                 : (isFloating ? '0 3px 10px rgba(0,0,0,0.25)' : '0 2px 6px rgba(0,0,0,0.3)');
-
-            const certainty = Math.max(0, Math.min(1, certaintyScore));
-            const isExact = certainty >= 0.999;
-            const markerOpacity = isHighlighted ? 1 : (0.42 + 0.58 * certainty);
-            const border = isHighlighted
-                ? '3px solid #fbbf24'
-                : (isExact ? '2px solid white' : '2px dashed rgba(255,255,255,0.9)');
-
-            // 불확실성이 클수록(certainty가 낮을수록) 마커 주변 halo 반경/농도가 커짐
-            const haloScale = 1 - certainty;
-            const haloSize = Math.round(size * (1 + haloScale * 1.1));
-            const showHalo = !isHighlighted && haloScale > 0.05;
-            const haloHtml = showHalo
-                ? `<div style="position:absolute; top:50%; left:50%; width:${haloSize}px; height:${haloSize}px; transform:translate(-50%,-50%); border-radius:50%; background:${color}; opacity:${(haloScale * 0.28).toFixed(2)}; filter: blur(1px); pointer-events:none;"></div>`
-                : '';
+            const ringStyle = (!isPrecise && type !== '마을') ? 'outline: 2px dashed rgba(255,255,255,0.6); outline-offset:2px;' : '';
 
             const badgeHtml = badgeCount > 0
                 ? `<div class="town-badge">${badgeCount}</div>`
                 : '';
 
-            const outerSize = Math.max(size + 8, haloSize);
             const html = `
-                <div style="position:relative; width:${outerSize}px; height:${outerSize}px; display:flex; align-items:center; justify-content:center;">
-                    ${haloHtml}
-                    <div style="position:relative; width:${size}px; height:${size}px;">
-                        <div style="background-color:${color}; width:${size}px; height:${size}px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:${border}; box-shadow:${shadow}; opacity:${markerOpacity}; transition: all 0.25s;" class="text-white">
-                            <i class="fa-solid ${iconClass}" style="font-size:${Math.round(size*0.42)}px;"></i>
-                        </div>
-                        ${badgeHtml}
+                <div style="position:relative; width:${size}px; height:${size}px;">
+                    <div style="background-color:${color}; width:${size}px; height:${size}px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:${border}; box-shadow:${shadow}; ${ringStyle} transition: all 0.25s;" class="text-white">
+                        <i class="fa-solid ${iconClass}" style="font-size:${Math.round(size*0.42)}px;"></i>
                     </div>
+                    ${badgeHtml}
                 </div>
             `;
             return L.divIcon({
                 html, className: isFloating ? 'floating-marker' : '',
-                iconSize: [outerSize, outerSize], iconAnchor: [outerSize/2, outerSize/2], popupAnchor: [0, -size/2 - 4]
+                iconSize: [size+8, size+8], iconAnchor: [(size+8)/2, (size+8)/2], popupAnchor: [0, -size/2 - 4]
             });
         }
 
+        // 노드 레이블 추가 (항상 표시 옵션)
         function addNodeLabel(lat, lng, text) {
+
             if (map.getZoom() < ZOOM_DETAIL_THRESHOLD) return;
+
             const label = L.marker([lat, lng], {
                 interactive: false,
                 icon: L.divIcon({
                     className: '',
                     html: `
-                    <div style="background:none; border:none; padding:0; font-size:13px; font-weight:700; color:#475569; white-space:nowrap; text-shadow: 0 0 3px #fff, 0 0 6px #fff, 0 0 8px #fff;">
+                    <div style="
+                        background:none;
+                        border:none;
+                        padding:0;
+
+                        font-size:13px;
+                        font-weight:700;
+                        color:#475569;
+
+                        white-space:nowrap;
+                        text-shadow:
+                            0 0 3px #fff,
+                            0 0 6px #fff,
+                            0 0 8px #fff;
+                    ">
                         ${escapeHtml(text)}
-                    </div>`,
+                    </div>
+                    `,
                     iconAnchor: [12, -22]
                 })
             });
+
             markersLayer.addLayer(label);
         }
 
@@ -1090,6 +1039,7 @@
                 }
                 renderData();
             });
+
             updateSlider();
         }
 
@@ -1098,9 +1048,11 @@
             if (lightTileLayer) lightTileLayer.setOpacity(1 - darkMapOpacity);
             if (darkTileLayer) darkTileLayer.setOpacity(darkMapOpacity);
 
+            /* 퍼센트 레이블 */
             const pctLabel = document.getElementById('darkMapPctLabel');
             if (pctLabel) pctLabel.textContent = Math.round(darkMapOpacity * 100) + '%';
 
+            /* 다크맵 컨트롤 패널 색상 반응형 */
             const ctrl = document.getElementById('darkMapControl');
             if (ctrl) {
                 if (darkMapOpacity > 0.5) {
@@ -1115,6 +1067,7 @@
                 }
             }
 
+            /* 범례 / 줌힌트 색상 반응형 */
             const mapLegend = document.querySelector('.map-legend');
             const zoomHint = document.getElementById('zoomHint');
             if (darkMapOpacity > 0.5) {
@@ -1134,16 +1087,17 @@
             }
         }
 
-        /* ====== 필터링 ====== */
+        /* ====== 필터링 (사이드바 리스트용) ====== */
         function getFilteredData() {
             return rawData.filter(item => {
                 const matchType = currentFilter === 'all' || item.type === currentFilter;
                 const haystack = [
-                    item.name, item.description, item.relatedTown, item.address,
+                    item.name, item.description, item.relatedTown,
                     item.orgType, item.nationality, item.job, item.relatedOrg
                 ].filter(Boolean).join(' ').toLowerCase();
                 const matchSearch = !currentSearch || haystack.includes(currentSearch);
 
+                /* 연도 필터 */
                 let matchYear = true;
                 if (yearFilterEnabled) {
                     const founded = parseInt(item.founded) || null;
@@ -1154,6 +1108,7 @@
                         matchYear = itemStart <= yearFilterMax && itemEnd >= yearFilterMin;
                     }
                 }
+
                 return matchType && matchSearch && matchYear;
             });
         }
@@ -1170,6 +1125,7 @@
             const listContainer = document.getElementById('dataList');
             listContainer.innerHTML = '';
 
+            /* 선택 배너 */
             const banner = document.getElementById('selectionBanner');
             if (selectedTownName) {
                 banner.classList.remove('hidden');
@@ -1189,6 +1145,7 @@
                 return;
             }
 
+            /* 네트워크 트리 정렬 (마을 선택 시) */
             let displayData = [...filteredData];
             if (selectedTownName && currentFilter === 'all') {
                 const townItem = rawData.find(d => d.type === '마을' && d.name === selectedTownName);
@@ -1199,23 +1156,21 @@
 
             displayData.forEach(item => {
                 let badgeColor = '';
-                let displayType = item.type;
-                if (item.type === '마을') {
-                    displayType = item.settlementType === '빌리지' ? '빌리지' : '타운';
-                    badgeColor = 'bg-orange-100 text-orange-800 border-orange-200';
-                }
+                if (item.type === '마을') badgeColor = 'bg-orange-100 text-orange-800 border-orange-200';
                 else if (item.type === '조직') badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
                 else if (item.type === '인물') badgeColor = 'bg-green-100 text-green-800 border-green-200';
 
                 const isChild = selectedTownName && item.type !== '마을' && item.relatedTown === selectedTownName;
                 const isSelected = item.name === selectedTownName && item.type === '마을';
 
+                /* 마을이면 관련 노드 카운트 표시 */
                 let countChip = '';
                 if (item.type === '마을') {
                     const cnt = rawData.filter(d => d.type !== '마을' && d.relatedTown === item.name).length;
                     if (cnt > 0) countChip = `<span class="meta-chip" style="background:#fff7ed; color:#9a3412; border-color:#fed7aa;"><i class="fa-solid fa-diagram-project"></i> ${cnt}개 연결</span>`;
                 }
 
+                /* type/nationality/job 등 메타 칩 */
                 let extraChips = '';
                 if (item.type === '조직' && item.orgType) {
                     extraChips += `<span class="meta-chip" style="background:#eff6ff; color:#1e40af; border-color:#bfdbfe;"><i class="fa-solid fa-tag"></i> ${escapeHtml(item.orgType)}</span>`;
@@ -1224,7 +1179,10 @@
                     if (item.nationality) extraChips += `<span class="meta-chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-flag"></i> ${escapeHtml(item.nationality)}</span>`;
                     if (item.job) extraChips += `<span class="meta-chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>`;
                 }
-                extraChips += renderPrecisionChip(item);
+                /* 정밀도 표시 (마을 제외 + town/city/region/unknown 일때) */
+                if (item.type !== '마을' && !item.isPrecise) {
+                    extraChips += `<span class="meta-chip" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" title="정확 좌표 없음 — 소속 마을에 부유 표시"><i class="fa-solid fa-location-crosshairs"></i> ${item.locationPrecision || 'unknown'}</span>`;
+                }
 
                 const card = document.createElement('div');
                 card.className = `p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all ${isSelected ? 'selected-card' : ''} ${isChild ? 'network-child-card' : ''}`;
@@ -1234,18 +1192,17 @@
                         <h3 class="font-bold text-slate-800 font-serif ${isChild ? 'text-base' : 'text-lg'} flex-1 min-w-0 truncate">
                             ${isChild ? '<i class="fa-solid fa-arrow-turn-up rotate-90 mr-1 text-slate-400"></i>' : ''}${escapeHtml(item.name)}
                         </h3>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-medium ${badgeColor} flex-shrink-0">${displayType}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-medium ${badgeColor} flex-shrink-0">${item.type}</span>
                     </div>
                     <p class="text-xs text-slate-500 mb-2 line-clamp-2">${escapeHtml(item.description) || '<span class="italic text-slate-300">설명 없음</span>'}</p>
                     <div class="flex flex-wrap mb-1">
                         ${countChip}${extraChips}
                     </div>
-                    ${renderAddressHtml(item, { compact: true })}
                     ${item.relatedTown ? `<div class="text-[10px] text-primary font-medium mb-1"><i class="fa-solid fa-link"></i> 소속마을: ${escapeHtml(item.relatedTown)}</div>` : ''}
                     ${item.relatedOrg ? `<div class="text-[10px] text-purple-700 font-medium mb-1"><i class="fa-solid fa-sitemap"></i> 소속조직: ${escapeHtml(item.relatedOrg)}</div>` : ''}
                     <div class="flex justify-between items-end text-[10px] text-slate-400 mt-1">
                         <span><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || '미상')} ~ ${escapeHtml(item.dissolved || '미상')}</span>
-                        <button onclick="event.stopPropagation(); askAIAboutById(${item.id})" class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 transition-colors bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 mt-1">
+                        <button onclick="event.stopPropagation(); askAIAboutById(${item.id})" class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 transition-colors bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
                             <i class="fa-solid fa-sparkles"></i> AI 해설
                         </button>
                     </div>
@@ -1262,61 +1219,6 @@
             return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
 
-        /* ====== 위치 확실성(certainty) 표시 헬퍼 ====== */
-        function certaintyColor(pct) {
-            if (pct < 40) return '#dc2626';
-            if (pct < 70) return '#d97706';
-            return '#16a34a';
-        }
-
-        /* 사이드바 카드용 — 짧은 칩 형태 */
-        function renderPrecisionChip(item) {
-            const info = PRECISION_INFO[item.locationPrecision] || PRECISION_INFO.unknown;
-            const pct = Math.round((item.certaintyScore ?? 0) * 100);
-            const color = certaintyColor(pct);
-            return `<span class="meta-chip" style="background:#f8fafc; color:#334155; border-color:#e2e8f0;" title="${escapeHtml(info.desc)}">
-                <i class="fa-solid fa-signal" style="color:${color};"></i> ${info.label} · 확실성 ${pct}%
-            </span>`;
-        }
-
-        /* 팝업용 — 확실성 게이지(신호 막대 형태) + 설명 */
-        function renderCertaintyGaugeHtml(item) {
-            const info = PRECISION_INFO[item.locationPrecision] || PRECISION_INFO.unknown;
-            const rank = getPrecisionRank(item.locationPrecision);
-            const pct = Math.round((item.certaintyScore ?? 0) * 100);
-            const color = certaintyColor(pct);
-            const filledCount = PRECISION_ORDER.length - rank; // Exact→7칸, Unknown→1칸 채움
-
-            const bars = PRECISION_ORDER.map((_, i) => {
-                const filled = i < filledCount;
-                return `<span style="width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:2px;background:${filled ? color : '#e2e8f0'};"></span>`;
-            }).join('');
-
-            return `
-                <div class="text-[10.5px] bg-slate-50 text-slate-600 p-2 rounded border border-slate-200 mt-1 mb-2 leading-relaxed">
-                    <div class="flex items-center justify-between mb-1">
-                        <b class="text-slate-700"><i class="fa-solid fa-gauge-high" style="color:${color};"></i> 위치 확실성: ${info.label}</b>
-                        <span style="color:${color}; font-weight:700;">${pct}%</span>
-                    </div>
-                    <div class="mb-1">${bars}</div>
-                    <div>${escapeHtml(info.desc)}</div>
-                </div>`;
-        }
-
-        /* 주소(텍스트 보존) 블록 — 좌표 비정이 안 되어도 사료상 주소를 그대로 노출 */
-        function renderAddressHtml(item, { compact = false } = {}) {
-            if (!item.address) return '';
-            if (compact) {
-                return `<div class="text-[10px] text-slate-500 mb-1" title="현재 주소 체계와 다르거나 지도 좌표와 정확히 일치하지 않을 수 있으나, 사료상 주소를 텍스트로 보존합니다.">
-                    <i class="fa-solid fa-map-pin text-slate-400"></i> 주소: ${escapeHtml(item.address)}
-                </div>`;
-            }
-            return `<div class="text-[11px] text-slate-600 mb-2">
-                <i class="fa-solid fa-map-pin text-slate-400"></i> <b>주소:</b> ${escapeHtml(item.address)}
-                <div class="text-[10px] text-slate-400 mt-0.5">사료상의 주소 표기이며, 현재 주소 체계와 다르거나 지도 좌표와 정확히 일치하지 않을 수 있습니다.</div>
-            </div>`;
-        }
-
         /* --- 지도 마커 --- */
         function renderMap() {
             if (!map) return;
@@ -1328,6 +1230,12 @@
             const filteredData = getFilteredData();
             const zoom = map.getZoom();
             const isDetailMode = zoom >= ZOOM_DETAIL_THRESHOLD;
+
+            /* 필터 모드별 처리:
+               - currentFilter === 'all' 이고 줌이 낮으면 → 마을만 표시
+               - 줌이 detail 이상 → 마을 + (자체 좌표 있는 정확위치 노드) + (부유 노드)
+               - filter가 '조직'/'인물' 단독이면 줌과 상관없이 해당 타입만 표시 (단, 부유는 마을 좌표 활용)
+            */
 
             const villagesAll = rawData.filter(d => d.type === '마을');
             const villageMap = {};
@@ -1342,69 +1250,101 @@
                 const childCount = rawData.filter(d => d.type !== '마을' && d.relatedTown === item.name).length;
                 const isHighlighted = selectedTownName && item.name === selectedTownName;
                 const marker = L.marker([item.lat, item.lng], {
-                    icon: getIcon('마을', { isHighlighted, badgeCount: childCount, settlementType: item.settlementType, certaintyScore: item.certaintyScore })
+                    icon: getIcon('마을', { isHighlighted, badgeCount: childCount, isPrecise: true })
                 });
                 attachPopupAndEvents(marker, item);
                 townClusterLayer.addLayer(marker);
                 markers.push(marker);
 
-                addNodeLabel(item.lat, item.lng, item.name);
+                addNodeLabel(
+                    item.lat,
+                    item.lng,
+                    item.name
+                );
             });
 
             /* 2. 조직/인물 표시 */
             filteredOrgsPersons.forEach(item => {
+                /* (a) 정확 위치(exact/street): 무조건 자신의 좌표에 표시 */
                 if (item.isPrecise && item.lat && item.lng) {
+                    /* 단, 'all'필터 + low zoom이면 숨김 (마을만 보이게) */
                     if (currentFilter === 'all' && !isDetailMode) return;
 
                     const isHighlighted = selectedTownName && item.relatedTown === selectedTownName;
                     const marker = L.marker([item.lat, item.lng], {
-                        icon: getIcon(item.type, { isHighlighted, certaintyScore: item.certaintyScore })
+                        icon: getIcon(item.type, { isHighlighted, isPrecise: true })
                     });
                     attachPopupAndEvents(marker, item);
                     markersLayer.addLayer(marker);
                     markers.push(marker);
 
-                    addNodeLabel(item.lat, item.lng, item.name);
+                    addNodeLabel(
+                        item.lat,
+                        item.lng,
+                        item.name
+                    );
+
                     return;
                 }
 
+                /* (b) 비정확 위치: 마을에 부유 표시 — 줌 임계 이상에서만 (또는 단독 필터일 때) */
                 const showFloating = isDetailMode || currentFilter === item.type;
                 if (!showFloating) return;
 
                 const parentVillage = villageMap[item.relatedTown];
-                if (!parentVillage || !parentVillage.lat || !parentVillage.lng) return;
+                if (!parentVillage || !parentVillage.lat || !parentVillage.lng) {
+                    /* 부모 마을도 좌표가 없으면 표시 불가 */
+                    return;
+                }
 
-                const siblings = rawData.filter(d => d.type !== '마을' && !d.isPrecise && d.relatedTown === parentVillage.name);
+                /* 같은 마을에 부유하는 다른 비정확 노드들 중 자신의 인덱스 계산 → 원형 배치 */
+                const siblings = rawData.filter(d =>
+                    d.type !== '마을' &&
+                    !d.isPrecise &&
+                    d.relatedTown === parentVillage.name
+                );
                 const idx = siblings.findIndex(s => s.id === item.id);
                 const total = siblings.length || 1;
 
                 const pos = computeFloatingLatLng(parentVillage, idx, total);
+
                 const isHighlighted = selectedTownName && item.relatedTown === selectedTownName;
                 const marker = L.marker(pos, {
-                    icon: getIcon(item.type, { isHighlighted, isFloating: true, certaintyScore: item.certaintyScore })
+                    icon: getIcon(item.type, { isHighlighted, isFloating: true, isPrecise: false })
                 });
                 attachPopupAndEvents(marker, item);
                 markersLayer.addLayer(marker);
                 markers.push(marker);
 
-                addNodeLabel(pos[0], pos[1], item.name);
+                addNodeLabel(
+                    pos[0],
+                    pos[1],
+                    item.name
+                );
+
             });
             drawRelationshipLines();
         }
 
+        /* 부유 노드 좌표 계산 — 줌에 따라 반경 자동 조절 */
         function computeFloatingLatLng(village, idx, total) {
             const zoom = map.getZoom();
-            const baseRadiusDeg = 0.45;          
+            /* 줌이 클수록 화면상 같은 픽셀거리가 더 작은 위경도이므로 반경을 줄임 */
+            const baseRadiusDeg = 0.45;          // zoom 7 기준
             const radius = baseRadiusDeg * Math.pow(0.55, Math.max(0, zoom - 7));
-            const angle = (idx / total) * Math.PI * 2 - Math.PI / 2; 
+            const angle = (idx / total) * Math.PI * 2 - Math.PI / 2; // 12시 방향부터
             const dLat = radius * Math.sin(angle);
+            /* 위도가 높으면 경도 1도가 짧아지므로 경도 보정 */
             const lonCorr = 1 / Math.max(0.2, Math.cos(village.lat * Math.PI / 180));
             const dLng = radius * Math.cos(angle) * lonCorr;
             return [village.lat + dLat, village.lng + dLng];
         }
 
         function drawRelationshipLines() {
+
             const markerMap = {};
+
+            // 마을(클러스터 레이어) + 조직/인물(일반 레이어) 모두 포함
             const collectMarkers = (layerGroup) => {
                 if (!layerGroup || !layerGroup.eachLayer) return;
                 layerGroup.eachLayer(layer => {
@@ -1413,46 +1353,78 @@
                     }
                 });
             };
+
             collectMarkers(townClusterLayer);
             collectMarkers(markersLayer);
 
             rawData.forEach(item => {
+
                 const fromMarker = markerMap[item.id];
                 if (!fromMarker) return;
 
                 let target = null;
                 let color = '#64748b';
 
+                // 조직 → 마을
                 if (item.type === '조직' && item.relatedTown) {
-                    target = rawData.find(d => d.type === '마을' && d.name === item.relatedTown);
+
+                    target = rawData.find(
+                        d => d.type === '마을' &&
+                        d.name === item.relatedTown
+                    );
+
                     color = '#2563eb';
                 }
+
+                // 인물 → 조직 우선
                 else if (item.type === '인물') {
+
                     if (item.relatedOrg) {
-                        target = rawData.find(d => d.type === '조직' && d.name === item.relatedOrg);
+
+                        target = rawData.find(
+                            d => d.type === '조직' &&
+                            d.name === item.relatedOrg
+                        );
+
                         color = '#16a34a';
                     }
+
+                    // 조직 없으면 마을
                     if (!target && item.relatedTown) {
-                        target = rawData.find(d => d.type === '마을' && d.name === item.relatedTown);
+
+                        target = rawData.find(
+                            d => d.type === '마을' &&
+                            d.name === item.relatedTown
+                        );
+
                         color = '#16a34a';
                     }
                 }
 
                 if (!target) return;
+
                 const toMarker = markerMap[target.id];
                 if (!toMarker) return;
 
                 const fromLatLng = fromMarker.getLatLng();
                 const toLatLng = toMarker.getLatLng();
 
-                const line = L.polyline([fromLatLng, toLatLng], {
-                    color, weight: 2, opacity: 0.6, className: 'network-line'
-                });
+                const line = L.polyline(
+                    [fromLatLng, toLatLng],
+                    {
+                        color,
+                        weight: 2,
+                        opacity: 0.6,
+                        className: 'network-line'
+                    }
+                );
+
                 linesLayer.addLayer(line);
             });
         }
 
         function attachPopupAndEvents(marker, item) {
+            /* 팝업 내용 구성 */
             let extraMetaHtml = '';
             if (item.type === '조직' && item.orgType) {
                 extraMetaHtml += `<span class="chip" style="background:#eff6ff; color:#1e40af; border-color:#bfdbfe;"><i class="fa-solid fa-tag"></i> ${escapeHtml(item.orgType)}</span>`;
@@ -1461,6 +1433,10 @@
                 if (item.nationality) extraMetaHtml += `<span class="chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-flag"></i> ${escapeHtml(item.nationality)}</span>`;
                 if (item.job) extraMetaHtml += `<span class="chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>`;
             }
+            if (item.type !== '마을' && !item.isPrecise) {
+                extraMetaHtml += `<span class="chip" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" title="정확 좌표 없음 — 마을에 부유 표시"><i class="fa-solid fa-location-crosshairs"></i> ${escapeHtml(item.locationPrecision)}</span>`;
+            }
+
             let relationsHtml = '';
             if (item.type === '마을') {
                 const subOrgs = rawData.filter(d => d.type === '조직' && d.relatedTown === item.name);
@@ -1469,18 +1445,13 @@
                 if (subPers.length) relationsHtml += `<div class="text-[11px] text-green-700 mt-0.5"><b><i class="fa-solid fa-user"></i> 관련 인물(${subPers.length}):</b> ${escapeHtml(subPers.map(d=>d.name).join(', '))}</div>`;
             }
 
-            const addressHtml = renderAddressHtml(item);
-            const uncertaintyHtml = renderCertaintyGaugeHtml(item);
-
             const popupContent = `
                 <div class="custom-popup max-w-[320px]">
-                    <div class="text-[10px] text-slate-500 mb-1">${item.type === '마을' ? item.settlementType : item.type}${item.relatedTown ? ` · 소속: ${escapeHtml(item.relatedTown)}` : ''}</div>
+                    <div class="text-[10px] text-slate-500 mb-1">${item.type}${item.relatedTown ? ` · 소속: ${escapeHtml(item.relatedTown)}` : ''}</div>
                     <div class="title">${escapeHtml(item.name)}</div>
                     <div class="meta"><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || '미상')} ~ ${escapeHtml(item.dissolved || '미상')}</div>
                     <div class="mb-2">${extraMetaHtml}</div>
-                    ${addressHtml}
                     <div class="desc mb-2">${escapeHtml(item.description) || '<span class="italic text-slate-400">설명 없음</span>'}</div>
-                    ${uncertaintyHtml}
                     ${item.relatedOrg ? `<div class="text-[11px] text-purple-700 mb-1"><i class="fa-solid fa-sitemap"></i> 소속조직: ${escapeHtml(item.relatedOrg)}</div>` : ''}
                     ${relationsHtml}
                     <div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex flex-col gap-2">
@@ -1501,6 +1472,7 @@
                 if (item.type === '마을') selectedTownName = item.name;
                 else if (item.relatedTown) selectedTownName = item.relatedTown;
                 renderSidebar();
+                /* 마커 자체는 이미 클릭시 popup 자동 표시 */
             });
         }
 
@@ -1509,10 +1481,12 @@
             const lat = parseFloat(item.lat);
             const lng = parseFloat(item.lng);
 
+            /* 마을이거나 정확 좌표가 있으면 그 위치로 */
             let targetLat = lat, targetLng = lng;
             let targetZoom = 8;
 
             if (item.type !== '마을' && !item.isPrecise) {
+                /* 부유 노드는 부모 마을로 이동하면서 zoom-in (펼침 모드 보장) */
                 const parent = rawData.find(d => d.type === '마을' && d.name === item.relatedTown);
                 if (parent && parent.lat && parent.lng) {
                     targetLat = parent.lat; targetLng = parent.lng;
@@ -1536,6 +1510,7 @@
             renderSidebar();
             map.setView([targetLat, targetLng], targetZoom, { animate: true, duration: 0.8 });
 
+            /* renderMap은 zoomend 이벤트로 트리거 → 끝난 뒤 해당 항목 팝업 열기 */
             const tryOpenPopup = () => {
                 const target = markers.find(m => m.itemId === item.id);
                 if (target) target.openPopup();
@@ -1567,18 +1542,22 @@
             renderData();
         }
 
-        let isSidebarCollapsed = true; 
+        /* ====== 사이드바(검색 패널) 토글 ====== */
+        let isSidebarCollapsed = true; // 최초 로드 시 접힌 상태로 시작 (HTML의 sidebar-collapsed 클래스와 일치)
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const btn = document.getElementById('sidebarToggleBtn');
             isSidebarCollapsed = !isSidebarCollapsed;
             sidebar.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
+            // 지도 좌상단 토글 버튼은 사이드바가 접혔을 때만 눈에 띄게 강조
             btn.classList.toggle('ring-2', isSidebarCollapsed);
             btn.classList.toggle('ring-primary', isSidebarCollapsed);
             btn.title = isSidebarCollapsed ? '검색 패널 열기' : '검색 패널 닫기';
+            // transition 종료 후에도 ResizeObserver가 처리하지만, 안전하게 한 번 더 호출
             setTimeout(() => { if (map) map.invalidateSize(); }, 260);
         }
 
+        /* ====== 범례 / 지도 스타일 패널 접기·펼치기 ====== */
         function togglePanel(panelId) {
             const panel = document.getElementById(panelId);
             if (!panel) return;
