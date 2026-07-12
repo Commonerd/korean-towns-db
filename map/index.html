@@ -487,8 +487,7 @@
                     </span>
                 </div>
                 <div class="panel-body">
-                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c; border-radius:4px;"><i class="fa-solid fa-house-chimney" style="font-size:8px; color:white; display:block; margin:-1px 0 0 0px;"></i></span> 타운 (Town)</div>
-                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c; border-radius:4px;"><i class="fa-solid fa-house" style="font-size:8px; color:white; display:block; margin:-1px 0 0 0px;"></i></span> 빌리지 (Village)</div>
+                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c"></span> 마을 (Town)</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#2563eb"></span> 조직 (Organization)</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> 인물 (Person)</div>
                     <div class="legend-row text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200" style="font-size:10px; line-height:1.5; display:block;">
@@ -970,7 +969,7 @@
             const markerOpacity = isHighlighted ? 1 : (0.42 + 0.58 * certainty);
             const border = isHighlighted
                 ? '3px solid #fbbf24'
-                : (isExact ? '2px solid white' : '2px dashed rgba(255,255,255,0.9)');
+                : (isExact ? '2px solid white' : '2px rgba(255,255,255,0.9)');
 
             // 불확실성이 클수록(certainty가 낮을수록) 마커 주변 halo 반경/농도가 커짐
             const haloScale = 1 - certainty;
