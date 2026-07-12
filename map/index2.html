@@ -487,13 +487,23 @@
                     </span>
                 </div>
                 <div class="panel-body">
+                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c; border-radius:4px;"><i class="fa-solid fa-house" style="font-size:8px; color:white; display:block; margin:-1px 0 0 0px;"></i></span> 빌리지 (Village) · 수백 명 단위 소규모 정착지</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#ea580c; border-radius:4px;"><i class="fa-solid fa-house-chimney" style="font-size:8px; color:white; display:block; margin:-1px 0 0 0px;"></i></span> 타운 (Town)</div>
-                    <div class="legend-row"><span class="legend-dot" style="background:#ea580c; border-radius:4px;"><i class="fa-solid fa-house" style="font-size:8px; color:white; display:block; margin:-1px 0 0 0px;"></i></span> 빌리지 (Village)</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#2563eb"></span> 조직 (Organization)</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> 인물 (Person)</div>
                     <div class="legend-row text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200" style="font-size:10px; line-height: 1.4;">
-                        <i class="fa-solid fa-location-crosshairs text-[9px]"></i> 불확실한 좌표 (Exact 외)<br>
-                        <span class="pl-3">= 위치 정확도에 따라 마커 반투명 및 점선 처리</span>
+                        <i class="fa-solid fa-circle-info text-[9px]"></i> <b>위치 정확도(location_precision)</b>
+                    </div>
+                    <div class="legend-row" style="gap:4px; padding-left:2px;">
+                        <span class="legend-dot" style="width:10px; height:10px; background:#334155; opacity:1;"></span>
+                        <span class="legend-dot" style="width:10px; height:10px; background:#334155; opacity:0.8;"></span>
+                        <span class="legend-dot" style="width:10px; height:10px; background:#334155; opacity:0.68; border:1px dashed #94a3b8;"></span>
+                        <span class="legend-dot" style="width:10px; height:10px; background:#334155; opacity:0.55; border:1px dashed #94a3b8;"></span>
+                        <span class="legend-dot" style="width:10px; height:10px; background:#334155; opacity:0.4; border:1px dashed #94a3b8;"></span>
+                        <span class="legend-dot" style="width:10px; height:10px; background:#334155; opacity:0.28; border:1px dashed #94a3b8;"></span>
+                    </div>
+                    <div class="legend-row text-slate-500" style="font-size:9.5px; line-height:1.4; padding-left:2px;">
+                        <span>Exact → Street → Village → Town → City → Region → Unknown 순으로 마커가 점점 반투명 · 점선 테두리로 표시됩니다 (Exact만 완전히 확실, 이후로는 갈수록 근사치).</span>
                     </div>
                 </div>
             </div>
@@ -535,10 +545,10 @@
         /* ====== 상태 ====== */
         let rawData = [];
         let map;
-        let townClusterLayer;      
-        let markersLayer;          
-        let linesLayer;            
-        let markers = [];          
+        let townClusterLayer;      // 마을 클러스터
+        let markersLayer;          // 상세 마커 그룹
+        let linesLayer;            // 네트워크 라인 그룹
+        let markers = [];          // 마커 객체 캐시 (id 추적용)
         let currentFilter = 'all';
         let currentSearch = '';
         let chatHistory = [];
@@ -588,6 +598,7 @@
             return r;
         }
 
+        /* 헤더 → 인덱스 맵 (대소문자/공백 무시, 별칭 지원) */
         function buildHeaderMap(headerRow) {
             const map = {};
             headerRow.forEach((h, i) => {
@@ -643,15 +654,17 @@
                             const population = getCol(row, headerMap, 'population', '인구');
                             if (population) desc = `[인구: ${population}] ` + desc;
 
-                            // location_precision을 기준으로 마을/빌리지 규모 판별
-                            const locationPrecision = (getCol(row, headerMap, 'location_precision', 'precision') || 'unknown').toLowerCase();
-                            const isVillage = locationPrecision.includes('village') || locationPrecision.includes('빌리지');
+                            // 규모(빌리지/타운/시/지역)와 위치 정확도는 별도의 settlement_type 열이 아니라
+                            // location_precision 열 하나에서 함께 읽어온다. (Exact/Street/Village/Town/City/Region/Unknown)
+                            const rawPrecision = (getCol(row, headerMap, 'location_precision', 'precision') || 'town').toLowerCase().trim();
+                            const settlementKey = ['village', 'town', 'city', 'region'].includes(rawPrecision) ? rawPrecision : 'town';
+                            const recordConflict = getCol(row, headerMap, 'conflict', '이견', '기록별이견', '기록별_이견');
                             const address = getCol(row, headerMap, 'address', '어드레스', '주소', '주소지');
 
                             updatedData.push({
                                 id: globalId++,
                                 type: '마을',
-                                settlementType: isVillage ? '빌리지' : '타운',
+                                settlementType: settlementKey,
                                 name,
                                 description: desc,
                                 founded: getCol(row, headerMap, 'start_year', 'founded', '설립'),
@@ -661,8 +674,9 @@
                                 author: getCol(row, headerMap, 'creator', 'author', '작성자'),
                                 relatedTown: '',
                                 relatedOrg: '',
-                                locationPrecision: locationPrecision,
-                                address: address
+                                locationPrecision: rawPrecision,
+                                address,
+                                recordConflict
                             });
                         }
                     }
@@ -702,6 +716,8 @@
                             lat = ownLat; lng = ownLng;
                         }
                         
+                        // 어드레스(주소지) 및 참고용 기록 비고
+                        const recordConflict = getCol(row, headerMap, 'conflict', '이견', '기록별이견', '기록별_이견');
                         const address = getCol(row, headerMap, 'address', '어드레스', '주소', '주소지');
 
                         const item = {
@@ -718,7 +734,8 @@
                             author: getCol(row, headerMap, 'creator', 'author', '작성자'),
                             locationPrecision: precision,
                             isPrecise,
-                            address
+                            address,
+                            recordConflict
                         };
 
                         if (target.type === '조직') {
@@ -882,16 +899,52 @@
             }
         }
 
-        /* ====== 아이콘 설정 (위치 정확도(Precision)에 따른 불확실성 반영) ====== */
+        /* ====== 위치 정확도(location_precision) 통합 처리 ======
+           구글시트의 location_precision 한 열에 Exact/Street/Village/Town/City/Region/Unknown 값이 들어온다.
+           Exact를 제외하면 완전히 확실한 값은 없고, 이 순서에서 멀어질수록(=Unknown에 가까울수록) 비정 오차가 커진다.
+           마을(정착지) 로우에서는 이 값이 곧 정착지의 '규모'(빌리지~지역)로도 함께 쓰인다. */
+        const PRECISION_LEVELS = ['exact', 'street', 'village', 'town', 'city', 'region', 'unknown'];
+        const PRECISION_META = {
+            exact:   { ko: 'Exact · 정확한 지점',    opacity: 1.00, dashed: false, chip: { bg: '#ecfdf5', text: '#047857', border: '#a7f3d0' } },
+            street:  { ko: 'Street · 거리 단위',     opacity: 0.90, dashed: false, chip: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' } },
+            village: { ko: 'Village · 빌리지 단위',  opacity: 0.80, dashed: false, chip: { bg: '#f0fdfa', text: '#0f766e', border: '#99f6e4' } },
+            town:    { ko: 'Town · 타운 단위',       opacity: 0.68, dashed: true,  chip: { bg: '#fffbeb', text: '#b45309', border: '#fde68a' } },
+            city:    { ko: 'City · 도시 단위',       opacity: 0.55, dashed: true,  chip: { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa' } },
+            region:  { ko: 'Region · 지역 단위',     opacity: 0.40, dashed: true,  chip: { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' } },
+            unknown: { ko: 'Unknown · 미상',        opacity: 0.28, dashed: true,  chip: { bg: '#f8fafc', text: '#64748b', border: '#cbd5e1' } },
+        };
+        function getPrecisionMeta(precision) {
+            const key = PRECISION_LEVELS.includes(precision) ? precision : 'unknown';
+            return { key, level: PRECISION_LEVELS.indexOf(key), ...PRECISION_META[key] };
+        }
+        // 사이드바(meta-chip) / 팝업(chip) 양쪽에서 재사용하는 정확도 칩
+        function getPrecisionChipHtml(item, className) {
+            const pm = getPrecisionMeta(item.locationPrecision);
+            return `<span class="${className}" style="background:${pm.chip.bg}; color:${pm.chip.text}; border-color:${pm.chip.border};" title="위치 정확도: Exact(정확)에서 Unknown(미상)으로 갈수록 비정 오차가 커집니다."><i class="fa-solid fa-crosshairs"></i> ${pm.ko}</span>`;
+        }
+
+        // 마을(정착지)의 규모: 빌리지(수백 명 단위) < 타운 < 시 < 지역
+        const SETTLEMENT_SCALE = {
+            village: { icon: 'fa-house',           sizeNormal: 26, sizeHighlighted: 32, label: '빌리지 (Village)' },
+            town:    { icon: 'fa-house-chimney',    sizeNormal: 32, sizeHighlighted: 38, label: '타운 (Town)' },
+            city:    { icon: 'fa-city',             sizeNormal: 36, sizeHighlighted: 42, label: '시 (City)' },
+            region:  { icon: 'fa-map-location-dot', sizeNormal: 40, sizeHighlighted: 46, label: '지역 (Region)' },
+        };
+        function getSettlementScale(key) {
+            return SETTLEMENT_SCALE[key] || SETTLEMENT_SCALE.town;
+        }
+
+        /* ====== 아이콘 설정 (위치 정확도 그라데이션 반영) ====== */
         function getIcon(type, opts = {}) {
-            const { isHighlighted=false, badgeCount=0, isFloating=false, locationPrecision='unknown', settlementType='타운' } = opts;
+            const { isHighlighted=false, badgeCount=0, isFloating=false, isPrecise=true, settlementType='town', precision='unknown' } = opts;
             let color, iconClass;
-            
+
             let size = isHighlighted ? 38 : (isFloating ? 24 : 28);
             if (type === '마을') {
-                size = isHighlighted ? (settlementType === '빌리지' ? 34 : 38) : (settlementType === '빌리지' ? 28 : 32);
-                color = '#ea580c'; 
-                iconClass = settlementType === '빌리지' ? 'fa-house' : 'fa-house-chimney';
+                const scale = getSettlementScale(settlementType);
+                size = isHighlighted ? scale.sizeHighlighted : scale.sizeNormal;
+                color = '#ea580c';
+                iconClass = scale.icon;
             }
             else if (type === '조직') { color = '#2563eb'; iconClass = 'fa-users'; }
             else if (type === '인물') { color = '#16a34a'; iconClass = 'fa-user'; }
@@ -900,21 +953,12 @@
             const shadow = isHighlighted
                 ? '0 0 14px rgba(251,191,36,0.9)'
                 : (isFloating ? '0 3px 10px rgba(0,0,0,0.25)' : '0 2px 6px rgba(0,0,0,0.3)');
-            
-            // 데이터 불확실성 매핑 (Exact -> Street -> Village -> Town -> City -> Region -> Unknown)
-            const p = locationPrecision.toLowerCase();
-            let op = 1, isDashed = false, blur = 0;
-            if (p.includes('exact')) { op = 1; isDashed = false; blur = 0; }
-            else if (p.includes('street')) { op = 0.85; isDashed = true; blur = 0; }
-            else if (p.includes('village')) { op = 0.75; isDashed = true; blur = 0; }
-            else if (p.includes('town')) { op = 0.6; isDashed = true; blur = 1; }
-            else if (p.includes('city')) { op = 0.45; isDashed = true; blur = 1; }
-            else if (p.includes('region')) { op = 0.3; isDashed = true; blur = 2; }
-            else { op = 0.2; isDashed = true; blur = 2; } 
 
-            const opacityStyle = `opacity: ${op}; ${blur > 0 ? `backdrop-filter: blur(${blur}px);` : ''}`;
-            const finalBorder = (isDashed && !isHighlighted) ? '2px dashed rgba(255,255,255,0.85)' : border;
-            const ringStyle = (isDashed && type !== '마을') ? 'outline: 2px dashed rgba(255,255,255,0.5); outline-offset:2px;' : '';
+            // 데이터 불확실성: Exact에서 멀어질수록(location_precision 그라데이션) 점점 반투명 + 점선 테두리
+            const pm = getPrecisionMeta(precision);
+            const opacityStyle = `opacity: ${pm.opacity};`;
+            const ringStyle = (!isPrecise && type !== '마을') ? 'outline: 2px dashed rgba(255,255,255,0.6); outline-offset:2px;' : '';
+            const finalBorder = (pm.dashed && !isHighlighted) ? '2px dashed rgba(255,255,255,0.85)' : border;
 
             const badgeHtml = badgeCount > 0
                 ? `<div class="town-badge">${badgeCount}</div>`
@@ -1133,7 +1177,7 @@
                 let badgeColor = '';
                 let displayType = item.type;
                 if (item.type === '마을') {
-                    displayType = item.settlementType === '빌리지' ? '빌리지' : '타운';
+                    displayType = getSettlementScale(item.settlementType).label;
                     badgeColor = 'bg-orange-100 text-orange-800 border-orange-200';
                 }
                 else if (item.type === '조직') badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
@@ -1156,11 +1200,7 @@
                     if (item.nationality) extraChips += `<span class="meta-chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-flag"></i> ${escapeHtml(item.nationality)}</span>`;
                     if (item.job) extraChips += `<span class="meta-chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>`;
                 }
-                
-                // 위치 정확도(locationPrecision) 표시 적용
-                if (item.locationPrecision) {
-                    extraChips += `<span class="meta-chip" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" title="좌표 위치 정확도"><i class="fa-solid fa-location-crosshairs"></i> ${escapeHtml(item.locationPrecision)}</span>`;
-                }
+                extraChips += getPrecisionChipHtml(item, 'meta-chip');
 
                 const card = document.createElement('div');
                 card.className = `p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all ${isSelected ? 'selected-card' : ''} ${isChild ? 'network-child-card' : ''}`;
@@ -1179,6 +1219,7 @@
                     ${item.address ? `<div class="text-[10px] text-slate-500 mb-1"><i class="fa-solid fa-map-pin text-slate-400"></i> 주소지: ${escapeHtml(item.address)}</div>` : ''}
                     ${item.relatedTown ? `<div class="text-[10px] text-primary font-medium mb-1"><i class="fa-solid fa-link"></i> 소속마을: ${escapeHtml(item.relatedTown)}</div>` : ''}
                     ${item.relatedOrg ? `<div class="text-[10px] text-purple-700 font-medium mb-1"><i class="fa-solid fa-sitemap"></i> 소속조직: ${escapeHtml(item.relatedOrg)}</div>` : ''}
+                    ${item.recordConflict ? `<div class="text-[10px] text-red-600 bg-red-50 px-1.5 py-1 mt-1 rounded inline-block"><i class="fa-solid fa-note-sticky"></i> 비고: ${escapeHtml(item.recordConflict)}</div>` : ''}
                     <div class="flex justify-between items-end text-[10px] text-slate-400 mt-1">
                         <span><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || '미상')} ~ ${escapeHtml(item.dissolved || '미상')}</span>
                         <button onclick="event.stopPropagation(); askAIAboutById(${item.id})" class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 transition-colors bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 mt-1">
@@ -1223,7 +1264,7 @@
                 const childCount = rawData.filter(d => d.type !== '마을' && d.relatedTown === item.name).length;
                 const isHighlighted = selectedTownName && item.name === selectedTownName;
                 const marker = L.marker([item.lat, item.lng], {
-                    icon: getIcon('마을', { isHighlighted, badgeCount: childCount, locationPrecision: item.locationPrecision, settlementType: item.settlementType })
+                    icon: getIcon('마을', { isHighlighted, badgeCount: childCount, isPrecise: true, settlementType: item.settlementType, precision: item.locationPrecision })
                 });
                 attachPopupAndEvents(marker, item);
                 townClusterLayer.addLayer(marker);
@@ -1239,7 +1280,7 @@
 
                     const isHighlighted = selectedTownName && item.relatedTown === selectedTownName;
                     const marker = L.marker([item.lat, item.lng], {
-                        icon: getIcon(item.type, { isHighlighted, locationPrecision: item.locationPrecision })
+                        icon: getIcon(item.type, { isHighlighted, isPrecise: true, precision: item.locationPrecision })
                     });
                     attachPopupAndEvents(marker, item);
                     markersLayer.addLayer(marker);
@@ -1262,7 +1303,7 @@
                 const pos = computeFloatingLatLng(parentVillage, idx, total);
                 const isHighlighted = selectedTownName && item.relatedTown === selectedTownName;
                 const marker = L.marker(pos, {
-                    icon: getIcon(item.type, { isHighlighted, isFloating: true, locationPrecision: item.locationPrecision })
+                    icon: getIcon(item.type, { isHighlighted, isFloating: true, isPrecise: false, precision: item.locationPrecision })
                 });
                 attachPopupAndEvents(marker, item);
                 markersLayer.addLayer(marker);
@@ -1342,11 +1383,7 @@
                 if (item.nationality) extraMetaHtml += `<span class="chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-flag"></i> ${escapeHtml(item.nationality)}</span>`;
                 if (item.job) extraMetaHtml += `<span class="chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>`;
             }
-            
-            // 위치 정확도(Precision) 표기
-            if (item.locationPrecision) {
-                extraMetaHtml += `<span class="chip" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" title="좌표 위치 정확도"><i class="fa-solid fa-location-crosshairs"></i> ${escapeHtml(item.locationPrecision)}</span>`;
-            }
+            extraMetaHtml += getPrecisionChipHtml(item, 'chip');
 
             let relationsHtml = '';
             if (item.type === '마을') {
@@ -1361,17 +1398,25 @@
                 addressHtml = `<div class="text-[11px] text-slate-600 mb-2"><i class="fa-solid fa-map-pin text-slate-400"></i> <b>주소지:</b> ${escapeHtml(item.address)}</div>`;
             }
 
-            // Exact 레벨이 아닐 경우 위치 불확실성 경고 문구 추가
+            // 위치 정확도 그라데이션 설명: Exact를 제외하면 완전히 확실한 값은 없고,
+            // Exact → Street → Village → Town → City → Region → Unknown 순으로 갈수록 비정 오차가 커진다.
             let uncertaintyHtml = '';
-            if (item.locationPrecision && !item.locationPrecision.toLowerCase().includes('exact')) {
-                uncertaintyHtml = `<div class="text-[10.5px] bg-amber-50 text-amber-700 p-2 rounded border border-amber-200 mt-1 mb-2 leading-relaxed">
-                    <b><i class="fa-solid fa-circle-exclamation"></i> 위치 불확실성:</b> 좌표 정밀도가 '${escapeHtml(item.locationPrecision)}' 수준으로 비정되어 실제 과거의 고증된 좌표점과 오차가 존재할 수 있습니다.
+            const pm = getPrecisionMeta(item.locationPrecision);
+            if (pm.level > 0) {
+                uncertaintyHtml = `<div class="text-[10.5px] p-2 rounded border mt-1 mb-2 leading-relaxed" style="background:${pm.chip.bg}; color:${pm.chip.text}; border-color:${pm.chip.border};">
+                    <b><i class="fa-solid fa-circle-info"></i> 위치 정확도: ${pm.ko}</b><br>
+                    정확한 지점(Exact)이 아니라 '${pm.ko.split(' · ')[1] || pm.ko}'로 비정된 근사 위치입니다. Exact에서 멀어질수록(→Unknown) 오차 범위가 커집니다.
+                    ${item.recordConflict ? `<div class="mt-1 pt-1 border-t" style="border-color:${pm.chip.border};"><i class="fa-solid fa-note-sticky"></i> 비고: ${escapeHtml(item.recordConflict)}</div>` : ''}
+                </div>`;
+            } else if (item.recordConflict) {
+                uncertaintyHtml = `<div class="text-[10.5px] bg-slate-50 text-slate-600 p-2 rounded border border-slate-200 mt-1 mb-2 leading-relaxed">
+                    <i class="fa-solid fa-note-sticky"></i> 비고: ${escapeHtml(item.recordConflict)}
                 </div>`;
             }
 
             const popupContent = `
                 <div class="custom-popup max-w-[320px]">
-                    <div class="text-[10px] text-slate-500 mb-1">${item.type === '마을' ? item.settlementType : item.type}${item.relatedTown ? ` · 소속: ${escapeHtml(item.relatedTown)}` : ''}</div>
+                    <div class="text-[10px] text-slate-500 mb-1">${item.type === '마을' ? getSettlementScale(item.settlementType).label : item.type}${item.relatedTown ? ` · 소속: ${escapeHtml(item.relatedTown)}` : ''}</div>
                     <div class="title">${escapeHtml(item.name)}</div>
                     <div class="meta"><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || '미상')} ~ ${escapeHtml(item.dissolved || '미상')}</div>
                     <div class="mb-2">${extraMetaHtml}</div>
