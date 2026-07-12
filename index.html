@@ -5,6 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코리안타운 DB — 세계 속 한인 마을의 과거와 현재를 지도 위에</title>
 <meta name="description" content="코리안타운 DB는 세계 각지 한인 마을과 단체, 사람들의 기록을 하나의 데이터베이스로 잇는 재외동포 역사 인프라 프로젝트입니다.">
+<meta name="keywords" content="코리안타운, 한인마을, 재외동포, 지도, 역사, 데이터베이스">
+<meta name="author" content="코리안타운 DB">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#0f1c3f">
+<link rel="canonical" href="https://korean-towns-db.vercel.app/korean-towns-db/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="코리안타운 DB">
+<meta property="og:title" content="코리안타운 DB — 세계 속 한인 마을의 과거와 현재를 지도 위에">
+<meta property="og:description" content="세계 각지 한인 마을과 단체, 사람들의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다.">
+<meta property="og:url" content="https://korean-towns-db.vercel.app/korean-towns-db/">
+<meta property="og:image" content="https://korean-towns-db.vercel.app/korean-towns-db/resources/images/koreantown1.png">
+<meta property="og:image:alt" content="코리안타운 DB 소개 이미지">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="코리안타운 DB">
+<meta name="twitter:description" content="세계 각지 한인 마을과 단체, 사람들의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다.">
+<meta name="twitter:image" content="https://korean-towns-db.vercel.app/korean-towns-db/resources/images/koreantown1.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -890,29 +908,33 @@ button{ font:inherit; cursor:pointer; }
         </div>
       </div>
 
-      <figure class="hero-visual reveal">
+<figure class="hero-visual reveal">
         <svg viewBox="0 0 560 420" role="img" aria-label="한반도에서 연해주, 미주 서부로 이어지는 1단계 데이터 연결망과, 일본·중국으로 이어질 예정인 다음 단계를 보여주는 도식">
           <path class="route-line" d="M150,235 L378,96" fill="none" stroke="var(--navy)" stroke-width="2"/>
           <path class="route-line" d="M150,235 L392,352" fill="none" stroke="var(--navy)" stroke-width="2"/>
           <path d="M150,235 L486,192" fill="none" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 6"/>
           <path d="M150,235 L486,300" fill="none" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 6"/>
 
-          <circle class="node-pulse" cx="378" cy="96" r="23" fill="var(--amber)"/>
-          <text x="378" y="100" text-anchor="middle" font-family="Noto Sans KR" font-size="12" font-weight="700" fill="#fff">연해주</text>
+          <!-- 연해주 -->
+          <circle class="node-pulse" cx="378" cy="96" r="29" fill="var(--amber)"/>
+          <text x="378" y="101" text-anchor="middle" font-family="Noto Sans KR" font-size="14" font-weight="700" fill="#fff">연해주</text>
 
-          <circle class="node-pulse delay" cx="392" cy="352" r="23" fill="var(--amber)"/>
-          <text x="392" y="356" text-anchor="middle" font-family="Noto Sans KR" font-size="12" font-weight="700" fill="#fff">미주서부</text>
+          <!-- 미주서부 -->
+          <circle class="node-pulse delay" cx="392" cy="352" r="29" fill="var(--amber)"/>
+          <text x="392" y="357" text-anchor="middle" font-family="Noto Sans KR" font-size="14" font-weight="700" fill="#fff">미주서부</text>
 
-          <circle cx="486" cy="192" r="17" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4"/>
-          <text x="486" y="196" text-anchor="middle" font-family="Noto Sans KR" font-size="11" fill="#8b93a7">일본</text>
+          <!-- 일본 (글자색을 진하게 변경 및 크기 확대) -->
+          <circle cx="486" cy="192" r="29" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4"/>
+          <text x="486" y="197" text-anchor="middle" font-family="Noto Sans KR" font-size="14" font-weight="700" fill="var(--navy-deep)">일본</text>
 
-          <circle cx="486" cy="300" r="17" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4"/>
-          <text x="486" y="304" text-anchor="middle" font-family="Noto Sans KR" font-size="11" fill="#8b93a7">중국</text>
+          <!-- 중국 (글자색을 진하게 변경 및 크기 확대) -->
+          <circle cx="486" cy="300" r="29" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4"/>
+          <text x="486" y="305" text-anchor="middle" font-family="Noto Sans KR" font-size="14" font-weight="700" fill="var(--navy-deep)">중국</text>
 
-          <circle cx="150" cy="235" r="30" fill="var(--navy)"/>
-          <text x="150" y="240" text-anchor="middle" font-family="Noto Serif KR" font-size="13" font-weight="700" fill="#fff">한반도</text>
+          <!-- 한반도 -->
+          <circle cx="150" cy="235" r="32" fill="var(--navy)"/>
+          <text x="150" y="240" text-anchor="middle" font-family="Noto Serif KR" font-size="15" font-weight="700" fill="#fff">한반도</text>
         </svg>
-        <figcaption>PHASE 01 데이터 연결망 · 진행 중인 지역과 다음 단계</figcaption>
         <div class="hero-legend">
           <span><i style="background:var(--amber)"></i>진행 중</span>
           <span><i style="background:#c7cdda"></i>다음 단계 예정</span>
