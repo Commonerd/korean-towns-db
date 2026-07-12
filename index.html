@@ -357,6 +357,78 @@ button{ font:inherit; cursor:pointer; }
 .intro-copy p:last-child{ margin-bottom:0; }
 .intro-copy strong{ color:var(--navy-deep); font-weight:600; }
 
+
+/* 캐러셀 컨테이너 */
+.carousel-container {
+    position: relative; /* 버튼 위치를 위한 기준점 */
+    overflow: hidden;    /* 넘치는 이미지 숨김 */
+    width: 100%;
+    height: 100%;
+}
+
+/* 이미지들이 가로로 길게 늘어선 트랙 */
+.carousel-track {
+    display: flex;
+    transition: transform 0.5s ease-in-out; /* 부드러운 슬라이드 효과 */
+    height: 100%;
+    width: 100%;
+}
+
+/* 개별 이미지 스타일 */
+.carousel-track img {
+    min-width: 100%; /* 각 이미지가 컨테이너 너비를 꽉 채우도록 */
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 이전/다음 버튼 스타일 */
+.carousel-prev, .carousel-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    z-index: 10;
+    border-radius: 50%;
+    font-size: 18px;
+}
+
+.carousel-prev { left: 10px; }
+.carousel-next { right: 10px; }
+
+.carousel-prev:hover, .carousel-next:hover {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* 하단 점(Dots) 스타일 */
+.carousel-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.dot.active {
+    background-color: white;
+    transform: scale(1.2);
+}
+
+
 .preview-card{
   border:1px solid var(--line);
   border-radius:var(--radius);
@@ -863,8 +935,28 @@ button{ font:inherit; cursor:pointer; }
       </div>
 
       <div class="preview-card reveal">
-        <div class="preview-map">
-          <img src="koreantown.png" alt="코리안타운 이미지 미리보기" style="width:100%; height:100%; object-fit:cover; display:block;">
+        <div class="preview-map carousel-container">
+            <!-- 슬라이드 트랙: 이미지들이 가로로 나열됨 -->
+            <div class="carousel-track">
+                <img src="resources/images/koreantown1.png" alt="미리보기 1">
+                <img src="resources/images/koreantown2.png" alt="미리보기 2">
+                <img src="resources/images/koreantown3.png" alt="미리보기 3">
+                <img src="resources/images/koreantown4.png" alt="미리보기 4">
+                <img src="resources/images/koreantown5.png" alt="미리보기 5">
+            </div>
+            
+            <!-- 캐러셀 컨트롤 버튼 (선택 사항) -->
+            <button class="carousel-prev" aria-label="이전 이미지">&#10094;</button>
+            <button class="carousel-next" aria-label="다음 이미지">&#10095;</button>
+            
+            <!-- 페이지 표시 점 (Dots) (선택 사항) -->
+            <div class="carousel-dots">
+                <span class="dot active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
         </div>
         <div class="cap-row">
           <span>지도 화면 미리보기</span>
@@ -955,7 +1047,7 @@ button{ font:inherit; cursor:pointer; }
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow">진행 기록</p>
-        <h2>만든 지 두 달, 조금씩 쌓이는 중입니다</h2>
+        <h2>조금씩 쌓이는 중입니다</h2>
       </div>
 
       <div class="log-list">
@@ -990,7 +1082,7 @@ button{ font:inherit; cursor:pointer; }
       <div class="section-head reveal">
         <p class="eyebrow">데이터와 방법론</p>
         <h2>출처가 곧 데이터의 중심입니다</h2>
-        <p>같은 마을도 일본·러시아·한국 자료마다 이름이 다릅니다. 그래서 모든 항목은 출처를 기준으로 서로 연결됩니다.</p>
+        <p>모든 항목은 철저하게 사료에 기반해 토론을 거쳐 입력합니다.</p>
       </div>
 
       <div class="data-grid">
@@ -1042,22 +1134,11 @@ button{ font:inherit; cursor:pointer; }
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow">연구팀</p>
-        <h2>연구자 세 명이 모였습니다</h2>
+        <h2>글로벌 코리안 연구자들이 모였습니다</h2>
       </div>
-      <p class="team-intro reveal"><strong>코리안 디아스포라 연구팀</strong>은 2026년 6월부터 한 달에 한 번 모여 데이터를 더하기로 했습니다.</p>
+      <p class="team-intro reveal"><strong>코리안 디아스포라 연구팀</strong>은 한 달에 한 번 세미나를 통해 데이터를 보강합니다.</p>
 
       <div class="team-grid">
-        <div class="team-card reveal">
-          <div class="avatar" style="background:var(--navy);">송</div>
-          <h3>송영화</h3>
-          <p class="role">기획 · 총괄</p>
-          <p>성균관대학교 사학과 박사졸업 (2023)</p>
-          <p>現 웹개발자로 근무중</p>
-          <p></p>주요 저서로는 『귀화를 넘어서:러시아로 간 한인 이야기』(2025)가 있습니다.</p>
-          <p>러시아 연해주 한인마을을 연구하며 프로젝트 전체 기획과 학술논문 집필중입니다.</p>
-          <p></p>
-        </div>
-
         <div class="team-card reveal">
           <div class="avatar" style="background:var(--amber);">김</div>
           <h3>김슬기</h3>
@@ -1069,6 +1150,16 @@ button{ font:inherit; cursor:pointer; }
           <div class="avatar" style="background:var(--person);">박</div>
           <h3>박영훈</h3>
           <p class="role">미주 데이터</p>
+          <p></p>
+        </div>
+
+        <div class="team-card reveal">
+          <div class="avatar" style="background:var(--navy);">송</div>
+          <h3>송영화</h3>
+          <p class="role">기획</p>
+          <p>성균관대학교 사학과 박사졸업 (2023)</p>
+          <p></p>러시아 극동의 코리안들에 대해 연구중입니다. 주요 저서로 『귀화를 넘어서 : 러시아로 간 한인 이야기』(2025)가 있습니다. </p>
+          <p></p>
           <p></p>
         </div>
       </div>
@@ -1186,6 +1277,50 @@ button{ font:inherit; cursor:pointer; }
     reveals.forEach(function(el){ io.observe(el); });
   }
 })();
+document.addEventListener('DOMContentLoaded', () => {
+    const track = document.querySelector('.carousel-track');
+    const slides = Array.from(track.children);
+    const nextButton = document.querySelector('.carousel-next');
+    const prevButton = document.querySelector('.carousel-prev');
+    const dots = document.querySelectorAll('.dot');
+    
+    let currentIndex = 0;
+
+    // 슬라이드 이동 함수
+    function updateSlider() {
+        // 트랙을 왼쪽으로 밀어서 현재 인덱스의 이미지를 보여줌
+        track.style.transform = `translateX(-${currentIndex * 100}%)`;
+        
+        // 점(Dots) 활성화 상태 업데이트
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentIndex);
+        });
+    }
+
+    // 다음 버튼 클릭
+    nextButton.addEventListener('click', () => {
+        currentIndex = (currentIndex + 1) % slides.length; // 마지막이면 처음으로
+        updateSlider();
+    });
+
+    // 이전 버튼 클릭
+    prevButton.addEventListener('click', () => {
+        currentIndex = (currentIndex - 1 + slides.length) % slides.length; // 처음이면 마지막으로
+        updateSlider();
+    });
+
+    // 점(Dots) 클릭 시 해당 슬라이드로 이동
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            currentIndex = index;
+            updateSlider();
+        });
+    });
+    setInterval(() => {
+        nextButton.click();
+    }, 1500);
+});
+
 </script>
 
 </body>
