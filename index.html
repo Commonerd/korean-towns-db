@@ -366,8 +366,47 @@ button{ font:inherit; cursor:pointer; }
 }
 
 @media (max-width:900px){
-  .hero .wrap{ grid-template-columns:1fr; }
-  .hero-visual{ order:-1; max-width:420px; margin:0 auto 1rem; }
+  .hero{
+    padding:72px 0 56px;
+  }
+  .hero .wrap{ grid-template-columns:1fr; gap:2.2rem; }
+  .hero h1{
+    font-size:clamp(2rem, 7vw, 2.7rem);
+    line-height:1.2;
+  }
+  .hero p.lede{
+    font-size:1rem;
+    line-height:1.75;
+  }
+  .hero-ctas{
+    margin-top:1.8rem;
+    gap:.8rem;
+  }
+  .hero-ctas .btn{
+    width:100%;
+    justify-content:center;
+  }
+  .stat-row{
+    margin-top:2rem;
+    gap:1.2rem 1.4rem;
+  }
+  .stat-row .stat b{
+    font-size:1.3rem;
+  }
+  .stat-row .stat span{
+    font-size:.82rem;
+  }
+  .hero-visual{ order:-1; max-width:100%; margin:0 auto 1rem; }
+  .hero-visual svg{
+    width:100%;
+    max-width:460px;
+    margin:0 auto;
+  }
+  .hero-legend{
+    gap:1.1rem;
+    font-size:.8rem;
+    margin-top:.6rem;
+  }
 }
 
 /* ============================================================
