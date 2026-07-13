@@ -377,12 +377,12 @@ button{ font:inherit; cursor:pointer; }
   .hero{
     padding:84px 0 72px;
     min-height:min(100svh, 860px);
-    /* 모바일 그라데이션 및 지도 배치 수정: 지도가 은은하게 전체적으로 보이도록 */
+    /* 모바일에서 지도 배경이 가로로 더 이동하도록 조정해 한반도 쪽이 중앙에 보이게 함 */
     background-image: 
-      linear-gradient(to bottom, rgba(248, 250, 252, 0.80) 0%, rgba(248, 250, 252, 0.82) 55%, rgba(248, 250, 252, 0.58) 100%),
+      linear-gradient(to bottom, rgba(248, 250, 252, 0.84) 0%, rgba(248, 250, 252, 0.82) 55%, rgba(248, 250, 252, 0.62) 100%),
       url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg');
-    background-position: center top;
-    background-size: cover;
+    background-position: 55% 12%;
+    background-size: 160% auto;
     background-repeat: no-repeat; 
   }
   .hero .wrap{ grid-template-columns:1fr; gap:2.2rem; align-items:start; }
