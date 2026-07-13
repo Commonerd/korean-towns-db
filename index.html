@@ -288,12 +288,21 @@ button{ font:inherit; cursor:pointer; }
 .hero{
   padding:88px 0 70px;
   position:relative;
+  /* 지도 배경 및 왼편 흰색 그라데이션 처리 추가 */
+  background-image: 
+    linear-gradient(90deg, var(--paper) 45%, rgba(248, 250, 252, 0.75) 70%, rgba(248, 250, 252, 0.1) 100%),
+    url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg');
+  background-position: right center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 .hero .wrap{
   display:grid;
   grid-template-columns:1.05fr .95fr;
   gap:3.5rem;
   align-items:center;
+  position: relative; /* 텍스트가 배경 위에 확실히 뜨도록 */
+  z-index: 1;
 }
 .hero h1{
   font-family:var(--font-display);
@@ -368,6 +377,11 @@ button{ font:inherit; cursor:pointer; }
 @media (max-width:900px){
   .hero{
     padding:72px 0 56px;
+    /* 모바일에서는 위-아래 그라데이션으로 텍스트 영역 보호 */
+    background-image: 
+      linear-gradient(to bottom, var(--paper) 50%, rgba(248, 250, 252, 0.85) 100%),
+      url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg');
+    background-position: center bottom;
   }
   .hero .wrap{ grid-template-columns:1fr; gap:2.2rem; }
   .hero h1{
@@ -427,7 +441,6 @@ button{ font:inherit; cursor:pointer; }
 }
 .intro-copy p:last-child{ margin-bottom:0; }
 .intro-copy strong{ color:var(--navy-deep); font-weight:600; }
-
 
 /* 캐러셀 컨테이너 */
 .carousel-container {
@@ -498,7 +511,6 @@ button{ font:inherit; cursor:pointer; }
     background-color: white;
     transform: scale(1.2);
 }
-
 
 .preview-card{
   border:1px solid var(--line);
@@ -1217,7 +1229,8 @@ button{ font:inherit; cursor:pointer; }
           <div class="avatar" style="background:var(--amber);">김</div>
           <h3>김슬기</h3>
           <p class="role">러시아 데이터</p>
-          <p></p>
+          <p>성균관대학교 사학과 박사수료(2024~)</p>
+          <p>근대 한인 디아스포라의 이동과 생존 전략을 연구합니다. 현재 러시아 극동 조선인 개신교 공동체(1905–1923)를 주제로 박사학위논문을 작성하고 있습니다.</p>
         </div>
 
         <div class="team-card reveal">
@@ -1232,9 +1245,7 @@ button{ font:inherit; cursor:pointer; }
           <h3>송영화</h3>
           <p class="role">기획</p>
           <p>성균관대학교 사학과 박사졸업 (2023)</p>
-          <p></p>러시아 극동의 코리안들에 대해 연구중입니다. 주요 저서로 『귀화를 넘어서 : 러시아로 간 한인 이야기』(2025)가 있습니다. </p>
-          <p></p>
-          <p></p>
+          <p>러시아 극동 코리안 국적에 대해 연구중입니다. 주요 저서로 『귀화를 넘어서 : 러시아로 간 한인 이야기』(2025)가 있습니다.</p>
         </div>
       </div>
     </div>
