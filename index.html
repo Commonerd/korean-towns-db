@@ -377,12 +377,12 @@ button{ font:inherit; cursor:pointer; }
   .hero{
     padding:84px 0 72px;
     min-height:min(100svh, 860px);
-    /* 모바일 그라데이션 및 지도 배치 수정: 한반도 쪽으로 시각 중심을 이동하고 불투명도를 더 높임 */
+    /* 모바일 그라데이션 및 지도 배치 수정: 지도가 은은하게 전체적으로 보이도록 */
     background-image: 
-      linear-gradient(to bottom, rgba(248, 250, 252, 0.94) 0%, rgba(248, 250, 252, 0.82) 55%, rgba(248, 250, 252, 0.68) 100%),
+      linear-gradient(to bottom, rgba(248, 250, 252, 0.96) 0%, rgba(248, 250, 252, 0.82) 55%, rgba(248, 250, 252, 0.58) 100%),
       url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg');
-    background-position: 52% 10%;
-    background-size: 140% auto;
+    background-position: center top;
+    background-size: cover;
     background-repeat: no-repeat; 
   }
   .hero .wrap{ grid-template-columns:1fr; gap:2.2rem; align-items:start; }
@@ -1059,7 +1059,7 @@ button{ font:inherit; cursor:pointer; }
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow">무엇을 할 수 있나요</p>
-        <h2>지도를 통해 네 단계로 데이터를 봅니다.</h2>
+        <h2>지도를 통해 네 단계로 데이터를 보기</h2>
         <p>코리안타운의 상세정보, 위치 정확도 확인, 시대별 필터링, 그리고 AI에 의한 데이터분석까지</p>
       </div>
 
