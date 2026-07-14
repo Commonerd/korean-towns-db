@@ -1321,20 +1321,36 @@ button{ font:inherit; cursor:pointer; }
             <div><b>연구 · 교육 활용</b>인용, 데이터 다운로드, 공동연구 문의를 환영합니다.</div>
           </li>
           <li>
-            <i class="fa-solid fa-seedling"></i>
-            <div>
-              <b><a href="https://buymeacoffee.com/koreatowndb" target="_blank" rel="noopener">커피 한 잔 후원하기</a></b>
+          <!-- 아이콘을 다른 항목들과 통일하여 시각적 밸런스를 맞춤 -->
+          <i class="fa-solid fa-mug-hot"></i> 
+          <div style="width: 100%;">
+            <b>후원과 응원</b>
+            <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.75); margin: 4px 0 14px 0; line-height: 1.6;">
               후원자 명단에 이름을 남기고 프로젝트를 함께 만들어 주세요.
-              
-              <!-- 세련된 후원자 명단 배지 영역 추가 -->
-              <!-- <div class="sponsor-list-wrapper">
-                <span class="sponsor-tag"></span>
-                <span class="sponsor-tag"></span>
-                <span class="sponsor-tag"></span> -->
-                <!-- <span class="sponsor-tag-more">+ 12명</span> -->
-              </div>
+            </p>
+            <!-- 버튼 배치 -->
+            <a href="https://buymeacoffee.com/koreatowndb" target="_blank" rel="noopener" class="btn btn--primary" style="background:#f5c98c; color:var(--navy-deep); border:none; padding: 0.55em 1.3em; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; vertical-align: middle;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                <line x1="6" y1="1" x2="6" y2="4"></line>
+                <line x1="10" y1="1" x2="10" y2="4"></line>
+                <line x1="14" y1="1" x2="14" y2="4"></line>
+              </svg>
+              커피 한 잔 후원하기
+            </a>
+
+            <!-- 나중에 주석을 해제할 후원자 명단 영역 (여백 정돈) -->
+            <!-- 
+            <div class="sponsor-list-wrapper" style="margin-top: 14px;">
+              <span class="sponsor-tag">홍길동</span>
+              <span class="sponsor-tag">김연구</span>
+              <span class="sponsor-tag">이철수</span>
+              <span class="sponsor-tag-more">+ 12명</span>
             </div>
-          </li>
+            -->
+          </div>
+        </li>
         </ul>
       </div>
     </div>
