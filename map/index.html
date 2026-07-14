@@ -137,7 +137,7 @@
             box-shadow: 0 4px 10px rgba(30, 58, 138, 0.25);
         }
 
-        /* 줌 가이드 안내 (지도 상단) */
+        /* 줌 가이드 안내 (기본: 데스크톱 상단 중앙) */
         .zoom-hint {
             position: absolute;
             top: 12px;
@@ -152,8 +152,22 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             z-index: 500;
             pointer-events: none;
-            transition: opacity 0.4s;
+            transition: opacity 0.4s, transform 0.4s;
             white-space: nowrap;
+        }
+
+        /* 📱 모바일 환경(767px 이하) 대응 추가 */
+        @media (max-width: 767px) {
+            .zoom-hint {
+                top: auto;
+                bottom: 16px;          /* 하단으로 배치 */
+                left: 12px;            /* 좌측 여백 */
+                transform: none;       /* 중앙 정렬 해제 */
+                white-space: normal;   /* 줄바꿈 허용 */
+                max-width: calc(100% - 180px); /* 우측 하단 범례 패널 공간 확보 */
+                font-size: 10px;
+                padding: 6px 10px;
+            }
         }
 
         /* 지도 범례 */
@@ -977,17 +991,22 @@
             }
 
             // 2. 줌 아웃되거나 줌 레벨이 변경되어 다시 '축소 상태'가 되었을 때
-            // 기존 타이머가 작동 중이었다면 초기화
             if (hintFadeTimer) clearTimeout(hintFadeTimer);
+
+            // 모바일 여부에 따라 문구 간소화
+            const isMobile = window.innerWidth < 768;
+            const hintText = isMobile 
+                ? `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 확대하면 점들이 펼쳐집니다 (Zoom ${z})`
+                : `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 지도를 확대하면 점들이 펼쳐집니다 (현재 zoom ${z})`;
 
             // 메시지 표시 및 텍스트 갱신
             hint.style.opacity = '1';
-            hint.innerHTML = `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 지도를 확대하면 점들이 펼쳐집니다 (현재 zoom ${z})`;
+            hint.innerHTML = hintText;
 
-            // 3초 동안 보여준 뒤 부드럽게 사라지도록 설정 (시야 방해 방지)
+            // 3초 동안 보여준 뒤 부드럽게 사라지도록 설정
             hintFadeTimer = setTimeout(() => {
                 hint.style.opacity = '0';
-            }, 3000); // 3초 후 Fade-out (원하는 시간으로 조절 가능)
+            }, 3000);
 
             lastZoom = z;
         }
