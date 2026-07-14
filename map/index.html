@@ -176,6 +176,30 @@
         .map-legend .legend-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
         .map-legend .legend-dot { width: 12px; height: 12px; border-radius: 999px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); flex-shrink: 0; }
 
+        /* 헤더 타이틀 및 서브텍스트 크기 조정 */
+        header h1 {
+            font-size: 1.15rem !important; /* 기존 text-xl에서 축소 */
+        }
+        header p {
+            font-size: 0.7rem !important; /* 기존 text-xs에서 축소 */
+            letter-spacing: -0.02em;
+        }
+
+        /* 모바일(화면 폭 640px 이하) 환경에서 글자가 겹치거나 깨지는 현상 방지 */
+        @media (max-width: 640px) {
+            header .flex.items-center.gap-3 {
+                gap: 0.5rem !important;
+            }
+            header h1 {
+                font-size: 1rem !important;
+            }
+            header p {
+                font-size: 0.65rem !important;
+                white-space: normal; /* 자동 줄바꿈 허용 */
+                line-height: 1.2;
+            }
+        }
+
         /* ====== 패널 토글(사이드바 / 범례 / 지도스타일) 공통 ====== */
 
         aside.sidebar-collapsed {
@@ -934,16 +958,36 @@
             setInterval(fetchLatestAndRender, 30000);
         });
 
+        // 최초 로드 시 안내 노출 후 4초 뒤에 자동으로 사라지게 만들기 위한 플래그
+        let isHintDismissed = false;
+
         function updateZoomHint() {
             const hint = document.getElementById('zoomHint');
-            if (!map) return;
+            if (!map || !hint) return;
             const z = map.getZoom();
-            if (z < ZOOM_DETAIL_THRESHOLD) {
+            
+            // 사용자가 지도를 확대(10 이상)하면 메시지를 즉시 숨김
+            if (z >= ZOOM_DETAIL_THRESHOLD) {
+                hint.style.opacity = '0';
+                hint.style.pointerEvents = 'none';
+                return;
+            }
+
+            // 줌 레벨이 낮을 때 (확대 유도 메세지)
+            if (!isHintDismissed) {
                 hint.style.opacity = '1';
                 hint.innerHTML = `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 지도를 더 확대하면 조직·인물 노드가 펼쳐집니다 (현재 zoom ${z})`;
+                
+                // 최초 1회만 4초 후에 서서히 투명해지도록 타이머 설정
+                if (!window.hintTimer) {
+                    window.hintTimer = setTimeout(() => {
+                        hint.style.opacity = '0';
+                        isHintDismissed = true;
+                    }, 4000); // 4000ms = 4초 (원하는 시간으로 조절 가능)
+                }
             } else {
-                hint.style.opacity = '0.85';
-                hint.innerHTML = `<i class="fa-solid fa-circle-nodes mr-1"></i> 펼침 모드 · 마을 주변 조직·인물 표시 중 (zoom ${z})`;
+                // 4초가 지나 자동으로 숨겨진 이후에는 상시 노출하지 않음
+                hint.style.opacity = '0';
             }
         }
 
