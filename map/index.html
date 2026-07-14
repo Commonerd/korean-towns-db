@@ -958,37 +958,38 @@
             setInterval(fetchLatestAndRender, 30000);
         });
 
-        // 최초 로드 시 안내 노출 후 4초 뒤에 자동으로 사라지게 만들기 위한 플래그
-        let isHintDismissed = false;
+        // 이전 줌 레벨을 기록하여 줌 변화가 실제로 일어났을 때만 메시지를 띄우기 위함
+        let lastZoom = map ? map.getZoom() : 5;
+        let hintFadeTimer = null;
 
         function updateZoomHint() {
             const hint = document.getElementById('zoomHint');
             if (!map || !hint) return;
             const z = map.getZoom();
             
-            // 사용자가 지도를 확대(10 이상)하면 메시지를 즉시 숨김
+            // 1. 상세 모드(ZOOM_DETAIL_THRESHOLD 이상)로 들어갔을 때는 즉시 메시지 숨김
             if (z >= ZOOM_DETAIL_THRESHOLD) {
                 hint.style.opacity = '0';
                 hint.style.pointerEvents = 'none';
+                if (hintFadeTimer) clearTimeout(hintFadeTimer);
+                lastZoom = z;
                 return;
             }
 
-            // 줌 레벨이 낮을 때 (확대 유도 메세지)
-            if (!isHintDismissed) {
-                hint.style.opacity = '1';
-                hint.innerHTML = `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 지도를 더 확대하면 조직·인물 노드가 펼쳐집니다 (현재 zoom ${z})`;
-                
-                // 최초 1회만 4초 후에 서서히 투명해지도록 타이머 설정
-                if (!window.hintTimer) {
-                    window.hintTimer = setTimeout(() => {
-                        hint.style.opacity = '0';
-                        isHintDismissed = true;
-                    }, 4000); // 4000ms = 4초 (원하는 시간으로 조절 가능)
-                }
-            } else {
-                // 4초가 지나 자동으로 숨겨진 이후에는 상시 노출하지 않음
+            // 2. 줌 아웃되거나 줌 레벨이 변경되어 다시 '축소 상태'가 되었을 때
+            // 기존 타이머가 작동 중이었다면 초기화
+            if (hintFadeTimer) clearTimeout(hintFadeTimer);
+
+            // 메시지 표시 및 텍스트 갱신
+            hint.style.opacity = '1';
+            hint.innerHTML = `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 지도를 더 확대하면 조직·인물 노드가 펼쳐집니다 (현재 zoom ${z})`;
+
+            // 3초 동안 보여준 뒤 부드럽게 사라지도록 설정 (시야 방해 방지)
+            hintFadeTimer = setTimeout(() => {
                 hint.style.opacity = '0';
-            }
+            }, 3000); // 3초 후 Fade-out (원하는 시간으로 조절 가능)
+
+            lastZoom = z;
         }
 
         /* ====== 아이콘 설정 (위치 확실성 그라데이션 반영) ======
