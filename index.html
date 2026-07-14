@@ -876,6 +876,48 @@ button{ font:inherit; cursor:pointer; }
 }
 
 /* ============================================================
+   Sponsor Badges (후원자 명단 스타일)
+   ============================================================ */
+.sponsor-list-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* 개별 후원자 이름 배지 */
+.sponsor-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.08); /* 딥네이비 배경 위에서 은은한 반투명 */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.85);
+  transition: all 0.2s ease-in-out;
+  cursor: default;
+}
+
+/* 마우스 호버 시 살짝 떠오르며 하이라이트 */
+.sponsor-tag:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: #f5c98c; /* 기존 조인 패널의 골드/앰버 계열 포인트 컬러 */
+  transform: translateY(-1.5px);
+}
+
+/* 더보기 및 카운트 배지 */
+.sponsor-tag-more {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  color: #f5c98c; /* 포인트 컬러 */
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ============================================================
    Footer
    ============================================================ */
 .site-footer{
@@ -1280,7 +1322,18 @@ button{ font:inherit; cursor:pointer; }
           </li>
           <li>
             <i class="fa-solid fa-seedling"></i>
-            <div><b><a href="https://buymeacoffee.com/koreatowndb" target="_blank" rel="noopener">커피 한 잔 후원하기</a></b>후원자 명단에 이름을 남기고 프로젝트를 함께 만들어 주세요.</div>
+            <div>
+              <b><a href="https://buymeacoffee.com/koreatowndb" target="_blank" rel="noopener">커피 한 잔 후원하기</a></b>
+              후원자 명단에 이름을 남기고 프로젝트를 함께 만들어 주세요.
+              
+              <!-- 세련된 후원자 명단 배지 영역 추가 -->
+              <!-- <div class="sponsor-list-wrapper">
+                <span class="sponsor-tag"></span>
+                <span class="sponsor-tag"></span>
+                <span class="sponsor-tag"></span> -->
+                <!-- <span class="sponsor-tag-more">+ 12명</span> -->
+              </div>
+            </div>
           </li>
         </ul>
       </div>
