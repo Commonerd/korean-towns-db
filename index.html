@@ -211,22 +211,10 @@ button{ font:inherit; cursor:pointer; }
 .brand{ display:flex; align-items:center; gap:.7rem; }
 .brand-mark{
   width:38px; height:38px; border-radius:11px;
-  background:var(--navy);
-  position:relative;
-  flex-shrink:0;
-}
-.brand-mark::before{
-  content:"";
-  position:absolute; inset:9px;
-  border:2px solid #fff;
-  border-radius:50%;
-}
-.brand-mark::after{
-  content:"";
-  position:absolute; left:50%; top:50%;
-  width:6px; height:6px; border-radius:50%;
-  background:var(--amber);
-  transform:translate(-50%,-50%);
+  object-fit:cover; flex-shrink:0;
+  display:block; box-shadow:var(--shadow-sm);
+  border:1px solid rgba(255,255,255,.18);
+  background:#fff;
 }
 .brand-text h2{
   font-family:var(--font-display);
@@ -966,7 +954,7 @@ button{ font:inherit; cursor:pointer; }
 <header class="site-header" id="siteHeader">
   <div class="wrap">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
+      <img class="brand-mark" src="favicon.png" alt="코리아타운 DB 로고">
       <div class="brand-text">
         <h2>코리아타운 DB</h2>
         <span>KOREAN DIASPORA RESEARCH TEAM</span>
@@ -1366,7 +1354,7 @@ button{ font:inherit; cursor:pointer; }
     <div class="footer-top">
       <div class="footer-brand">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
+          <img class="brand-mark" src="favicon.png" alt="코리아타운 DB 로고">
           <div class="brand-text">
             <h2>코리아타운 DB</h2>
             <span>KOREAN DIASPORA RESEARCH TEAM</span>
