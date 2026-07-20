@@ -226,8 +226,8 @@
 			<div class="feature-grid">
 				<div class="feature-card" use:reveal>
 					<div class="icon"><i class="fa-solid fa-sitemap"></i></div>
-					<h3>마을 → 조직 → 인물</h3>
-					<p>지도를 확대하면 마을에 속한 단체와 사람이 자연스럽게 펼쳐집니다. 메인은 언제나 마을입니다.</p>
+					<h3>마을 → 조직 → 인물 → 사건</h3>
+					<p>지도를 확대하면 마을, 단체, 사람, 사건이 자연스럽게 펼쳐집니다.</p>
 				</div>
 				<div class="feature-card" use:reveal>
 					<div class="icon"><i class="fa-solid fa-location-crosshairs"></i></div>
@@ -316,6 +316,14 @@
 					<div class="log-body">
 						<span class="log-tag next">기능</span>
 						<p>랜딩페이지가 개설되었습니다. 위치정확도 시각화와 주소표시 기능을 추가했습니다.</p>
+					</div>
+				</div>
+				<div class="log-item" use:reveal>
+					<div class="log-date">2026.07.20</div>
+					<div class="log-body">
+						<span class="log-tag next">기능</span>
+						<p>사건 항목을 추가했습니다.</p>
+						<p>Svelte5와 MapLibre GL JS를 도입하고, GPU 렌더링을 사용해 시각화를 더욱 부드럽게 개선했습니다.</p>
 					</div>
 				</div>
 			</div>
