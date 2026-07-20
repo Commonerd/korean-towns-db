@@ -1,0 +1,10 @@
+{
+  "name": "korean-towns-db",
+  "private": true,
+  "scripts": {
+    "build-config": "node scripts/generate-config.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
