@@ -52,3 +52,12 @@ export function renderAddressHtml(item, { compact = false } = {}) {
 		<div class="text-[10px] text-slate-400 mt-0.5">사료상의 주소 표기이며, 현재 주소 체계와 다르거나 지도 좌표와 정확히 일치하지 않을 수 있습니다.</div>
 	</div>`;
 }
+
+/* 위치 근거(location_basis) 블록 — 왜 이 좌표로 비정했는지 사료적 근거를 보존 */
+export function renderLocationBasisHtml(item) {
+	if (!item.locationBasis) return '';
+	return `<div class="text-[10.5px] text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 mb-2 leading-relaxed">
+		<b class="text-slate-700"><i class="fa-solid fa-compass-drafting text-slate-400"></i> 위치 근거</b>
+		<div class="mt-0.5">${escapeHtml(item.locationBasis)}</div>
+	</div>`;
+}

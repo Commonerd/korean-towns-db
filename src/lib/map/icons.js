@@ -28,6 +28,8 @@ export function computeMarkerVisual(type, opts = {}) {
 		color = '#2563eb';
 	} else if (type === '인물') {
 		color = '#16a34a';
+	} else if (type === '사건') {
+		color = '#9333ea';
 	}
 
 	const certainty = Math.max(0, Math.min(1, certaintyScore));
@@ -62,6 +64,7 @@ export function buildIcon(type, opts = {}) {
 	if (type === '마을') iconClass = settlementType === '빌리지' ? 'fa-house' : 'fa-house-chimney';
 	else if (type === '조직') iconClass = 'fa-users';
 	else if (type === '인물') iconClass = 'fa-user';
+	else if (type === '사건') iconClass = 'fa-bolt';
 
 	const shadow = v.isHighlighted
 		? '0 0 14px rgba(251,191,36,0.9)'

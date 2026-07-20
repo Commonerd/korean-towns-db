@@ -30,7 +30,8 @@
 		{ type: 'all', label: '전체보기', icon: null, iconColor: '' },
 		{ type: '마을', label: '마을', icon: 'fa-house', iconColor: 'text-orange-600' },
 		{ type: '조직', label: '조직', icon: 'fa-users', iconColor: 'text-blue-600' },
-		{ type: '인물', label: '인물', icon: 'fa-user', iconColor: 'text-green-600' }
+		{ type: '인물', label: '인물', icon: 'fa-user', iconColor: 'text-green-600' },
+		{ type: '사건', label: '사건', icon: 'fa-bolt', iconColor: 'text-purple-600' }
 	];
 
 	// 표시 목록 (기존 renderSidebar 의 displayData 로직 이식)
@@ -48,6 +49,7 @@
 	function badgeColor(item) {
 		if (item.type === '마을') return 'bg-orange-100 text-orange-800 border-orange-200';
 		if (item.type === '조직') return 'bg-blue-100 text-blue-800 border-blue-200';
+		if (item.type === '사건') return 'bg-purple-100 text-purple-800 border-purple-200';
 		return 'bg-green-100 text-green-800 border-green-200';
 	}
 	function displayType(item) {
@@ -71,6 +73,9 @@
 				out += `<span class="meta-chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-flag"></i> ${escapeHtml(item.nationality)}</span>`;
 			if (item.job)
 				out += `<span class="meta-chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(item.job)}</span>`;
+		}
+		if (item.type === '사건' && item.eventType) {
+			out += `<span class="meta-chip" style="background:#faf5ff; color:#6b21a8; border-color:#e9d5ff;"><i class="fa-solid fa-bolt"></i> ${escapeHtml(item.eventType)}</span>`;
 		}
 		out += renderPrecisionChip(item);
 		return out;
@@ -112,7 +117,7 @@
 			<i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400"></i>
 		</div>
 
-		<div class="flex gap-2 text-xs font-medium">
+		<div class="flex flex-wrap gap-2 text-xs font-medium">
 			{#each filters as f (f.type)}
 				<button
 					class="px-3 py-1.5 rounded-full border transition-all {filter === f.type
@@ -206,7 +211,12 @@
 					{/if}
 					{#if item.relatedOrg}
 						<div class="text-[10px] text-purple-700 font-medium mb-1">
-							<i class="fa-solid fa-sitemap"></i> 소속조직: {item.relatedOrg}
+							<i class="fa-solid fa-sitemap"></i> {item.type === '사건' ? '관련조직' : '소속조직'}: {item.relatedOrg}
+						</div>
+					{/if}
+					{#if item.relatedPerson}
+						<div class="text-[10px] text-green-700 font-medium mb-1">
+							<i class="fa-solid fa-user"></i> 관련인물: {item.relatedPerson}
 						</div>
 					{/if}
 					<div class="flex justify-between items-end text-[10px] text-slate-400 mt-1">

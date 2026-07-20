@@ -14,7 +14,8 @@ const GLYPH_CODEPOINT = {
 	'마을-타운': 0xf7f2, // fa-house-chimney
 	'마을-빌리지': 0xf015, // fa-house
 	조직: 0xf0c0, // fa-users
-	인물: 0xf007 // fa-user
+	인물: 0xf007, // fa-user
+	사건: 0xf0e7 // fa-bolt
 };
 
 function glyphChar(key) {
@@ -87,7 +88,9 @@ const ICON_COMBOS = [
 	['조직', '타운', false],
 	['조직', '타운', true],
 	['인물', '타운', false],
-	['인물', '타운', true]
+	['인물', '타운', true],
+	['사건', '타운', false],
+	['사건', '타운', true]
 ];
 
 /* 필요한 8종(타운/빌리지/조직/인물 × 일반/하이라이트) 아이콘 이미지를 스타일에 등록한다. */

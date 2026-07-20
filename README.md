@@ -10,7 +10,7 @@
 | 경로     | 설명                                            |
 | -------- | ----------------------------------------------- |
 | `/`      | 랜딩 페이지 (프로젝트 소개)                      |
-| `/map/`  | 인터랙티브 지도 (마을·조직·인물 네트워크 탐색)  |
+| `/map/`  | 인터랙티브 지도 (마을·조직·인물·사건 네트워크 탐색)  |
 
 ## 요구 사항
 
@@ -40,7 +40,7 @@ Vercel 등 어떤 정적 호스팅에도 그대로 배포할 수 있습니다.
 `VITE_` 접두사를 사용합니다.)
 
 ```
-VITE_SPREADSHEET_ID=     # 구글 스프레드시트 ID (towns/organizations/persons 시트)
+VITE_SPREADSHEET_ID=     # 구글 스프레드시트 ID (towns/organizations/persons/events 시트)
 VITE_GEMINI_API_KEY=     # Gemini API 키 (AI 연구 보조원)
 ```
 

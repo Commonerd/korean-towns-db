@@ -14,6 +14,12 @@ import { filterData } from '$lib/data/filter.js';
 
 const WORLD_BBOX = [-180, -85, 180, 85];
 
+/* 쉼표로 구분된 관련 대상(예: 사건의 related_person)에서 첫 값만 반환 */
+function firstToken(str) {
+	if (!str) return '';
+	return str.split(',')[0].trim();
+}
+
 const GPU_SOURCE_IDS = ['kt-halo', 'kt-icons', 'kt-badges', 'kt-labels'];
 
 /* 애니메이션 대시 시퀀스 (MapLibre 공식 "animate a line" 예제 이식) */
@@ -828,6 +834,20 @@ export class MapController {
 					target = this.rawData.find((d) => d.type === '마을' && d.name === item.relatedTown);
 					color = '#16a34a';
 				}
+			} else if (item.type === '사건') {
+				// 사건은 가장 구체적인 관련 대상(인물 → 조직 → 마을)에 연결
+				const firstPerson = firstToken(item.relatedPerson);
+				const firstOrg = firstToken(item.relatedOrg);
+				if (firstPerson) {
+					target = this.rawData.find((d) => d.type === '인물' && d.name === firstPerson);
+				}
+				if (!target && firstOrg) {
+					target = this.rawData.find((d) => d.type === '조직' && d.name === firstOrg);
+				}
+				if (!target && item.relatedTown) {
+					target = this.rawData.find((d) => d.type === '마을' && d.name === item.relatedTown);
+				}
+				color = '#9333ea';
 			}
 
 			if (!target) return;

@@ -207,6 +207,7 @@
 						<span><i style="background:var(--town)"></i>마을</span>
 						<span><i style="background:var(--org)"></i>조직</span>
 						<span><i style="background:var(--person)"></i>인물</span>
+						<span><i style="background:var(--event)"></i>사건</span>
 					</div>
 				</div>
 			</div>
@@ -343,6 +344,10 @@
 					<div class="model-card" use:reveal>
 						<div class="dot-row"><span class="dot" style="background:var(--person)"></span><h4>인물 Person</h4></div>
 						<div class="fields">이름 · 국적 · 직업<br />관련 마을 · 관련 조직 · 출처</div>
+					</div>
+					<div class="model-card" use:reveal>
+						<div class="dot-row"><span class="dot" style="background:var(--event)"></span><h4>사건 Event</h4></div>
+						<div class="fields">이름 · 유형 · 발생/종료연도<br />관련 마을·조직·인물 · 위치근거 · 출처</div>
 					</div>
 				</div>
 

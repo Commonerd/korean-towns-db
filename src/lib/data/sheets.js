@@ -2,6 +2,11 @@ import { spreadsheetId } from '$lib/config.js';
 import { csvToArray, buildHeaderMap, getCol } from './csv.js';
 import { normalizePrecision, getCertaintyScore } from './precision.js';
 
+/* ⚠️ events(사건) 시트의 gid 로 교체하세요.
+   구글시트에서 events 탭을 연 뒤 주소창의 `...#gid=숫자` 값을 그대로 넣으면 됩니다.
+   (0 인 상태로 두면 마을 시트와 겹치므로 반드시 실제 gid 로 바꿔야 사건이 로드됩니다.) */
+const EVENTS_GID = 'REPLACE_WITH_EVENTS_GID';
+
 /* ====== DB 데이터 로드 (기존 loadGoogleSheetsData 이식) ====== */
 export async function loadGoogleSheetsData() {
 	if (!spreadsheetId) return [];
@@ -10,7 +15,8 @@ export async function loadGoogleSheetsData() {
 	const targets = [
 		{ type: '마을', gid: '0' },
 		{ type: '조직', gid: '1633831664' },
-		{ type: '인물', gid: '997795861' }
+		{ type: '인물', gid: '997795861' },
+		{ type: '사건', gid: '1560552606' }
 	];
 
 	let globalId = 1;
@@ -79,9 +85,11 @@ export async function loadGoogleSheetsData() {
 						address,
 						source: getCol(row, headerMap, 'source', '출처'),
 						author: getCol(row, headerMap, 'creator', 'author', '작성자'),
+						updater: getCol(row, headerMap, 'updater', '수정자'),
 						relatedTown: '',
 						relatedOrg: '',
 						locationPrecision: precision,
+						locationBasis: getCol(row, headerMap, 'location_basis', '위치_근거', '위치근거'),
 						certaintyScore: getCertaintyScore(precision)
 					});
 				}
@@ -91,9 +99,11 @@ export async function loadGoogleSheetsData() {
 		console.error('마을 파싱 실패', e);
 	}
 
-	/* 2단계: 조직 & 인물 */
+	/* 2단계: 조직 & 인물 & 사건 */
 	for (const target of targets) {
 		if (target.type === '마을') continue;
+		// events gid 미설정 시 건너뜀 (마을 시트와 겹치는 것 방지)
+		if (target.type === '사건' && (!target.gid || target.gid === 'REPLACE_WITH_EVENTS_GID')) continue;
 		try {
 			const response = await fetch(`${baseUrl}&gid=${target.gid}`);
 			if (!response.ok) continue;
@@ -115,7 +125,12 @@ export async function loadGoogleSheetsData() {
 					'정확도'
 				);
 				const precision = normalizePrecision(rawPrecision, 'unknown');
-				const relatedTown = getCol(row, headerMap, 'related_town', '소속마을');
+				// 사건은 여러 마을이 쉼표로 들어올 수 있음 → 좌표 비정·부유 위치는 첫 마을 기준,
+				// 전체 목록은 relatedTownAll 로 보존
+				const relatedTownRaw = getCol(row, headerMap, 'related_town', '소속마을', '관련마을');
+				const relatedTown = relatedTownRaw.includes(',')
+					? relatedTownRaw.split(',')[0].trim()
+					: relatedTownRaw;
 				const ownLat = parseFloat(getCol(row, headerMap, 'lat', 'latitude', '위도')) || 0;
 				const ownLng = parseFloat(getCol(row, headerMap, 'lng', 'lon', 'longitude', '경도')) || 0;
 
@@ -148,10 +163,14 @@ export async function loadGoogleSheetsData() {
 					lat,
 					lng,
 					relatedTown,
+					relatedTownAll: relatedTownRaw,
 					relatedOrg: '',
+					relatedPerson: '',
 					source: getCol(row, headerMap, 'source', '출처'),
 					author: getCol(row, headerMap, 'creator', 'author', '작성자'),
+					updater: getCol(row, headerMap, 'updater', '수정자'),
 					locationPrecision: precision,
+					locationBasis: getCol(row, headerMap, 'location_basis', '위치_근거', '위치근거'),
 					isPrecise,
 					address,
 					certaintyScore: getCertaintyScore(precision)
@@ -169,6 +188,24 @@ export async function loadGoogleSheetsData() {
 					);
 					item.nationality = getCol(row, headerMap, 'nationality', '국적');
 					item.job = getCol(row, headerMap, 'job', 'occupation', '직업');
+				} else if (target.type === '사건') {
+					// 사건은 마을·조직·인물 모두와 연결될 수 있다 (한 값 또는 쉼표로 여러 값)
+					item.eventType = getCol(row, headerMap, 'event_type', 'type', '유형', '사건유형');
+					item.relatedOrg = getCol(
+						row,
+						headerMap,
+						'related_organization',
+						'related_org',
+						'관련조직',
+						'소속조직'
+					);
+					item.relatedPerson = getCol(
+						row,
+						headerMap,
+						'related_person',
+						'related_people',
+						'관련인물'
+					);
 				}
 				updatedData.push(item);
 			}

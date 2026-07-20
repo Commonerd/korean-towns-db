@@ -199,6 +199,14 @@
 			if (item.nationality) attrContext += ` 국적: ${item.nationality}.`;
 			if (item.job) attrContext += ` 직업: ${item.job}.`;
 		}
+		if (item.type === '사건') {
+			if (item.eventType) attrContext += ` 사건 유형: ${item.eventType}.`;
+			const rel = [];
+			if (item.relatedTownAll || item.relatedTown) rel.push(`관련 마을: ${item.relatedTownAll || item.relatedTown}`);
+			if (item.relatedOrg) rel.push(`관련 조직: ${item.relatedOrg}`);
+			if (item.relatedPerson) rel.push(`관련 인물: ${item.relatedPerson}`);
+			if (rel.length) attrContext += ` ${rel.join(', ')}.`;
+		}
 
 		const prompt = `'${item.name}'(${item.type})에 대해 학술적·역사적 배경을 자세히 설명해 줘. (DB 기초 정보: ${item.description}).${attrContext}${relationContext}`;
 		pushUser(`'${item.name}' 관계망에 대해 자세한 학술 해설을 부탁합니다.`);

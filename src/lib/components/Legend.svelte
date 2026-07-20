@@ -18,6 +18,7 @@
 			<span class="legend-dot" style="background:#2563eb"></span> 조직 (Organization)
 		</div>
 		<div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> 인물 (Person)</div>
+		<div class="legend-row"><span class="legend-dot" style="background:#9333ea"></span> 사건 (Event)</div>
 		<div
 			class="legend-precision text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200"
 			style="font-size:10px; line-height:1.5;"

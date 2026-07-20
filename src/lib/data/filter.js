@@ -20,7 +20,9 @@ export function filterData(rawData, opts) {
 			item.orgType,
 			item.nationality,
 			item.job,
-			item.relatedOrg
+			item.relatedOrg,
+			item.relatedPerson,
+			item.eventType
 		]
 			.filter(Boolean)
 			.join(' ')
