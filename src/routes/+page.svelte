@@ -32,7 +32,7 @@
 	<title>코리아타운 DB — 세계 속 한인 마을의 과거와 현재를 지도 위에</title>
 	<meta
 		name="description"
-		content="코리아타운 DB는 세계 각지 한인 마을과 단체, 사람들의 기록을 하나의 데이터베이스로 잇는 재외동포 역사 인프라 프로젝트입니다."
+		content="코리아타운 DB는 세계 각지 한인 마을과 단체, 사람, 사건의 기록을 하나의 데이터베이스로 잇는 재외동포 역사 인프라 프로젝트입니다."
 	/>
 	<meta name="keywords" content="코리아타운, 한인마을, 재외동포, 지도, 역사, 데이터베이스" />
 	<link rel="canonical" href="https://korean-towns-db.vercel.app/" />
@@ -42,7 +42,7 @@
 	<meta property="og:title" content="코리아타운 DB — 세계 속 한인 마을의 과거와 현재를 지도 위에" />
 	<meta
 		property="og:description"
-		content="세계 각지 한인 마을과 단체, 사람들의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다."
+		content="세계 각지 한인 마을과 단체, 사람, 사건의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다."
 	/>
 	<meta property="og:url" content="https://korean-towns-db.vercel.app/" />
 	<meta property="og:image" content="https://korean-towns-db.vercel.app/resources/images/koreantown1.png" />
@@ -51,7 +51,7 @@
 	<meta name="twitter:title" content="코리아타운 DB" />
 	<meta
 		name="twitter:description"
-		content="세계 각지 한인 마을과 단체, 사람들의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다."
+		content="세계 각지 한인 마을과 단체, 사람, 사건의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다."
 	/>
 	<meta name="twitter:image" content="https://korean-towns-db.vercel.app/resources/images/koreantown1.png" />
 	{@html `<script type="application/ld+json">${JSON.stringify({
@@ -323,7 +323,7 @@
 					<div class="log-body">
 						<span class="log-tag next">기능</span>
 						<p>사건 항목을 추가했습니다.</p>
-						<p>Svelte5와 MapLibre GL JS를 도입하고, GPU 렌더링을 사용해 시각화를 더욱 부드럽게 개선했습니다.</p>
+						<p>Svelte5와 MapLibre GL JS를 도입하고, GPU 렌더링을 사용해 시각화를 부드럽게 개선했습니다.</p>
 					</div>
 				</div>
 			</div>
