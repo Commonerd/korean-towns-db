@@ -87,8 +87,8 @@
 		</nav>
 
 		<div class="nav-actions">
-			<a class="btn btn--coffee btn--sm" href="#join">
-				<i class="fa-solid fa-mug-hot"></i><span class="long">&nbsp;후원하기</span>
+			<a class="btn btn--coffee btn--sm" href="https://buymeacoffee.com/koreatowndb">
+				<i class="fa-solid fa-mug-hot"></i><span class="long">&nbsp;커피 한 잔 후원하기</span>
 			</a>
 			<a class="btn btn--primary btn--sm" href="/map/">
 				<i class="fa-solid fa-map-location-dot"></i><span class="long">&nbsp;지도 보기</span>
