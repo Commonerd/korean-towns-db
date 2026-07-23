@@ -11,6 +11,7 @@
 	import { loadGoogleSheetsData, detectYearRange } from '$lib/data/sheets.js';
 	import { fetchGeminiResponse, parseSimpleMarkdown } from '$lib/ai/gemini.js';
 	import { escapeHtml } from '$lib/util.js';
+	import { t, getLocale } from '$lib/i18n/store.svelte.js';
 
 	/* ====== 상태 ====== */
 	let rawData = $state([]);
@@ -73,9 +74,9 @@
 		syncing = true;
 		try {
 			await fetchLatestAndRender(false);
-			showToast('DB의 최신 데이터가 반영되었습니다.');
+			showToast(t('toast.synced'));
 		} catch (err) {
-			showToast('동기화에 실패했습니다.', true);
+			showToast(t('toast.syncFail'), true);
 		} finally {
 			syncing = false;
 		}
@@ -152,9 +153,7 @@
 	function toggleAIChat() {
 		chatOpen = !chatOpen;
 		if (chatOpen && messages.length === 0) {
-			pushAssistant(
-				"안녕하세요! '코리아타운 DB' 연구 보조원입니다. 지도에서 마을을 클릭하시면 종속된 조직·인물 관계망이 펼쳐집니다. 궁금한 역사적 사실을 물어보세요!"
-			);
+			pushAssistant(t('ai.greeting'));
 		}
 	}
 
@@ -209,38 +208,35 @@
 		}
 
 		const prompt = `'${item.name}'(${item.type})에 대해 학술적·역사적 배경을 자세히 설명해 줘. (DB 기초 정보: ${item.description}).${attrContext}${relationContext}`;
-		pushUser(`'${item.name}' 관계망에 대해 자세한 학술 해설을 부탁합니다.`);
+		pushUser(t('ai.askPush', { name: item.name }));
 		callGemini(prompt);
 	}
 </script>
 
 <svelte:head>
-	<title>코리아타운 DB - 기억의 복원</title>
-	<meta
-		name="description"
-		content="코리아타운 DB의 지도 페이지에서 세계 한인 마을의 연결망과 기록을 탐색할 수 있습니다."
-	/>
-	<meta name="keywords" content="코리아타운, 지도, 한인마을, 네트워크, 재외동포" />
+	<title>{t('mapPage.title')}</title>
+	<meta name="description" content={t('mapPage.desc')} />
+	<meta name="keywords" content="코리아타운, 지도, 한인마을, 네트워크, 재외동포, Koreatown, map" />
 	<link rel="canonical" href="https://korean-towns-db.vercel.app/map/" />
 	<meta property="og:type" content="website" />
-	<meta property="og:locale" content="ko_KR" />
-	<meta property="og:site_name" content="코리아타운 DB" />
-	<meta property="og:title" content="코리아타운 DB - 기억의 복원" />
-	<meta property="og:description" content="지도에서 세계 한인 마을의 연결망과 기록을 탐색해 보세요." />
+	<meta property="og:locale" content={getLocale()} />
+	<meta property="og:site_name" content={t('brand.name')} />
+	<meta property="og:title" content={t('mapPage.title')} />
+	<meta property="og:description" content={t('mapPage.desc')} />
 	<meta property="og:url" content="https://korean-towns-db.vercel.app/map/" />
 	<meta property="og:image" content="https://korean-towns-db.vercel.app/resources/images/koreantown1.png" />
-	<meta property="og:image:alt" content="코리아타운 DB 지도 페이지 미리보기" />
+	<meta property="og:image:alt" content={t('mapPage.title')} />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="코리아타운 DB - 기억의 복원" />
-	<meta name="twitter:description" content="지도에서 세계 한인 마을의 연결망과 기록을 탐색해 보세요." />
+	<meta name="twitter:title" content={t('mapPage.title')} />
+	<meta name="twitter:description" content={t('mapPage.desc')} />
 	<meta name="twitter:image" content="https://korean-towns-db.vercel.app/resources/images/koreantown1.png" />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'WebPage',
-		name: '코리아타운 DB 지도',
+		name: t('mapPage.title'),
 		url: 'https://korean-towns-db.vercel.app/map/',
-		description: '세계 한인 마을의 연결망과 기록을 지도에서 탐색할 수 있는 페이지입니다.',
-		inLanguage: 'ko'
+		description: t('mapPage.desc'),
+		inLanguage: getLocale()
 	})}<\/script>`}
 </svelte:head>
 
@@ -291,7 +287,7 @@
 
 			<button
 				onclick={toggleSidebar}
-				title="검색 패널 열기/닫기"
+				title={t('sidebar.toggleSearch')}
 				class="sidebar-toggle-btn"
 				class:ring-2={sidebarCollapsed}
 				class:ring-primary={sidebarCollapsed}

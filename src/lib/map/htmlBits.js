@@ -1,21 +1,22 @@
 import { escapeHtml } from '$lib/util.js';
-import { PRECISION_ORDER, PRECISION_INFO, getPrecisionRank, certaintyColor } from '$lib/data/precision.js';
+import { PRECISION_ORDER, getPrecisionRank, certaintyColor } from '$lib/data/precision.js';
+import { t, precisionLabel, precisionDesc } from '$lib/i18n/store.svelte.js';
 
 /* 사이드바 카드용 — 짧은 칩 형태 (기존 renderPrecisionChip 이식) */
 export function renderPrecisionChip(item) {
-	const info = PRECISION_INFO[item.locationPrecision] || PRECISION_INFO.unknown;
+	const key = item.locationPrecision || 'unknown';
 	const pct = Math.round((item.certaintyScore ?? 0) * 100);
 	const color = certaintyColor(pct);
 	return `<span class="meta-chip" style="background:#f8fafc; color:#334155; border-color:#e2e8f0;" title="${escapeHtml(
-		info.desc
+		precisionDesc(key)
 	)}">
-		<i class="fa-solid fa-signal" style="color:${color};"></i> ${info.label} · 확실성 ${pct}%
+		<i class="fa-solid fa-signal" style="color:${color};"></i> ${precisionLabel(key)} · ${t('chip.certainty', { n: pct })}
 	</span>`;
 }
 
 /* 팝업용 — 확실성 게이지(신호 막대 형태) + 설명 (기존 renderCertaintyGaugeHtml 이식) */
 export function renderCertaintyGaugeHtml(item) {
-	const info = PRECISION_INFO[item.locationPrecision] || PRECISION_INFO.unknown;
+	const key = item.locationPrecision || 'unknown';
 	const rank = getPrecisionRank(item.locationPrecision);
 	const pct = Math.round((item.certaintyScore ?? 0) * 100);
 	const color = certaintyColor(pct);
@@ -31,11 +32,11 @@ export function renderCertaintyGaugeHtml(item) {
 	return `
 		<div class="text-[10.5px] bg-slate-50 text-slate-600 p-2 rounded border border-slate-200 mt-1 mb-2 leading-relaxed">
 			<div class="flex items-center justify-between mb-1">
-				<b class="text-slate-700"><i class="fa-solid fa-gauge-high" style="color:${color};"></i> 위치 확실성: ${info.label}</b>
+				<b class="text-slate-700"><i class="fa-solid fa-gauge-high" style="color:${color};"></i> ${t('certainty.title', { label: precisionLabel(key) })}</b>
 				<span style="color:${color}; font-weight:700;">${pct}%</span>
 			</div>
 			<div class="mb-1">${bars}</div>
-			<div>${escapeHtml(info.desc)}</div>
+			<div>${escapeHtml(precisionDesc(key))}</div>
 		</div>`;
 }
 
@@ -43,13 +44,13 @@ export function renderCertaintyGaugeHtml(item) {
 export function renderAddressHtml(item, { compact = false } = {}) {
 	if (!item.address) return '';
 	if (compact) {
-		return `<div class="text-[10px] text-slate-500 mb-1" title="현재 주소 체계와 다르거나 지도 좌표와 정확히 일치하지 않을 수 있으나, 사료상 주소를 텍스트로 보존합니다.">
-			<i class="fa-solid fa-map-pin text-slate-400"></i> 주소: ${escapeHtml(item.address)}
+		return `<div class="text-[10px] text-slate-500 mb-1" title="${escapeHtml(t('addr.compactTitle'))}">
+			<i class="fa-solid fa-map-pin text-slate-400"></i> ${t('addr.label')}: ${escapeHtml(item.address)}
 		</div>`;
 	}
 	return `<div class="text-[11px] text-slate-600 mb-2">
-		<i class="fa-solid fa-map-pin text-slate-400"></i> <b>주소:</b> ${escapeHtml(item.address)}
-		<div class="text-[10px] text-slate-400 mt-0.5">사료상의 주소 표기이며, 현재 주소 체계와 다르거나 지도 좌표와 정확히 일치하지 않을 수 있습니다.</div>
+		<i class="fa-solid fa-map-pin text-slate-400"></i> <b>${t('addr.label')}:</b> ${escapeHtml(item.address)}
+		<div class="text-[10px] text-slate-400 mt-0.5">${escapeHtml(t('addr.note'))}</div>
 	</div>`;
 }
 
@@ -57,7 +58,7 @@ export function renderAddressHtml(item, { compact = false } = {}) {
 export function renderLocationBasisHtml(item) {
 	if (!item.locationBasis) return '';
 	return `<div class="text-[10.5px] text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 mb-2 leading-relaxed">
-		<b class="text-slate-700"><i class="fa-solid fa-compass-drafting text-slate-400"></i> 위치 근거</b>
+		<b class="text-slate-700"><i class="fa-solid fa-compass-drafting text-slate-400"></i> ${t('locationBasis.title')}</b>
 		<div class="mt-0.5">${escapeHtml(item.locationBasis)}</div>
 	</div>`;
 }

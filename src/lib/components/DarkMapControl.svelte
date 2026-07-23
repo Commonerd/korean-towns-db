@@ -1,4 +1,5 @@
 <script>
+	import { t } from '$lib/i18n/store.svelte.js';
 	let { value = 0, onChange = () => {} } = $props();
 	let collapsed = $state(true);
 
@@ -14,14 +15,14 @@
 >
 	<div class="panel-header-row">
 		<span class="panel-header-label text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-			<i class="fa-solid fa-moon text-indigo-500"></i> 지도 스타일
+			<i class="fa-solid fa-moon text-indigo-500"></i> {t('darkmap.title')}
 		</span>
 		<div class="flex items-center gap-1.5">
 			<span class="text-[10px] text-slate-400 font-mono">{pct}%</span>
 			<button
 				class="panel-collapse-btn"
 				onclick={() => (collapsed = !collapsed)}
-				title="지도 스타일 패널 접기/펼치기"
+				title={t('darkmap.toggle')}
 			>
 				<i class="fa-solid fa-chevron-up"></i>
 			</button>
@@ -42,7 +43,7 @@
 			<i class="fa-solid fa-moon text-indigo-500 text-xs flex-shrink-0"></i>
 		</div>
 		<div class="flex justify-between text-[9px] text-slate-400 mt-1">
-			<span>밝음</span><span>어두움</span>
+			<span>{t('darkmap.light')}</span><span>{t('darkmap.dark')}</span>
 		</div>
 	</div>
 </div>

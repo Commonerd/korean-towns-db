@@ -1,4 +1,5 @@
 <script>
+	import { t } from '$lib/i18n/store.svelte.js';
 	let { dark = false } = $props();
 	let collapsed = $state(true);
 </script>
@@ -6,25 +7,25 @@
 <div class="map-legend map-panel" class:collapsed class:is-dark={dark}>
 	<div class="panel-header-row">
 		<span class="panel-header-label font-bold"
-			><i class="fa-solid fa-map-location-dot mr-1 text-primary"></i> 범례</span
+			><i class="fa-solid fa-map-location-dot mr-1 text-primary"></i> {t('legend.title')}</span
 		>
-		<button class="panel-collapse-btn" onclick={() => (collapsed = !collapsed)} title="범례 접기/펼치기">
+		<button class="panel-collapse-btn" onclick={() => (collapsed = !collapsed)} title={t('legend.toggle')}>
 			<i class="fa-solid fa-chevron-down"></i>
 		</button>
 	</div>
 	<div class="panel-body">
-		<div class="legend-row"><span class="legend-dot" style="background:#ea580c"></span> 마을 (Town)</div>
+		<div class="legend-row"><span class="legend-dot" style="background:#ea580c"></span> {t('legend.town')}</div>
 		<div class="legend-row">
-			<span class="legend-dot" style="background:#2563eb"></span> 조직 (Organization)
+			<span class="legend-dot" style="background:#2563eb"></span> {t('legend.org')}
 		</div>
-		<div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> 인물 (Person)</div>
-		<div class="legend-row"><span class="legend-dot" style="background:#9333ea"></span> 사건 (Event)</div>
+		<div class="legend-row"><span class="legend-dot" style="background:#16a34a"></span> {t('legend.person')}</div>
+		<div class="legend-row"><span class="legend-dot" style="background:#9333ea"></span> {t('legend.event')}</div>
 		<div
 			class="legend-precision text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200"
 			style="font-size:10px; line-height:1.5;"
 		>
 			<div class="font-semibold text-slate-600 mb-1">
-				<i class="fa-solid fa-gauge-high text-[9px]"></i> 위치 확실성 (Exact → Unknown)
+				<i class="fa-solid fa-gauge-high text-[9px]"></i> {t('legend.precisionTitle')}
 			</div>
 			<div class="flex items-center gap-1 mb-1">
 				<span style="width:9px;height:9px;border-radius:50%;background:#334155;display:inline-block;"></span>
@@ -46,7 +47,7 @@
 				><span>Region</span><span>Unknown</span>
 			</div>
 			<div class="mt-1" style="font-size:9.5px;">
-				점이 흐리고 주변 halo가 클수록 위치 확실성이 낮은 기록입니다.
+				{t('legend.precisionNote')}
 			</div>
 		</div>
 	</div>

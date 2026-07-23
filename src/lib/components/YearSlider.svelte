@@ -1,4 +1,5 @@
 <script>
+	import { t } from '$lib/i18n/store.svelte.js';
 	let {
 		enabled = false,
 		yearMin = 1860,
@@ -50,7 +51,7 @@
 			: 'border-slate-300 bg-white text-slate-600 hover:bg-slate-100'}"
 		onclick={onToggle}
 	>
-		<i class="fa-solid fa-clock-rotate-left {enabled ? 'text-white' : 'text-amber-600'}"></i> 연도 필터
+		<i class="fa-solid fa-clock-rotate-left {enabled ? 'text-white' : 'text-amber-600'}"></i> {t('year.filter')}
 	</button>
 	<span class="text-[10px] text-slate-400">{yearRangeMin} – {yearRangeMax}</span>
 </div>
@@ -77,21 +78,21 @@
 			<button
 				class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg year-thumb"
 				style="left:{minPct}%;"
-				aria-label="시작 연도"
+				aria-label={t('year.startAria')}
 				onmousedown={(e) => startDrag(e, true)}
 				ontouchstart={(e) => startDrag(e, true)}
 			></button>
 			<button
 				class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg year-thumb"
 				style="left:{maxPct}%;"
-				aria-label="종료 연도"
+				aria-label={t('year.endAria')}
 				onmousedown={(e) => startDrag(e, false)}
 				ontouchstart={(e) => startDrag(e, false)}
 			></button>
 		</div>
 		<div class="flex justify-between text-[9px] text-slate-400 mt-0.5 px-1">
 			<span></span>
-			<span class="text-center text-slate-300">드래그하여 기간 설정</span>
+			<span class="text-center text-slate-300">{t('year.dragHint')}</span>
 			<span></span>
 		</div>
 	</div>

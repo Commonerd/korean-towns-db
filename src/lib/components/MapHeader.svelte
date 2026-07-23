@@ -1,4 +1,6 @@
 <script>
+	import { t } from '$lib/i18n/store.svelte.js';
+	import LanguageSwitcher from './LanguageSwitcher.svelte';
 	let { syncing = false, onSync = () => {}, onToggleAI = () => {} } = $props();
 </script>
 
@@ -8,36 +10,37 @@
 			<a href="/" class="flex items-center gap-3">
 				<img
 					src="/favicon.png"
-					alt="코리아타운 DB 로고"
+					alt={t('brand.logoAlt')}
 					class="w-8 h-8 rounded-lg object-cover border border-slate-200 shadow-sm"
 				/>
 				<div>
-					<h1 class="font-serif font-bold text-primary leading-tight map-title">코리아타운 DB</h1>
+					<h1 class="font-serif font-bold text-primary leading-tight map-title">{t('brand.name')}</h1>
 					<p class="text-slate-500 tracking-wider map-subtitle">
-						기억의 복원 : 세계 속 한인 마을의 과거와 현재를 지도 위에
+						{t('mapHeader.subtitle')}
 					</p>
 				</div>
 			</a>
 		</div>
 
-		<div class="hidden sm:flex items-center gap-4">
+		<div class="flex items-center gap-2 sm:gap-4">
 			<button
 				onclick={onSync}
 				disabled={syncing}
-				class="bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm"
+				class="hidden sm:flex bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 items-center gap-2 shadow-sm"
 			>
 				{#if syncing}
-					<i class="fa-solid fa-circle-notch fa-spin"></i> 동기화 중...
+					<i class="fa-solid fa-circle-notch fa-spin"></i> {t('header.syncing')}
 				{:else}
-					<i class="fa-brands fa-google"></i> 실시간 동기화
+					<i class="fa-brands fa-google"></i> {t('header.sync')}
 				{/if}
 			</button>
 			<button
 				onclick={onToggleAI}
-				class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 flex items-center gap-2 shadow-sm"
+				class="hidden sm:flex bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200 items-center gap-2 shadow-sm"
 			>
-				<i class="fa-solid fa-wand-magic-sparkles"></i> AI 보조원
+				<i class="fa-solid fa-wand-magic-sparkles"></i> {t('header.ai')}
 			</button>
+			<LanguageSwitcher variant="compact" />
 		</div>
 	</div>
 </header>

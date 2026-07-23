@@ -1,4 +1,5 @@
 <script>
+	import { t } from '$lib/i18n/store.svelte.js';
 	let {
 		open = false,
 		messages = [],
@@ -36,11 +37,11 @@
 	<div class="px-4 py-3 bg-purple-600 text-white flex justify-between items-center shadow-sm z-10">
 		<div class="flex items-center gap-2 font-bold">
 			<i class="fa-solid fa-robot"></i>
-			<span>AI 연구 보조원</span>
+			<span>{t('aiPanel.title')}</span>
 		</div>
 		<button
 			onclick={onClose}
-			aria-label="AI 보조원 닫기"
+			aria-label={t('aiPanel.close')}
 			class="hover:bg-purple-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
 		>
 			<i class="fa-solid fa-xmark"></i>
@@ -78,7 +79,7 @@
 				<div
 					class="p-3 bg-slate-100 text-slate-500 rounded-r-lg rounded-bl-lg border border-slate-200 text-sm flex items-center gap-2"
 				>
-					<i class="fa-solid fa-circle-notch fa-spin"></i> 관계망 사료 교차 검증 중...
+					<i class="fa-solid fa-circle-notch fa-spin"></i> {t('aiPanel.verifying')}
 				</div>
 			</div>
 		{/if}
@@ -90,19 +91,19 @@
 				type="text"
 				bind:value={inputValue}
 				onkeypress={onKey}
-				placeholder="역사적 배경이나 추가 정보를 물어보세요..."
+				placeholder={t('aiPanel.placeholder')}
 				class="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow bg-slate-50"
 			/>
 			<button
 				onclick={submit}
-				aria-label="메시지 보내기"
+				aria-label={t('aiPanel.send')}
 				class="absolute right-2 top-2 w-8 h-8 bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white rounded flex items-center justify-center transition-colors"
 			>
 				<i class="fa-solid fa-paper-plane text-xs"></i>
 			</button>
 		</div>
 		<div class="text-[10px] text-center text-slate-400 mt-2">
-			Gemini AI가 제공하는 정보는 참고용으로 교차 검증이 필요합니다.
+			{t('aiPanel.disclaimer')}
 		</div>
 	</div>
 </div>

@@ -1,4 +1,5 @@
 import { geminiApiKey } from '$lib/config.js';
+import { t } from '$lib/i18n/store.svelte.js';
 
 /* ====== Gemini AI (기존 fetchGeminiResponse 이식) ======
    chatHistory: [{ role:'user'|'model', parts:[{text}] }]
@@ -8,13 +9,13 @@ export async function fetchGeminiResponse(chatHistory, rawData) {
 	if (!geminiApiKey) {
 		return {
 			status: 'no-key',
-			text: 'Gemini API 키가 설정되지 않았습니다. .env 의 VITE_GEMINI_API_KEY 를 확인하세요.'
+			text: t('ai.noKey')
 		};
 	}
 
 	const systemPrompt = `당신은 '코리아타운 DB - 기억의 복원' 프로젝트의 수석 역사학자이자 AI 연구원입니다. 사라진 한인 마을(공간), 독립운동 조직, 인물 간의 네트워크와 위상 관계를 설명합니다. 전체 데이터 정보: ${JSON.stringify(
 		rawData
-	)}. 질문에 사료적 근거와 학술적 맥락을 더해 풍성하게 답변하세요.`;
+	)}. 질문에 사료적 근거와 학술적 맥락을 더해 풍성하게 답변하세요. ${t('ai.langInstruction')}`;
 
 	const payload = {
 		contents: chatHistory,
@@ -35,12 +36,12 @@ export async function fetchGeminiResponse(chatHistory, rawData) {
 		} else if (result.error && result.error.code === 403) {
 			return {
 				status: 'forbidden',
-				text: "⚠️ <b>API 접근 권한 거부(403 Error)</b>: Google Cloud 콘솔의 'API 및 서비스 > 사용자 인증 정보'에서 사용 중인 API 키의 제한사항을 <b>'키 제한 안함'</b>으로 변경하거나, <b>'Generative Language API'</b>를 명시적으로 허용해 주셔야 해결됩니다."
+				text: t('ai.forbidden')
 			};
 		}
-		return { status: 'error', text: '자료를 분석하는 중에 에러가 발생했습니다.' };
+		return { status: 'error', text: t('ai.error') };
 	} catch (error) {
-		return { status: 'error', text: '네트워크 통신 오류가 발생했습니다.' };
+		return { status: 'error', text: t('ai.network') };
 	}
 }
 

@@ -1,5 +1,6 @@
 <script>
 	import { ZOOM_DETAIL_THRESHOLD } from '$lib/map/mapStyle.js';
+	import { t, getLocale } from '$lib/i18n/store.svelte.js';
 
 	let { zoom = 5, dark = false } = $props();
 
@@ -10,6 +11,7 @@
 	// 기존 updateZoomHint 로직 이식
 	$effect(() => {
 		const z = zoom;
+		getLocale(); // 언어 변경 시 힌트 문구 갱신
 		if (timer) clearTimeout(timer);
 
 		if (z >= ZOOM_DETAIL_THRESHOLD) {
@@ -20,8 +22,8 @@
 		const isMobile = window.innerWidth < 768;
 		const zr = Math.round(z);
 		html = isMobile
-			? `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 확대하면 점들이 펼쳐집니다 (Zoom ${zr})`
-			: `<i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 지도를 확대하면 점들이 펼쳐집니다 (현재 zoom ${zr})`;
+			? t('zoom.mobile', { z: zr })
+			: t('zoom.desktop', { z: zr });
 		visible = true;
 		timer = setTimeout(() => (visible = false), 3000);
 

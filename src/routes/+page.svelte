@@ -1,6 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
 	import { reveal } from '$lib/actions/reveal.js';
+	import { t, getLocale } from '$lib/i18n/store.svelte.js';
+	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 
 	let navOpen = $state(false);
 	let year = $state('');
@@ -29,73 +31,65 @@
 </script>
 
 <svelte:head>
-	<title>코리아타운 DB — 세계 속 한인 마을의 과거와 현재를 지도 위에</title>
-	<meta
-		name="description"
-		content="코리아타운 DB는 세계 각지 한인 마을과 단체, 사람, 사건의 기록을 하나의 데이터베이스로 잇는 재외동포 역사 인프라 프로젝트입니다."
-	/>
-	<meta name="keywords" content="코리아타운, 한인마을, 재외동포, 지도, 역사, 데이터베이스" />
+	<title>{t('home.title')}</title>
+	<meta name="description" content={t('home.desc')} />
+	<meta name="keywords" content="코리아타운, 한인마을, 재외동포, 지도, 역사, 데이터베이스, Koreatown, Korean diaspora" />
 	<link rel="canonical" href="https://korean-towns-db.vercel.app/" />
 	<meta property="og:type" content="website" />
-	<meta property="og:locale" content="ko_KR" />
-	<meta property="og:site_name" content="코리아타운 DB" />
-	<meta property="og:title" content="코리아타운 DB — 세계 속 한인 마을의 과거와 현재를 지도 위에" />
-	<meta
-		property="og:description"
-		content="세계 각지 한인 마을과 단체, 사람, 사건의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다."
-	/>
+	<meta property="og:locale" content={getLocale()} />
+	<meta property="og:site_name" content={t('brand.name')} />
+	<meta property="og:title" content={t('home.title')} />
+	<meta property="og:description" content={t('home.desc')} />
 	<meta property="og:url" content="https://korean-towns-db.vercel.app/" />
 	<meta property="og:image" content="https://korean-towns-db.vercel.app/resources/images/koreantown1.png" />
-	<meta property="og:image:alt" content="코리아타운 DB 소개 이미지" />
+	<meta property="og:image:alt" content={t('brand.name')} />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="코리아타운 DB" />
-	<meta
-		name="twitter:description"
-		content="세계 각지 한인 마을과 단체, 사람, 사건의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다."
-	/>
+	<meta name="twitter:title" content={t('brand.name')} />
+	<meta name="twitter:description" content={t('home.desc')} />
 	<meta name="twitter:image" content="https://korean-towns-db.vercel.app/resources/images/koreantown1.png" />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'WebSite',
-		name: '코리아타운 DB',
+		name: t('brand.name'),
 		url: 'https://korean-towns-db.vercel.app/',
-		description: '세계 각지 한인 마을과 단체, 사람, 사건의 기록을 지도 위에서 탐색할 수 있는 디지털 역사 인프라입니다.',
-		inLanguage: 'ko'
+		description: t('home.desc'),
+		inLanguage: getLocale()
 	})}<\/script>`}
 </svelte:head>
 
 <header class="site-header" class:nav-open={navOpen}>
 	<div class="wrap">
 		<div class="brand">
-			<img class="brand-mark" src="/favicon.png" alt="코리아타운 DB 로고" />
+			<img class="brand-mark" src="/favicon.png" alt={t('brand.logoAlt')} />
 			<div class="brand-text">
-				<h2>코리아타운 DB</h2>
-				<span>KOREAN DIASPORA RESEARCH TEAM</span>
+				<h2>{t('brand.name')}</h2>
+				<span>{t('brand.tagline')}</span>
 			</div>
 		</div>
 
 		<nav class="main-nav">
 			<ul>
-				<li><a href="#project" onclick={closeNav}>프로젝트</a></li>
-				<li><a href="#features" onclick={closeNav}>기능</a></li>
-				<li><a href="#roadmap" onclick={closeNav}>로드맵</a></li>
-				<li><a href="#log" onclick={closeNav}>진행기록</a></li>
-				<li><a href="#data" onclick={closeNav}>데이터</a></li>
-				<li><a href="#team" onclick={closeNav}>연구팀</a></li>
-				<li><a href="#join" onclick={closeNav}>참여하기</a></li>
+				<li><a href="#project" onclick={closeNav}>{t('nav.project')}</a></li>
+				<li><a href="#features" onclick={closeNav}>{t('nav.features')}</a></li>
+				<li><a href="#roadmap" onclick={closeNav}>{t('nav.roadmap')}</a></li>
+				<li><a href="#log" onclick={closeNav}>{t('nav.log')}</a></li>
+				<li><a href="#data" onclick={closeNav}>{t('nav.data')}</a></li>
+				<li><a href="#team" onclick={closeNav}>{t('nav.team')}</a></li>
+				<li><a href="#join" onclick={closeNav}>{t('nav.join')}</a></li>
 			</ul>
 		</nav>
 
 		<div class="nav-actions">
+			<LanguageSwitcher variant="light" />
 			<a class="btn btn--coffee btn--sm" href="https://buymeacoffee.com/koreatowndb">
-				<i class="fa-solid fa-mug-hot"></i><span class="long">&nbsp;커피 한 잔 후원하기</span>
+				<i class="fa-solid fa-mug-hot"></i><span class="long">&nbsp;{t('btn.donate')}</span>
 			</a>
 			<a class="btn btn--primary btn--sm" href="/map/">
-				<i class="fa-solid fa-map-location-dot"></i><span class="long">&nbsp;지도 보기</span>
+				<i class="fa-solid fa-map-location-dot"></i><span class="long">&nbsp;{t('btn.viewMap')}</span>
 			</a>
 			<button
 				class="nav-toggle"
-				aria-label="메뉴 열기"
+				aria-label={t('btn.openMenu')}
 				aria-expanded={navOpen}
 				onclick={() => (navOpen = !navOpen)}
 			>
@@ -110,22 +104,21 @@
 	<section class="hero" id="hero">
 		<div class="wrap">
 			<div class="hero-copy" use:reveal>
-				<p class="eyebrow">코리아타운 데이터베이스</p>
-				<h1>세계 속 한인 마을의<br /><span class="accent">과거와 현재</span>를<br />지도 위에</h1>
+				<p class="eyebrow">{t('hero.eyebrow')}</p>
+				<h1>{@html t('hero.title')}</h1>
 				<p class="lede">
-					코리아타운 DB는 세계 곳곳에 흩어진 한인 마을과 단체, 사람, 사건의 기록을 하나의 데이터베이스로
-					잇는 작업입니다. 연구자들이 조금씩 모아온 사료가 지도 위에서 다시 연결됩니다.
+					{t('hero.lede')}
 				</p>
 				<div class="hero-ctas">
 					<a class="btn btn--primary" href="/map/">
-						지도로 보기 <i class="fa-solid fa-arrow-right"></i>
+						{t('btn.viewMapArrow')} <i class="fa-solid fa-arrow-right"></i>
 					</a>
-					<a class="btn btn--ghost" href="#team">연구팀 소개 보기</a>
+					<a class="btn btn--ghost" href="#team">{t('btn.teamIntro')}</a>
 				</div>
 				<div class="stat-row">
-					<div class="stat"><b>900+</b><span>확보된 마을·단체 데이터</span></div>
-					<div class="stat"><b>1860–</b><span>연구 대상 시기 (근현대)</span></div>
-					<div class="stat"><b>3</b><span>참여 연구자</span></div>
+					<div class="stat"><b>{t('hero.stat1num')}</b><span>{t('hero.stat1label')}</span></div>
+					<div class="stat"><b>{t('hero.stat2num')}</b><span>{t('hero.stat2label')}</span></div>
+					<div class="stat"><b>{t('hero.stat3num')}</b><span>{t('hero.stat3label')}</span></div>
 				</div>
 			</div>
 
@@ -133,7 +126,7 @@
 				<svg
 					viewBox="0 0 560 420"
 					role="img"
-					aria-label="한반도에서 연해주, 미주 서부로 이어지는 1단계 데이터 연결망과, 일본·중국으로 이어질 예정인 다음 단계를 보여주는 도식"
+					aria-label={t('hero.svg.aria')}
 				>
 					<path class="route-line" d="M150,220 L378,86" fill="none" stroke="var(--navy)" stroke-width="2" />
 					<path class="route-line" d="M150,220 L392,338" fill="none" stroke="var(--navy)" stroke-width="2" />
@@ -141,23 +134,23 @@
 					<path d="M150,220 L486,286" fill="none" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 6" />
 
 					<circle class="node-pulse" cx="378" cy="86" r="44" fill="var(--amber)" />
-					<text x="378" y="91" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="#fff">러시아</text>
+					<text x="378" y="91" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="#fff">{t('hero.svg.russia')}</text>
 
 					<circle class="node-pulse delay" cx="392" cy="338" r="44" fill="var(--amber)" />
-					<text x="392" y="343" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="#fff">미국</text>
+					<text x="392" y="343" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="#fff">{t('hero.svg.usa')}</text>
 
 					<circle cx="486" cy="178" r="44" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4" />
-					<text x="486" y="183" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="var(--navy-deep)">일본</text>
+					<text x="486" y="183" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="var(--navy-deep)">{t('hero.svg.japan')}</text>
 
 					<circle cx="486" cy="286" r="44" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4" />
-					<text x="486" y="291" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="var(--navy-deep)">중국</text>
+					<text x="486" y="291" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="var(--navy-deep)">{t('hero.svg.china')}</text>
 
 					<circle cx="150" cy="220" r="49" fill="var(--navy)" />
-					<text x="150" y="225" text-anchor="middle" font-family="Noto Serif KR" font-size="20.8" font-weight="700" fill="#fff">한반도</text>
+					<text x="150" y="225" text-anchor="middle" font-family="Noto Serif KR" font-size="20.8" font-weight="700" fill="#fff">{t('hero.svg.korea')}</text>
 				</svg>
 				<div class="hero-legend">
-					<span><i style="background:var(--amber)"></i>진행 중</span>
-					<span><i style="background:#c7cdda"></i>다음 단계 예정</span>
+					<span><i style="background:var(--amber)"></i>{t('hero.svg.inProgress')}</span>
+					<span><i style="background:#c7cdda"></i>{t('hero.svg.next')}</span>
 				</div>
 			</figure>
 		</div>
@@ -168,16 +161,12 @@
 		<div class="wrap intro-grid">
 			<div>
 				<div class="section-head" use:reveal>
-					<p class="eyebrow">프로젝트 소개</p>
-					<h2>세계 속 흩어져 있던 코리아타운을 한 곳에서 모아 보기</h2>
+					<p class="eyebrow">{t('project.eyebrow')}</p>
+					<h2>{t('project.h2')}</h2>
 				</div>
 				<div class="intro-copy" use:reveal>
 					<p>
-						해외 한인 마을에 관한 정보는 지금까지 논문과 사료집, 신문, 회고록 속에 따로따로 흩어져
-						있었습니다. <strong>코리아타운 DB</strong>는 이 기록들을 마을·조직·인물·사건이라는 하나의 구조로
-						모아, 연구자와 교육기관, 재외동포 사회가 함께 검색하고 인용할 수 있는 공공 데이터 인프라를
-						만듭니다. 지도 위에 데이터 표시를 통해 직관적 이해를 도와, 연구와 교육을 위한 오픈데이터로
-						계속 재사용될 것입니다.
+						{@html t('project.body')}
 					</p>
 				</div>
 			</div>
@@ -186,17 +175,17 @@
 				<div class="preview-map carousel-container">
 					<div class="carousel-track" style="transform: translateX(-{current * 100}%)">
 						{#each slides as src, i (src)}
-							<img {src} alt={`미리보기 ${i + 1}`} />
+							<img {src} alt={t('project.previewAlt', { n: i + 1 })} />
 						{/each}
 					</div>
-					<button class="carousel-prev" aria-label="이전 이미지" onclick={prev}>&#10094;</button>
-					<button class="carousel-next" aria-label="다음 이미지" onclick={next}>&#10095;</button>
+					<button class="carousel-prev" aria-label={t('project.prevImg')} onclick={prev}>&#10094;</button>
+					<button class="carousel-next" aria-label={t('project.nextImg')} onclick={next}>&#10095;</button>
 					<div class="carousel-dots">
 						{#each slides as _, i (i)}
 							<button
 								class="dot"
 								class:active={i === current}
-								aria-label={`${i + 1}번 이미지로 이동`}
+								aria-label={t('project.gotoImg', { n: i + 1 })}
 								onclick={() => (current = i)}
 							></button>
 						{/each}
@@ -204,10 +193,10 @@
 				</div>
 				<div class="cap-row">
 					<div class="cap-legend">
-						<span><i style="background:var(--town)"></i>마을</span>
-						<span><i style="background:var(--org)"></i>조직</span>
-						<span><i style="background:var(--person)"></i>인물</span>
-						<span><i style="background:var(--event)"></i>사건</span>
+						<span><i style="background:var(--town)"></i>{t('type.town')}</span>
+						<span><i style="background:var(--org)"></i>{t('type.org')}</span>
+						<span><i style="background:var(--person)"></i>{t('type.person')}</span>
+						<span><i style="background:var(--event)"></i>{t('type.event')}</span>
 					</div>
 				</div>
 			</div>
@@ -218,31 +207,31 @@
 	<section class="section section--tint" id="features">
 		<div class="wrap">
 			<div class="section-head" use:reveal>
-				<p class="eyebrow">무엇을 할 수 있나요</p>
-				<h2>지도를 통해 네 단계로 데이터를 보기</h2>
-				<p>코리아타운의 상세정보, 위치 정확도 확인, 시대별 필터링, 그리고 AI에 의한 데이터분석까지</p>
+				<p class="eyebrow">{t('features.eyebrow')}</p>
+				<h2>{t('features.h2')}</h2>
+				<p>{t('features.p')}</p>
 			</div>
 
 			<div class="feature-grid">
 				<div class="feature-card" use:reveal>
 					<div class="icon"><i class="fa-solid fa-sitemap"></i></div>
-					<h3>마을 → 조직 → 인물 → 사건</h3>
-					<p>지도를 확대하면 마을, 단체, 사람, 사건이 자연스럽게 펼쳐집니다.</p>
+					<h3>{t('features.c1.h3')}</h3>
+					<p>{t('features.c1.p')}</p>
 				</div>
 				<div class="feature-card" use:reveal>
 					<div class="icon"><i class="fa-solid fa-location-crosshairs"></i></div>
-					<h3>있는 그대로의 불확실함</h3>
-					<p>정확한 번지수부터 대략적인 지역까지, 위치정확도 필드로 사료의 한계를 감추지 않고 보여줍니다.</p>
+					<h3>{t('features.c2.h3')}</h3>
+					<p>{t('features.c2.p')}</p>
 				</div>
 				<div class="feature-card" use:reveal>
 					<div class="icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
-					<h3>시간을 넘겨보는 지도</h3>
-					<p>연도 필터로 마을이 생기고 사라진 흐름을 직접 훑어봅니다.</p>
+					<h3>{t('features.c3.h3')}</h3>
+					<p>{t('features.c3.p')}</p>
 				</div>
 				<div class="feature-card" use:reveal>
 					<div class="icon"><i class="fa-solid fa-users-gear"></i></div>
-					<h3>AI로 연구보조</h3>
-					<p>AI를 활용해 여러 코리아타운 간 데이터 분석 및 인사이트를 도출합니다.</p>
+					<h3>{t('features.c4.h3')}</h3>
+					<p>{t('features.c4.p')}</p>
 				</div>
 			</div>
 		</div>
@@ -252,37 +241,37 @@
 	<section class="section" id="roadmap">
 		<div class="wrap">
 			<div class="section-head" use:reveal>
-				<p class="eyebrow">데이터 수집 로드맵</p>
-				<h2>좁게 시작해, 단계적으로 넓힙니다</h2>
+				<p class="eyebrow">{t('roadmap.eyebrow')}</p>
+				<h2>{t('roadmap.h2')}</h2>
 			</div>
 			<p class="roadmap-intro" use:reveal>
-				우선 러시아 극동과 미국부터 채우고, 이후 일본, 중국, 그리고 유럽까지 단계적으로 넓혀갑니다.
+				{t('roadmap.intro')}
 			</p>
 
 			<div class="phase-track">
 				<div class="phase" use:reveal>
 					<div class="phase-num">01</div>
-					<span class="tag">진행 중</span>
-					<h3>러시아 극동 · 미국 서부</h3>
-					<p>1906년 연해주 한인마을 분포도, 1922년 조선인촌락 및 인구조사서, 캘리포니아 센서스 자료를 중심으로 마을과 조직 데이터를 채우고 있습니다.</p>
+					<span class="tag">{t('tag.inProgress')}</span>
+					<h3>{t('roadmap.p1.h3')}</h3>
+					<p>{t('roadmap.p1.p')}</p>
 				</div>
 				<div class="phase is-upcoming" use:reveal>
 					<div class="phase-num">02</div>
-					<span class="tag">예정</span>
-					<h3>일본</h3>
-					<p>식민지기 도항과 정착 관련 사료를 중심으로 다음 지역을 준비합니다.</p>
+					<span class="tag">{t('tag.planned')}</span>
+					<h3>{t('roadmap.p2.h3')}</h3>
+					<p>{t('roadmap.p2.p')}</p>
 				</div>
 				<div class="phase is-upcoming" use:reveal>
 					<div class="phase-num">03</div>
-					<span class="tag">예정</span>
-					<h3>중국</h3>
-					<p>만주 지역 이주와 정착 기록을 축적할 예정입니다.</p>
+					<span class="tag">{t('tag.planned')}</span>
+					<h3>{t('roadmap.p3.h3')}</h3>
+					<p>{t('roadmap.p3.p')}</p>
 				</div>
 				<div class="phase is-upcoming" use:reveal>
 					<div class="phase-num">04</div>
-					<span class="tag">예정</span>
-					<h3>유럽</h3>
-					<p>비교적 최근 형성된 유럽 내 한인 공동체까지 범위를 넓힙니다.</p>
+					<span class="tag">{t('tag.planned')}</span>
+					<h3>{t('roadmap.p4.h3')}</h3>
+					<p>{t('roadmap.p4.p')}</p>
 				</div>
 			</div>
 		</div>
@@ -292,38 +281,38 @@
 	<section class="section section--tint" id="log">
 		<div class="wrap">
 			<div class="section-head" use:reveal>
-				<p class="eyebrow">진행 기록</p>
-				<h2>조금씩 쌓이는 중입니다</h2>
+				<p class="eyebrow">{t('log.eyebrow')}</p>
+				<h2>{t('log.h2')}</h2>
 			</div>
 
 			<div class="log-list">
 				<div class="log-item" use:reveal>
 					<div class="log-date">2026.06.09</div>
 					<div class="log-body">
-						<span class="log-tag data">데이터모델</span>
-						<p>마을·조직·인물 3단계 구조를 정하고, 코리아타운 DB 첫 화면을 열었습니다.</p>
+						<span class="log-tag data">{t('log.tag.dataModel')}</span>
+						<p>{t('log.item1.body')}</p>
 					</div>
 				</div>
 				<div class="log-item" use:reveal>
 					<div class="log-date">2026.07.09</div>
 					<div class="log-body">
-						<span class="log-tag data">기능</span>
-						<p>위치정확도, 연도 필터, 다크모드, 2계층 클러스터링을 더하고 확보 데이터가 900건을 넘었습니다.</p>
+						<span class="log-tag data">{t('log.tag.feature')}</span>
+						<p>{t('log.item2.body')}</p>
 					</div>
 				</div>
 				<div class="log-item" use:reveal>
 					<div class="log-date">2026.07.12</div>
 					<div class="log-body">
-						<span class="log-tag next">기능</span>
-						<p>랜딩페이지가 개설되었습니다. 위치정확도 시각화와 주소표시 기능을 추가했습니다.</p>
+						<span class="log-tag next">{t('log.tag.feature')}</span>
+						<p>{t('log.item3.body')}</p>
 					</div>
 				</div>
 				<div class="log-item" use:reveal>
 					<div class="log-date">2026.07.20</div>
 					<div class="log-body">
-						<span class="log-tag next">기능</span>
-						<p>사건 항목을 추가했습니다.</p>
-						<p>Svelte5와 MapLibre GL JS를 도입하고, GPU 렌더링을 사용해 시각화를 부드럽게 개선했습니다.</p>
+						<span class="log-tag next">{t('log.tag.feature')}</span>
+						<p>{t('log.item4.body1')}</p>
+						<p>{t('log.item4.body2')}</p>
 					</div>
 				</div>
 			</div>
@@ -334,56 +323,56 @@
 	<section class="section" id="data">
 		<div class="wrap">
 			<div class="section-head" use:reveal>
-				<p class="eyebrow">데이터와 방법론</p>
-				<h2>출처가 곧 데이터의 중심입니다</h2>
-				<p>모든 항목은 철저하게 사료에 기반해 토론을 거쳐 입력합니다.</p>
+				<p class="eyebrow">{t('data.eyebrow')}</p>
+				<h2>{t('data.h2')}</h2>
+				<p>{t('data.p')}</p>
 			</div>
 
 			<div class="data-grid">
 				<div>
 					<div class="model-card" use:reveal>
-						<div class="dot-row"><span class="dot" style="background:var(--town)"></span><h4>마을 Town</h4></div>
-						<div class="fields">이름 · 설명 · 인구 · 성립/소멸연도<br />위도·경도 · 위치정확도 · 출처</div>
+						<div class="dot-row"><span class="dot" style="background:var(--town)"></span><h4>{t('data.model.town')}</h4></div>
+						<div class="fields">{@html t('data.model.town.fields')}</div>
 					</div>
 					<div class="model-card" use:reveal>
-						<div class="dot-row"><span class="dot" style="background:var(--org)"></span><h4>조직 Organization</h4></div>
-						<div class="fields">이름 · 종류 · 설립/해체연도<br />관련 마을 · 출처</div>
+						<div class="dot-row"><span class="dot" style="background:var(--org)"></span><h4>{t('data.model.org')}</h4></div>
+						<div class="fields">{@html t('data.model.org.fields')}</div>
 					</div>
 					<div class="model-card" use:reveal>
-						<div class="dot-row"><span class="dot" style="background:var(--person)"></span><h4>인물 Person</h4></div>
-						<div class="fields">이름 · 국적 · 직업<br />관련 마을 · 관련 조직 · 출처</div>
+						<div class="dot-row"><span class="dot" style="background:var(--person)"></span><h4>{t('data.model.person')}</h4></div>
+						<div class="fields">{@html t('data.model.person.fields')}</div>
 					</div>
 					<div class="model-card" use:reveal>
-						<div class="dot-row"><span class="dot" style="background:var(--event)"></span><h4>사건 Event</h4></div>
-						<div class="fields">이름 · 유형 · 발생/종료연도<br />관련 마을·조직·인물 · 위치근거 · 출처</div>
+						<div class="dot-row"><span class="dot" style="background:var(--event)"></span><h4>{t('data.model.event')}</h4></div>
+						<div class="fields">{@html t('data.model.event.fields')}</div>
 					</div>
 				</div>
 
 				<div use:reveal>
 					<ul class="source-list">
 						<li>
-							<a href="https://www.data.go.kr/data/15070379/fileData.do" target="_blank" rel="noopener">독립기념관 해외사적지 데이터셋</a>
+							<a href="https://www.data.go.kr/data/15070379/fileData.do" target="_blank" rel="noopener">{t('data.source1')}</a>
 							<span class="src-tag">data.go.kr</span>
 						</li>
 						<li>
-							<a href="https://db.history.go.kr/id/haf_012_0330" target="_blank" rel="noopener">국사편찬위원회 한국사데이터베이스</a>
+							<a href="https://db.history.go.kr/id/haf_012_0330" target="_blank" rel="noopener">{t('data.source2')}</a>
 							<span class="src-tag">db.history.go.kr</span>
 						</li>
 						<li>
-							<a href="https://www.okpedia.kr/" target="_blank" rel="noopener">세계한민족문화대전</a>
+							<a href="https://www.okpedia.kr/" target="_blank" rel="noopener">{t('data.source3')}</a>
 							<span class="src-tag">okpedia.kr</span>
 						</li>
 						<li>
-							<a href="https://www.prlib.ru/item/686907" target="_blank" rel="noopener">러시아 대통령도서관</a>
+							<a href="https://www.prlib.ru/item/686907" target="_blank" rel="noopener">{t('data.source4')}</a>
 							<span class="src-tag">prlib.ru</span>
 						</li>
 						<li>
-							<a href="https://www.archives.gov/research/census/online-resources" target="_blank" rel="noopener">미국 국립문서기록관리청</a>
+							<a href="https://www.archives.gov/research/census/online-resources" target="_blank" rel="noopener">{t('data.source5')}</a>
 							<span class="src-tag">archives.gov</span>
 						</li>
 					</ul>
 
-					<div class="copyright-note">모든 자료는 출처를 명확히 표기하고 있습니다.</div>
+					<div class="copyright-note">{t('data.copyright')}</div>
 				</div>
 			</div>
 		</div>
@@ -393,36 +382,36 @@
 	<section class="section section--tint" id="team">
 		<div class="wrap">
 			<div class="section-head" use:reveal>
-				<p class="eyebrow">연구팀</p>
-				<h2>글로벌 코리안 연구자들이 모였습니다</h2>
+				<p class="eyebrow">{t('team.eyebrow')}</p>
+				<h2>{t('team.h2')}</h2>
 			</div>
 			<p class="team-intro" use:reveal>
-				<strong>코리안 디아스포라 연구팀</strong>은 한 달에 한 번 세미나를 통해 데이터를 보강합니다.
+				{@html t('team.intro')}
 			</p>
 
 			<div class="team-grid">
 				<div class="team-card" use:reveal>
-					<div class="avatar" style="background:var(--amber);">김</div>
-					<h3>김슬기</h3>
-					<p class="role">러시아 데이터</p>
-					<p>성균관대학교 사학과 박사수료(2024~)</p>
-					<p>근대 한인 디아스포라의 이동과 생존 전략을 연구합니다. 현재 러시아 극동 조선인 개신교 공동체(1905–1923)를 주제로 박사학위논문을 작성하고 있습니다.</p>
+					<div class="avatar" style="background:var(--amber);">{t('team.m1.initial')}</div>
+					<h3>{t('team.m1.name')}</h3>
+					<p class="role">{t('team.m1.role')}</p>
+					<p>{@html t('team.m1.affil')}</p>
+					<p>{t('team.m1.bio')}</p>
 				</div>
 
 				<div class="team-card" use:reveal>
-					<div class="avatar" style="background:var(--person);">박</div>
-					<h3>박영훈</h3>
-					<p class="role">미주 데이터</p>
-					<p>성균관대학교 사학과 박사 수료(2023~)<br />성공회대학교 동아시아연구소 연구원(2023~)</p>
-					<p>20세기 중반 재미한인의 커뮤니티를 연구합니다. 현재 1936-1952년 캘리포니아 한인 커뮤니티와 그 정치적 변동을 주제로 박사학위논문을 작성하고 있습니다.</p>
+					<div class="avatar" style="background:var(--person);">{t('team.m2.initial')}</div>
+					<h3>{t('team.m2.name')}</h3>
+					<p class="role">{t('team.m2.role')}</p>
+					<p>{@html t('team.m2.affil')}</p>
+					<p>{t('team.m2.bio')}</p>
 				</div>
 
 				<div class="team-card" use:reveal>
-					<div class="avatar" style="background:var(--navy);">송</div>
-					<h3>송영화</h3>
-					<p class="role">기획</p>
-					<p>성균관대학교 사학과 박사졸업 (2023)</p>
-					<p>러시아 극동 코리안의 국적에 대해 연구중입니다. 주요 저서로 『귀화를 넘어서 : 러시아로 간 한인 이야기』(2025)가 있습니다.</p>
+					<div class="avatar" style="background:var(--navy);">{t('team.m3.initial')}</div>
+					<h3>{t('team.m3.name')}</h3>
+					<p class="role">{t('team.m3.role')}</p>
+					<p>{@html t('team.m3.affil')}</p>
+					<p>{t('team.m3.bio')}</p>
 				</div>
 			</div>
 		</div>
@@ -433,31 +422,31 @@
 		<div class="wrap">
 			<div class="join-panel" use:reveal>
 				<div>
-					<p class="eyebrow">참여하기</p>
-					<h2>함께 채워갈 분을 찾습니다</h2>
-					<p>작지만 꾸준한 협업을 이어가고 있습니다.</p>
+					<p class="eyebrow">{t('join.eyebrow')}</p>
+					<h2>{t('join.h2')}</h2>
+					<p>{t('join.p')}</p>
 					<div class="join-ctas">
-						<a class="btn btn--primary" href="/map/">지도 보기</a>
-						<a class="btn btn--ghost" href="mailto:koreantowndb@gmail.com">문의하기</a>
+						<a class="btn btn--primary" href="/map/">{t('btn.viewMap')}</a>
+						<a class="btn btn--ghost" href="mailto:koreantowndb@gmail.com">{t('btn.contact')}</a>
 					</div>
-					<p class="contact-note">CONTACT: koreantowndb@gmail.com</p>
+					<p class="contact-note">{t('join.contactNote')}</p>
 				</div>
 
 				<ul class="join-list">
 					<li>
 						<i class="fa-solid fa-book-bookmark"></i>
-						<div><b>사료 · 데이터 제보</b>지역 전문가와 사료 소장자의 제보를 기다립니다.</div>
+						<div><b>{t('join.i1.title')}</b>{t('join.i1.body')}</div>
 					</li>
 					<li>
 						<i class="fa-solid fa-graduation-cap"></i>
-						<div><b>연구 · 교육 활용</b>인용, 데이터 다운로드, 공동연구 문의를 환영합니다.</div>
+						<div><b>{t('join.i2.title')}</b>{t('join.i2.body')}</div>
 					</li>
 					<li>
 						<i class="fa-solid fa-mug-hot"></i>
 						<div style="width: 100%;">
-							<b>후원과 응원</b>
+							<b>{t('join.i3.title')}</b>
 							<p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.75); margin: 4px 0 14px 0; line-height: 1.6;">
-								후원자 명단에 이름을 남기고 프로젝트를 함께 만들어 주세요.
+								{t('join.i3.body')}
 							</p>
 							<a
 								href="https://buymeacoffee.com/koreatowndb"
@@ -473,7 +462,7 @@
 									<line x1="10" y1="1" x2="10" y2="4"></line>
 									<line x1="14" y1="1" x2="14" y2="4"></line>
 								</svg>
-								커피 한 잔 후원하기
+								{t('btn.donate')}
 							</a>
 						</div>
 					</li>
@@ -488,40 +477,40 @@
 		<div class="footer-top">
 			<div class="footer-brand">
 				<div class="brand">
-					<img class="brand-mark" src="/favicon.png" alt="코리아타운 DB 로고" />
+					<img class="brand-mark" src="/favicon.png" alt={t('brand.logoAlt')} />
 					<div class="brand-text">
-						<h2>코리아타운 DB</h2>
-						<span>KOREAN DIASPORA RESEARCH TEAM</span>
+						<h2>{t('brand.name')}</h2>
+						<span>{t('brand.tagline')}</span>
 					</div>
 				</div>
-				<p>Mapping the Global Korean Diaspora, One Community at a Time.</p>
+				<p>{t('footer.brandDesc')}</p>
 			</div>
 
 			<div class="footer-links">
 				<div>
-					<h5>바로가기</h5>
+					<h5>{t('footer.quicklinks')}</h5>
 					<ul>
-						<li><a href="#project">프로젝트</a></li>
-						<li><a href="#roadmap">로드맵</a></li>
-						<li><a href="#team">연구팀</a></li>
-						<li><a href="/map/">지도 보기</a></li>
+						<li><a href="#project">{t('nav.project')}</a></li>
+						<li><a href="#roadmap">{t('nav.roadmap')}</a></li>
+						<li><a href="#team">{t('nav.team')}</a></li>
+						<li><a href="/map/">{t('btn.viewMap')}</a></li>
 					</ul>
 				</div>
 				<div>
-					<h5>참고자료</h5>
+					<h5>{t('footer.refs')}</h5>
 					<ul>
-						<li><a href="https://www.data.go.kr/data/15070379/fileData.do" target="_blank" rel="noopener">독립기념관 데이터셋</a></li>
-						<li><a href="https://db.history.go.kr/id/haf_012_0330" target="_blank" rel="noopener">국사편찬위원회 한국사데이터베이스</a></li>
-						<li><a href="https://www.prlib.ru/item/686907" target="_blank" rel="noopener">러시아 대통령도서관</a></li>
-						<li><a href="https://www.archives.gov/research/census/online-resources" target="_blank" rel="noopener">미국 국립문서기록관리청</a></li>
+						<li><a href="https://www.data.go.kr/data/15070379/fileData.do" target="_blank" rel="noopener">{t('footer.source1short')}</a></li>
+						<li><a href="https://db.history.go.kr/id/haf_012_0330" target="_blank" rel="noopener">{t('data.source2')}</a></li>
+						<li><a href="https://www.prlib.ru/item/686907" target="_blank" rel="noopener">{t('data.source4')}</a></li>
+						<li><a href="https://www.archives.gov/research/census/online-resources" target="_blank" rel="noopener">{t('data.source5')}</a></li>
 					</ul>
 				</div>
 			</div>
 		</div>
 
 		<div class="footer-bottom">
-			<span>© {year} 코리안 디아스포라 연구팀</span>
-			<span>기획 및 제작 · 김슬기, 박영훈, 송영화</span>
+			<span>{t('footer.copyright', { year })}</span>
+			<span>{t('footer.credits')}</span>
 		</div>
 	</div>
 </footer>
