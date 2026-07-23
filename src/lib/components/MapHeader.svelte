@@ -6,14 +6,14 @@
 
 <header class="bg-slate-50 border-b border-slate-200/80 shadow-sm z-20 relative flex-shrink-0">
 	<div class="px-4 py-3 flex justify-between items-center max-w-full">
-		<div class="flex items-center gap-3">
-			<a href="/" class="flex items-center gap-3">
+		<div class="flex items-center gap-3 min-w-0">
+			<a href="/" class="flex items-center gap-3 min-w-0">
 				<img
 					src="/favicon.png"
 					alt={t('brand.logoAlt')}
 					class="w-8 h-8 rounded-lg object-cover border border-slate-200 shadow-sm"
 				/>
-				<div>
+				<div class="min-w-0">
 					<h1 class="font-serif font-bold text-primary leading-tight map-title">{t('brand.name')}</h1>
 					<p class="text-slate-500 tracking-wider map-subtitle">
 						{t('mapHeader.subtitle')}
@@ -48,10 +48,16 @@
 <style>
 	.map-title {
 		font-size: 1.15rem;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		max-width: min(32vw, 20rem);
 	}
 	.map-subtitle {
 		font-size: 0.7rem;
 		letter-spacing: -0.02em;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		max-width: min(32vw, 18rem);
 	}
 	@media (max-width: 640px) {
 		.map-title {

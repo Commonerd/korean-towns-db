@@ -662,7 +662,9 @@
 		border-bottom: 1px solid var(--line);
 	}
 	.site-header .wrap {
-		height: 76px;
+		max-width: 100%;       /* 🔥 본문 너비 제한을 풀고 화면 전체 폭 사용 */
+    	padding: 0 24px;       /* 🔥 좌우 여백을 줄여 로고를 좌측 끝으로 당김 */
+		min-height: 76px;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -672,6 +674,12 @@
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
+		min-width: 0;
+		flex-shrink: 0;
+		margin-left: -10px; /* 🔥 왼쪽으로 10px 당기기 */
+	}
+	.brand-text {
+		min-width: 0;
 	}
 	.brand-mark {
 		width: 38px;
@@ -690,6 +698,9 @@
 		font-weight: 700;
 		color: var(--navy-deep);
 		line-height: 1.2;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.brand-text span {
 		display: block;
@@ -697,12 +708,15 @@
 		font-size: 0.66rem;
 		letter-spacing: 0.05em;
 		color: var(--ink-faint);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.main-nav {
 		display: flex;
 		align-items: center;
-		gap: 2.1rem;
+		gap: 1.2rem; /* 기존 2.1rem -> 1.2rem으로 축소 */
 	}
 	.main-nav ul {
 		display: flex;
@@ -714,6 +728,7 @@
 		color: var(--ink-soft);
 		transition: color 0.15s ease;
 		position: relative;
+		white-space: nowrap; /* 🔥 텍스트가 두 줄로 깨지는 현상 방지 */
 	}
 	.main-nav a:hover {
 		color: var(--navy);
@@ -723,6 +738,12 @@
 		display: flex;
 		align-items: center;
 		gap: 0.8rem;
+		flex-wrap: nowrap;
+		flex-shrink: 0;
+	}
+	.nav-actions :global(.lang-switch),
+	.nav-actions .btn {
+		flex-shrink: 0;
 	}
 	.nav-toggle {
 		display: none;
@@ -736,7 +757,7 @@
 		color: var(--navy-deep);
 	}
 
-	@media (max-width: 900px) {
+	@media (max-width: 1024px) {
 		.site-header .wrap {
 			height: auto;
 			min-height: 76px;

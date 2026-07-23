@@ -64,7 +64,10 @@
 	.lang-btn {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.4em;
+		min-height: 2.45rem;
+		min-width: 7.05rem;
 		padding: 0.5em 0.85em;
 		border-radius: 999px;
 		border: 1px solid var(--line, #e2e8f0);
@@ -75,6 +78,11 @@
 		cursor: pointer;
 		white-space: nowrap;
 		transition: background 0.15s ease, border-color 0.15s ease;
+	}
+	.lang-current {
+		display: inline-block;
+		min-width: 4.2rem;
+		text-align: left;
 	}
 	.lang-btn:hover {
 		background: #f1f5f9;
