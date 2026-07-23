@@ -662,8 +662,7 @@
 		border-bottom: 1px solid var(--line);
 	}
 	.site-header .wrap {
-		max-width: 100%;       /* 🔥 본문 너비 제한을 풀고 화면 전체 폭 사용 */
-    	padding: 0 24px;       /* 🔥 좌우 여백을 줄여 로고를 좌측 끝으로 당김 */
+		
 		min-height: 76px;
 		display: flex;
 		align-items: center;
