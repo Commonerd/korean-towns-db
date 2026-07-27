@@ -17,7 +17,8 @@
 		darkOpacity = 0,
 		onSelectTown = () => {},
 		onAskAI = () => {},
-		onZoom = () => {}
+		onZoom = () => {},
+		onReady = () => {}
 	} = $props();
 
 	let container;
@@ -77,6 +78,7 @@
 				controller.setData(rawData);
 				ready = true;
 				onZoom(map.getZoom());
+				onReady();
 			};
 			map.on('styledata', initController);
 			map.on('load', initController);

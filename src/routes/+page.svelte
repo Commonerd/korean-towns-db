@@ -3,6 +3,9 @@
 	import { reveal } from '$lib/actions/reveal.js';
 	import { t, getLocale } from '$lib/i18n/store.svelte.js';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+	import { COLLECTIONS, collectionHref } from '$lib/data/collections.js';
+
+	let { data } = $props();
 
 	let navOpen = $state(false);
 	let year = $state('');
@@ -375,6 +378,26 @@
 					<div class="copyright-note">{t('data.copyright')}</div>
 				</div>
 			</div>
+
+			<!-- 분류별 색인으로 나가는 실제 링크. 크롤러가 여기를 통해
+			     1000여 개 상세 페이지까지 내려간다. -->
+			<div class="archive-entry" use:reveal>
+				<div class="archive-entry-head">
+					<h3>{t('archive.title')}</h3>
+					<p>{t('archive.desc')}</p>
+				</div>
+				<ul class="archive-entry-list">
+					{#each COLLECTIONS as c (c.slug)}
+						<li>
+							<a href={collectionHref(c.slug)} style="--accent: {c.color}">
+								<span class="dot" style="background:{c.color}"></span>
+								<strong>{c.title}</strong>
+								<em>{t('archive.count', { n: data.counts?.[c.slug] ?? 0 })}</em>
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</div>
 		</div>
 	</section>
 
@@ -494,6 +517,9 @@
 						<li><a href="#roadmap">{t('nav.roadmap')}</a></li>
 						<li><a href="#team">{t('nav.team')}</a></li>
 						<li><a href="/map/">{t('btn.viewMap')}</a></li>
+						{#each COLLECTIONS as c (c.slug)}
+							<li><a href={collectionHref(c.slug)}>{c.title}</a></li>
+						{/each}
 					</ul>
 				</div>
 				<div>
@@ -1575,6 +1601,67 @@
 		gap: 0.6rem;
 		padding-top: 1.6rem;
 		font-size: 0.78rem;
+		color: var(--ink-faint);
+	}
+
+	/* 분류별 색인 진입 블록 (#data 섹션 하단) */
+	.archive-entry {
+		margin-top: 44px;
+		padding-top: 32px;
+		border-top: 1px solid var(--line);
+	}
+	.archive-entry-head h3 {
+		margin: 0 0 6px;
+		font-family: var(--font-display);
+		font-size: 21px;
+		color: var(--navy-deep);
+	}
+	.archive-entry-head p {
+		margin: 0 0 20px;
+		max-width: 62ch;
+		color: var(--ink-soft);
+		font-size: 15px;
+	}
+	.archive-entry-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 12px;
+		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+	}
+	.archive-entry-list a {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 14px 16px;
+		background: #fff;
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		box-shadow: var(--shadow-sm);
+		text-decoration: none;
+		color: var(--ink);
+		transition: border-color 0.15s, transform 0.15s;
+	}
+	.archive-entry-list a:hover {
+		border-color: var(--accent);
+		transform: translateY(-2px);
+	}
+	.archive-entry-list .dot {
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		flex: none;
+	}
+	.archive-entry-list strong {
+		font-weight: 600;
+		font-size: 15px;
+	}
+	.archive-entry-list em {
+		margin-left: auto;
+		font-style: normal;
+		font-family: var(--font-mono);
+		font-size: 12px;
 		color: var(--ink-faint);
 	}
 </style>

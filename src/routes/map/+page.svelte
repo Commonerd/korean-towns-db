@@ -12,20 +12,32 @@
 	import { fetchGeminiResponse, parseSimpleMarkdown } from '$lib/ai/gemini.js';
 	import { escapeHtml } from '$lib/util.js';
 	import { t, getLocale } from '$lib/i18n/store.svelte.js';
+	import { COLLECTIONS } from '$lib/data/collections.js';
 
-	/* ====== 상태 ====== */
-	let rawData = $state([]);
-	let loading = $state(true);
+	let { data } = $props();
+
+	/* ====== 상태 ======
+	   초기 노드는 +page.server.js 가 프리렌더 시점에 구워 넣은 값으로 시작한다.
+	   (CSV 4장을 기다리는 빈 화면이 사라진다. 이후 갱신은 30초 폴링이 담당)
+	   data 는 시드로만 읽고 그 뒤로는 rawData 가 소유권을 가진다 — 초기값 캡처가 의도된 동작. */
+	// svelte-ignore state_referenced_locally
+	let rawData = $state(data.nodes ?? []);
+	// svelte-ignore state_referenced_locally
+	let loading = $state((data.nodes ?? []).length === 0);
 
 	let filter = $state('all');
 	let search = $state('');
 	let selectedTownName = $state(null);
 
+	// 서버가 넘겨준 초기 노드로 연도 범위를 미리 맞춰 둔다 (없으면 기본값)
+	// svelte-ignore state_referenced_locally
+	const initialYears = detectYearRange(rawData) ?? { min: 1860, max: 2026 };
+
 	let yearEnabled = $state(false);
-	let yearMin = $state(1860);
-	let yearMax = $state(2026);
-	let yearRangeMin = $state(1860);
-	let yearRangeMax = $state(2026);
+	let yearMin = $state(initialYears.min);
+	let yearMax = $state(initialYears.max);
+	let yearRangeMin = $state(initialYears.min);
+	let yearRangeMax = $state(initialYears.max);
 
 	let darkOpacity = $state(0);
 	let syncing = $state(false);
@@ -89,16 +101,51 @@
 		toastTimer = setTimeout(() => (toast = null), 2600);
 	}
 
+	/* 상세 페이지(/towns/…)에서 «지도에서 보기»로 넘어온 경우 해당 노드로 이동.
+	   형식: /map/?focus=<collection>/<slug>
+	   지도 컨트롤러 준비(onMapReady)와 데이터 도착 중 늦은 쪽에 맞춰 한 번만 실행한다. */
+	let pendingFocus = null;
+	let mapReady = false;
+
+	function readFocusParam() {
+		const raw = new URLSearchParams(window.location.search).get('focus');
+		if (!raw) return null;
+		// URLSearchParams 가 이미 퍼센트 디코딩을 마친 값을 준다 (추가 디코딩 금지)
+		const [collectionSlug, ...rest] = raw.split('/');
+		const slug = rest.join('/');
+		const collection = COLLECTIONS.find((c) => c.slug === collectionSlug);
+		return collection && slug ? { type: collection.type, slug } : null;
+	}
+
+	function tryApplyFocus() {
+		if (!pendingFocus || !mapReady) return;
+		const item = rawData.find((d) => d.type === pendingFocus.type && d.slug === pendingFocus.slug);
+		if (!item) return;
+		pendingFocus = null;
+		onFocus(item);
+	}
+
+	function onMapReady() {
+		mapReady = true;
+		tryApplyFocus();
+	}
+
 	onMount(() => {
 		document.body.classList.add('map-page');
 
+		pendingFocus = readFocusParam();
+
+		// 프리렌더 데이터로 이미 그려진 상태 → 첫 동기화는 백그라운드 최신화 용도
+		const hadServerData = rawData.length > 0;
+
 		(async () => {
 			try {
-				await fetchLatestAndRender(true);
+				await fetchLatestAndRender(!hadServerData);
 			} catch (e) {
 				console.error(e);
 			} finally {
 				loading = false;
+				tryApplyFocus();
 			}
 		})();
 
@@ -283,6 +330,7 @@
 				{onSelectTown}
 				onAskAI={askAI}
 				onZoom={(z) => (zoom = z)}
+				onReady={onMapReady}
 			/>
 
 			<button

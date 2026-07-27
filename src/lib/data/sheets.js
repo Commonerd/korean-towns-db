@@ -7,6 +7,23 @@ import { normalizePrecision, getCertaintyScore } from './precision.js';
    (0 인 상태로 두면 마을 시트와 겹치므로 반드시 실제 gid 로 바꿔야 사건이 로드됩니다.) */
 const EVENTS_GID = 'REPLACE_WITH_EVENTS_GID';
 
+/* URL slug 생성 (name 기반, 타입별로 중복 시 -2, -3 ... 접미사) */
+function makeSlugger() {
+	const counts = new Map();
+	return function slugify(type, name) {
+		const base =
+			name
+				.trim()
+				.toLowerCase()
+				.replace(/[^\w가-힣\s-]/g, '')
+				.replace(/\s+/g, '-') || 'unnamed';
+		const key = `${type}:${base}`;
+		const n = (counts.get(key) ?? 0) + 1;
+		counts.set(key, n);
+		return n === 1 ? base : `${base}-${n}`;
+	};
+}
+
 /* ====== DB 데이터 로드 (기존 loadGoogleSheetsData 이식) ====== */
 export async function loadGoogleSheetsData() {
 	if (!spreadsheetId) return [];
@@ -22,6 +39,7 @@ export async function loadGoogleSheetsData() {
 	let globalId = 1;
 	const updatedData = [];
 	const townCoords = {};
+	const slugify = makeSlugger();
 
 	/* 1단계: 마을 먼저 */
 	try {
@@ -74,6 +92,7 @@ export async function loadGoogleSheetsData() {
 
 					updatedData.push({
 						id: globalId++,
+						slug: slugify('마을', name),
 						type: '마을',
 						settlementType: isVillage ? '빌리지' : '타운',
 						name,
@@ -155,6 +174,7 @@ export async function loadGoogleSheetsData() {
 
 				const item = {
 					id: globalId++,
+					slug: slugify(target.type, name),
 					type: target.type,
 					name,
 					description: getCol(row, headerMap, 'description', 'desc', '설명'),
