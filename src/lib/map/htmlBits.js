@@ -10,7 +10,7 @@ export function renderPrecisionChip(item) {
 	return `<span class="meta-chip" style="background:#f8fafc; color:#334155; border-color:#e2e8f0;" title="${escapeHtml(
 		precisionDesc(key)
 	)}">
-		<i class="fa-solid fa-signal" style="color:${color};"></i> ${precisionLabel(key)} · ${t('chip.certainty', { n: pct })}
+		<i class="fa-solid fa-signal" style="color:${color};"></i> ${precisionLabel(key)}
 	</span>`;
 }
 
@@ -33,7 +33,6 @@ export function renderCertaintyGaugeHtml(item) {
 		<div class="text-[10.5px] bg-slate-50 text-slate-600 p-2 rounded border border-slate-200 mt-1 mb-2 leading-relaxed">
 			<div class="flex items-center justify-between mb-1">
 				<b class="text-slate-700"><i class="fa-solid fa-gauge-high" style="color:${color};"></i> ${t('certainty.title', { label: precisionLabel(key) })}</b>
-				<span style="color:${color}; font-weight:700;">${pct}%</span>
 			</div>
 			<div class="mb-1">${bars}</div>
 			<div>${escapeHtml(precisionDesc(key))}</div>

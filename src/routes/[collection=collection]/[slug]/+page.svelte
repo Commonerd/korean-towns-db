@@ -151,10 +151,6 @@
 		<section class="archive-certainty" aria-label="위치 확실성">
 			<div class="archive-certainty-head">
 				<strong>{node.precisionLabel}</strong>
-				<span style="color: {certaintyColor(certaintyPct)}">확실성 {certaintyPct}%</span>
-			</div>
-			<div class="archive-meter" role="img" aria-label="위치 확실성 {certaintyPct}퍼센트">
-				<span style="width: {certaintyPct}%; background: {certaintyColor(certaintyPct)}"></span>
 			</div>
 			<p>{node.precisionDesc}</p>
 		</section>
