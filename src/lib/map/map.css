@@ -115,6 +115,12 @@
 	animation: floatPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* 검색창을 여는 햄버거 버튼(top:12px, .sidebar-toggle-btn)이 확대/축소 버튼보다
+   위에 오도록, 확대/축소 컨트롤 그룹 자체를 그만큼 아래로 민다. */
+.maplibregl-ctrl-top-left {
+	top: 60px;
+}
+
 /* MapLibre 마커 기본 커서 */
 .town-marker,
 .floating-marker,

@@ -152,7 +152,6 @@
 		<section class="archive-certainty" aria-label="위치 확실성">
 			<div class="archive-certainty-head">
 				<strong>{node.precisionLabel}</strong>
-				<span style="color: {certaintyColor(certaintyPct)}"></span>
 			</div>
 			<p>{node.precisionDesc}</p>
 		</section>

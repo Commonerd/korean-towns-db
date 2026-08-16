@@ -94,7 +94,7 @@
 </script>
 
 <aside
-	class="w-full md:w-96 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_15px_-3px_rgba(0,0,0,0.1)] h-[40vh] md:h-full transition-[width,min-width] duration-[250ms] ease-in-out"
+	class="mobile-panel w-full md:w-96 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_15px_-3px_rgba(0,0,0,0.1)] md:h-full transition-[width,min-width] duration-[250ms] ease-in-out"
 	class:sidebar-collapsed={collapsed}
 >
 	<div class="p-4 border-b border-slate-100 bg-slate-50">
@@ -116,9 +116,9 @@
 				value={search}
 				oninput={(e) => onSearch(e.currentTarget.value)}
 				placeholder={t('sidebar.searchPlaceholder')}
-				class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
+				class="search-input w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
 			/>
-			<i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400"></i>
+			<i class="fa-solid fa-search search-icon absolute left-3 top-2.5 text-slate-400"></i>
 		</div>
 
 		<div class="flex flex-wrap gap-2 text-xs font-medium">
@@ -273,8 +273,29 @@
 		pointer-events: none;
 	}
 	@media (max-width: 767px) {
+		/* 모바일에서는 40vh 고정폭 대신, 열렸을 때 지도 위를 덮는 오버레이로 전환.
+		   기존엔 사이드바가 뷰포트의 40%로 고정돼 검색 결과 카드가 거의 안 보였다.
+		   main(relative) 기준 absolute + inset:0 으로 펼쳐서 검색 중엔 화면 대부분을 쓰고,
+		   접히면(.sidebar-collapsed 의 height:0) 다시 그 자리로 사라진다. */
+		.mobile-panel {
+			position: absolute;
+			inset: 0;
+			height: auto;
+			z-index: 950;
+		}
 		.sidebar-collapsed {
 			height: 0 !important;
+		}
+		/* 모바일 탭 타겟이 너무 좁아 보이는 문제 대응 — 최소 44px 확보 */
+		.search-input {
+			min-height: 44px;
+			padding-top: 0.7rem;
+			padding-bottom: 0.7rem;
+			font-size: 16px; /* iOS 확대 방지 겸 가독성 */
+		}
+		.search-icon {
+			top: 50%;
+			transform: translateY(-50%);
 		}
 	}
 </style>

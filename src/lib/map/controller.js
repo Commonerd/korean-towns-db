@@ -73,6 +73,7 @@ export class MapController {
 		this._villageMap = {};
 		this._raf = null;
 		this._pendingPopupId = null;
+		this._pendingPopupCenter = false;
 		this._dashStep = 0;
 		this._dashTimer = null;
 		this._lastDashTs = 0;
@@ -931,6 +932,9 @@ export class MapController {
 		if (isNaN(targetLat) || isNaN(targetLng) || !targetLat || !targetLng) return;
 
 		this._pendingPopupId = item.id;
+		// 검색 결과 클릭 등 "포커싱" 경로로 열린 팝업은 내용 길이와 무관하게
+		// 화면 중앙에 통째로 보이도록 한 번 더 보정한다 (_centerPopupInView).
+		this._pendingPopupCenter = true;
 		this.map.flyTo({ center: [targetLng, targetLat], zoom: targetZoom, duration: 800 });
 		this.map.once('moveend', () => this.scheduleRender());
 	}
@@ -938,15 +942,17 @@ export class MapController {
 	_afterRender() {
 		if (this._pendingPopupId == null) return;
 		const id = this._pendingPopupId;
+		const centerInView = this._pendingPopupCenter;
 		this._pendingPopupId = null;
+		this._pendingPopupCenter = false;
 
 		const pos = this._positions.get(id);
 		const item = this.rawData.find((d) => d.id === id);
-		if (pos && item) this._openAdHocPopup(item, pos.coord, pos.popupOffset);
+		if (pos && item) this._openAdHocPopup(item, pos.coord, pos.popupOffset, { centerInView });
 	}
 
 	/* 클릭/포커스로 여는 팝업 (DOM·GPU 마커 공통, 마커에 바인딩되지 않는다) */
-	_openAdHocPopup(item, lngLat, offset) {
+	_openAdHocPopup(item, lngLat, offset, { centerInView = false } = {}) {
 		this._closeAdHocPopup();
 		this._activePopup = new maplibregl.Popup({
 			anchor: 'bottom',
@@ -957,6 +963,28 @@ export class MapController {
 			.setLngLat(lngLat)
 			.setHTML(buildPopupHtml(item, this.rawData))
 			.addTo(this.map);
+
+		if (centerInView) this._centerPopupInView();
+	}
+
+	/* 마커를 화면 중앙에 두면 팝업(anchor:'bottom')은 그 위로 떠서 열리므로,
+	   설명이 길어 팝업이 커지면 위쪽이 뷰포트 밖으로 잘릴 수 있다.
+	   팝업이 실제로 그려진 뒤 높이를 재서, 팝업 자체의 중심이 지도 중앙에 오도록
+	   지도를 한 번 더 미세하게 이동시킨다. */
+	_centerPopupInView() {
+		const popup = this._activePopup;
+		if (!popup) return;
+		requestAnimationFrame(() => {
+			if (this._activePopup !== popup) return; // 그사이 다른 팝업으로 교체됐으면 무시
+			const el = popup.getElement();
+			if (!el) return;
+			const popupRect = el.getBoundingClientRect();
+			const mapRect = this.map.getContainer().getBoundingClientRect();
+			const delta = popupRect.top + popupRect.height / 2 - (mapRect.top + mapRect.height / 2);
+			if (Math.abs(delta) > 4) {
+				this.map.panBy([0, delta], { duration: 350 });
+			}
+		});
 	}
 
 	_closeAdHocPopup() {

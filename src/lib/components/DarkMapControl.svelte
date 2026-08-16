@@ -7,27 +7,26 @@
 	const pct = $derived(Math.round(value * 100));
 </script>
 
-<div
-	class="map-panel dark-control"
-	class:collapsed
-	class:is-dark={dark}
-	style="min-width:180px;"
->
-	<div class="panel-header-row">
+<div class="map-panel dark-control" class:collapsed class:is-dark={dark}>
+	<button
+		class="panel-header-row panel-header-btn"
+		onclick={() => (collapsed = !collapsed)}
+		title={t('darkmap.toggle')}
+		aria-label={t('darkmap.toggle')}
+		aria-expanded={!collapsed}
+	>
 		<span class="panel-header-label text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-			<i class="fa-solid fa-moon text-indigo-500"></i> {t('darkmap.title')}
-		</span>
-		<div class="flex items-center gap-1.5">
-			<span class="text-[10px] text-slate-400 font-mono">{pct}%</span>
-			<button
-				class="panel-collapse-btn"
-				onclick={() => (collapsed = !collapsed)}
-				title={t('darkmap.toggle')}
+			<i class="fa-solid fa-moon text-indigo-500"></i><span class="panel-label-text"
+				>&nbsp;{t('darkmap.title')}</span
 			>
+		</span>
+		<span class="flex items-center gap-1.5">
+			<span class="text-[10px] text-slate-400 font-mono">{pct}%</span>
+			<span class="panel-collapse-btn">
 				<i class="fa-solid fa-chevron-up"></i>
-			</button>
-		</div>
-	</div>
+			</span>
+		</span>
+	</button>
 	<div class="panel-body">
 		<div class="flex items-center gap-2">
 			<i class="fa-solid fa-sun text-amber-400 text-xs flex-shrink-0"></i>
@@ -50,10 +49,14 @@
 
 <style>
 	.dark-control {
+		/* 우측 상단은 지도 헤더의 언어 전환 드롭다운이 열릴 때 그 아래로 열리는
+		   영역과 겹친다(데스크톱·모바일 공통). 겹치지 않도록 좌측 하단에 배치.
+		   하단 여백도 넉넉히 둬 지도 attribution(© OpenStreetMap 등) 표시와 안 겹치게 함. */
 		position: absolute;
-		top: 12px;
-		right: 12px;
+		bottom: 46px;
+		left: 12px;
 		z-index: 500;
+		min-width: 180px;
 		background: rgba(255, 255, 255, 0.95);
 		backdrop-filter: blur(4px);
 		border: 1px solid #e2e8f0;
@@ -62,7 +65,11 @@
 		padding: 10px 12px;
 		transition:
 			padding 0.2s ease,
+			min-width 0.2s ease,
 			background 0.25s ease;
+	}
+	.dark-control.collapsed {
+		min-width: 0;
 	}
 	.panel-header-row {
 		display: flex;
@@ -70,6 +77,21 @@
 		justify-content: space-between;
 		gap: 8px;
 		margin-bottom: 8px;
+	}
+	.panel-header-btn {
+		width: 100%;
+		min-height: 22px;
+		padding: 0;
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+	}
+	/* 접힌 상태에서는 "지도 스타일" 같은 글자 대신 아이콘만 남긴다 */
+	.map-panel.collapsed .panel-label-text {
+		display: none;
 	}
 	.panel-collapse-btn {
 		width: 22px;
@@ -80,15 +102,12 @@
 		justify-content: center;
 		color: #94a3b8;
 		font-size: 11px;
-		cursor: pointer;
 		transition:
 			background 0.2s,
 			color 0.2s;
 		flex-shrink: 0;
-		background: transparent;
-		border: none;
 	}
-	.panel-collapse-btn:hover {
+	.panel-header-btn:hover .panel-collapse-btn {
 		background: #f1f5f9;
 		color: #475569;
 	}

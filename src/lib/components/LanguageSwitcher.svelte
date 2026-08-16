@@ -137,12 +137,17 @@
 		padding: 0.45em 0.7em;
 		font-size: 0.75rem;
 	}
-	.is-compact .lang-current {
-		display: none;
-	}
-	@media (min-width: 640px) {
-		.is-compact .lang-current {
-			display: inline;
+
+	/* 좁은 화면에서는 variant 와 무관하게 아이콘만 남긴다.
+	   (랜딩 헤더의 light 변형이 항상 7rem 폭을 고정으로 차지해
+	   모바일에서 후원 버튼 등을 화면 밖으로 밀어내는 문제 대응) */
+	@media (max-width: 640px) {
+		.lang-btn {
+			min-width: 0;
+			padding: 0.5em 0.6em;
+		}
+		.lang-current {
+			display: none;
 		}
 	}
 </style>

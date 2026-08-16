@@ -5,14 +5,22 @@
 </script>
 
 <div class="map-legend map-panel" class:collapsed class:is-dark={dark}>
-	<div class="panel-header-row">
+	<button
+		class="panel-header-row panel-header-btn"
+		onclick={() => (collapsed = !collapsed)}
+		title={t('legend.toggle')}
+		aria-label={t('legend.toggle')}
+		aria-expanded={!collapsed}
+	>
 		<span class="panel-header-label font-bold"
-			><i class="fa-solid fa-map-location-dot mr-1 text-primary"></i> {t('legend.title')}</span
+			><i class="fa-solid fa-map-location-dot text-primary"></i><span class="panel-label-text"
+				>&nbsp;{t('legend.title')}</span
+			></span
 		>
-		<button class="panel-collapse-btn" onclick={() => (collapsed = !collapsed)} title={t('legend.toggle')}>
+		<span class="panel-collapse-btn">
 			<i class="fa-solid fa-chevron-down"></i>
-		</button>
-	</div>
+		</span>
+	</button>
 	<div class="panel-body">
 		<div class="legend-row"><span class="legend-dot" style="background:#ea580c"></span> {t('legend.town')}</div>
 		<div class="legend-row">
@@ -55,8 +63,9 @@
 
 <style>
 	.map-legend {
+		/* 하단 여백을 넉넉히 둬 지도 attribution(© OpenStreetMap 등) 표시와 겹치지 않게 함 */
 		position: absolute;
-		bottom: 18px;
+		bottom: 46px;
 		right: 12px;
 		background: rgba(255, 255, 255, 0.96);
 		border: 1px solid #e2e8f0;
@@ -69,8 +78,12 @@
 		min-width: 150px;
 		transition:
 			opacity 0.25s ease,
-			background 0.25s ease;
+			background 0.25s ease,
+			min-width 0.2s ease;
 		transform-origin: bottom right;
+	}
+	.map-legend.collapsed {
+		min-width: 0;
 	}
 	.map-legend :global(.legend-row) {
 		display: flex;
@@ -93,8 +106,24 @@
 		gap: 8px;
 		margin-bottom: 6px;
 	}
+	.panel-header-btn {
+		width: 100%;
+		min-height: 22px;
+		padding: 0;
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+	}
 	.panel-header-label {
 		font-size: 11px;
+		white-space: nowrap;
+	}
+	/* 접힌 상태에서는 "범례" 같은 글자 대신 아이콘만 남긴다 */
+	.map-panel.collapsed .panel-label-text {
+		display: none;
 	}
 	.panel-collapse-btn {
 		width: 22px;
@@ -105,15 +134,12 @@
 		justify-content: center;
 		color: #94a3b8;
 		font-size: 11px;
-		cursor: pointer;
 		transition:
 			background 0.2s,
 			color 0.2s;
 		flex-shrink: 0;
-		background: transparent;
-		border: none;
 	}
-	.panel-collapse-btn:hover {
+	.panel-header-btn:hover .panel-collapse-btn {
 		background: #f1f5f9;
 		color: #475569;
 	}

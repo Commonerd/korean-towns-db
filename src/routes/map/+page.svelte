@@ -177,6 +177,9 @@
 	function onFocus(item) {
 		if (item.type === '마을') selectedTownName = item.name;
 		else if (item.relatedTown) selectedTownName = item.relatedTown;
+		// 모바일에서는 검색 패널이 지도 전체를 덮는 오버레이라, 항목을 고르면
+		// 곧장 닫아 지도와 방금 뜬 설명 팝업이 바로 보이게 한다.
+		if (window.innerWidth < 768) sidebarCollapsed = true;
 		mapView?.focus(item);
 	}
 	function onClearSelection() {
@@ -314,7 +317,7 @@
 			onCollapse={toggleSidebar}
 		/>
 
-		<div class="flex-1 relative h-[60vh] md:h-full">
+		<div class="flex-1 relative h-full">
 			<MapView
 				bind:this={mapView}
 				{rawData}
@@ -364,8 +367,10 @@
 
 <style>
 	.sidebar-toggle-btn {
+		/* 지도 확대/축소 버튼(MapLibre 네이티브 컨트롤)보다 위에 오도록,
+		   확대/축소 쪽은 map.css 에서 아래로 밀어뒀다 */
 		position: absolute;
-		top: 96px;
+		top: 12px;
 		left: 12px;
 		z-index: 900;
 		width: 36px;

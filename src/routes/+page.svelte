@@ -691,7 +691,7 @@
 	}
 	.site-header .wrap {
 		max-width: 100%;       /* 🔥 본문 너비 제한을 풀고 화면 전체 폭 사용 */
-    	padding: 24 24px;       /* 🔥 좌우 여백을 줄여 로고를 좌측 끝으로 당김 */
+    	padding: 24px 24px;       /* 🔥 좌우 여백을 줄여 로고를 좌측 끝으로 당김 */
 		min-height: 76px;
 		display: flex;
 		align-items: center;
@@ -794,7 +794,12 @@
 			gap: 0.4rem;
 		}
 		.brand {
-			flex-shrink: 0;
+			/* 🔥 좁은 화면에서 언어/후원 버튼이 밀려 화면 밖으로 사라지는 것을 막기 위해,
+			   브랜드명이 먼저 줄어들도록 shrink 를 허용(공간이 실제로 부족할 때만 축소됨) */
+			flex-shrink: 1;
+			min-width: 44px;
+		}
+		.brand-text {
 			min-width: 0;
 		}
 		.brand-text h2 {
@@ -826,10 +831,23 @@
 			border-bottom: 1px solid var(--line);
 			box-shadow: var(--shadow-md);
 		}
+		.nav-actions {
+			gap: 0.5rem;
+		}
 	}
 	@media (max-width: 560px) {
 		.nav-actions .btn span.long {
 			display: none;
+		}
+		.site-header .wrap {
+			padding-left: 14px;
+			padding-right: 14px;
+		}
+		.nav-actions {
+			gap: 0.35rem;
+		}
+		.btn--sm {
+			padding: 0.55em 0.75em;
 		}
 	}
 
