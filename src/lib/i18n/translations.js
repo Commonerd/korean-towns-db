@@ -228,6 +228,8 @@ export const translations = {
 		'popup.orgOf': '소속조직',
 		'popup.source': '출처',
 		'popup.author': '작성자',
+		'popup.updater': '최종 수정자',
+		'popup.changeNote': '수정 내용',
 		'popup.selfResearch': '자체조사',
 		'popup.researchTeam': '연구팀',
 
@@ -481,6 +483,8 @@ export const translations = {
 		'popup.orgOf': 'Organization',
 		'popup.source': 'Source',
 		'popup.author': 'Author',
+		'popup.updater': 'Last editor',
+		'popup.changeNote': 'Change note',
 		'popup.selfResearch': 'Original research',
 		'popup.researchTeam': 'Research team',
 
@@ -734,6 +738,8 @@ export const translations = {
 		'popup.orgOf': '所属組織',
 		'popup.source': '出典',
 		'popup.author': '作成者',
+		'popup.updater': '最終更新者',
+		'popup.changeNote': '更新内容',
 		'popup.selfResearch': '独自調査',
 		'popup.researchTeam': '研究チーム',
 
@@ -987,6 +993,8 @@ export const translations = {
 		'popup.orgOf': 'Организация',
 		'popup.source': 'Источник',
 		'popup.author': 'Автор',
+		'popup.updater': 'Последний редактор',
+		'popup.changeNote': 'Заметка об изменении',
 		'popup.selfResearch': 'Собственное исследование',
 		'popup.researchTeam': 'Исследовательская команда',
 
@@ -1240,6 +1248,8 @@ export const translations = {
 		'popup.orgOf': '所属组织',
 		'popup.source': '出处',
 		'popup.author': '编写者',
+		'popup.updater': '最后修改者',
+		'popup.changeNote': '修改内容',
 		'popup.selfResearch': '自主调查',
 		'popup.researchTeam': '研究团队',
 

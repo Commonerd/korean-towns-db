@@ -1,4 +1,4 @@
-import { escapeHtml } from '$lib/util.js';
+import { escapeHtml, linkify } from '$lib/util.js';
 import { PRECISION_ORDER, getPrecisionRank, certaintyColor } from '$lib/data/precision.js';
 import { t, precisionLabel, precisionDesc } from '$lib/i18n/store.svelte.js';
 
@@ -58,6 +58,6 @@ export function renderLocationBasisHtml(item) {
 	if (!item.locationBasis) return '';
 	return `<div class="text-[10.5px] text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 mb-2 leading-relaxed">
 		<b class="text-slate-700"><i class="fa-solid fa-compass-drafting text-slate-400"></i> ${t('locationBasis.title')}</b>
-		<div class="mt-0.5">${escapeHtml(item.locationBasis)}</div>
+		<div class="mt-0.5">${linkify(item.locationBasis)}</div>
 	</div>`;
 }

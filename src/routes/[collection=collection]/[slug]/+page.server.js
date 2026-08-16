@@ -53,6 +53,7 @@ export async function load({ params }) {
 			source: node.source || '',
 			author: node.author || '',
 			updater: node.updater || '',
+			changeNote: node.changeNote || '',
 			orgType: node.orgType || '',
 			job: node.job || '',
 			nationality: node.nationality || '',

@@ -1,4 +1,4 @@
-import { escapeHtml } from '$lib/util.js';
+import { escapeHtml, linkify } from '$lib/util.js';
 import { renderAddressHtml, renderCertaintyGaugeHtml, renderLocationBasisHtml } from './htmlBits.js';
 import { t, typeLabel } from '$lib/i18n/store.svelte.js';
 
@@ -95,8 +95,16 @@ export function buildPopupHtml(item, rawData) {
 			${relationsHtml}
 			<div class="text-[10px] text-slate-400 border-t pt-2 mt-2 flex flex-col gap-2">
 				<div class="break-words overflow-hidden">
-					<strong>${t('popup.source')}:</strong> ${escapeHtml(item.source || t('popup.selfResearch'))}<br>
-					<strong>${t('popup.author')}:</strong> ${escapeHtml(item.author || t('popup.researchTeam'))}
+					<strong>${t('popup.source')}:</strong> ${item.source ? linkify(item.source) : escapeHtml(t('popup.selfResearch'))}<br>
+					<strong>${t('popup.author')}:</strong> ${escapeHtml(item.author || t('popup.researchTeam'))}${
+						item.updater
+							? `<br><strong>${t('popup.updater')}:</strong> ${escapeHtml(item.updater)}`
+							: ''
+					}${
+						item.changeNote
+							? `<br><strong>${t('popup.changeNote')}:</strong> ${escapeHtml(item.changeNote)}`
+							: ''
+					}
 				</div>
 				<button data-ai-id="${item.id}" class="w-full bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1.5 rounded text-[10px] border border-purple-200 transition-colors flex-shrink-0">
 					<i class="fa-solid fa-wand-magic-sparkles"></i> ${t('sidebar.aiExplain')}

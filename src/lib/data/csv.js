@@ -53,5 +53,16 @@ export function getCol(row, map, ...aliases) {
 			return (row[idx] || '').toString().trim();
 		}
 	}
+	// 폴백: 헤더에 공백/언더스코어 유무가 alias 와 달라도(예: "수정 내용" vs "수정내용")
+	// 매칭되도록 양쪽에서 언더스코어를 지우고 다시 비교한다.
+	for (const a of aliases) {
+		const target = a.replace(/_/g, '');
+		for (const key in map) {
+			if (key.replace(/_/g, '') === target) {
+				const idx = map[key];
+				if (row[idx] !== undefined) return (row[idx] || '').toString().trim();
+			}
+		}
+	}
 	return '';
 }

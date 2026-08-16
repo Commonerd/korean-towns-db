@@ -3,7 +3,7 @@
 	import { absUrl } from '$lib/config.js';
 	import { collectionHref, nodeHref } from '$lib/data/collections.js';
 	import { certaintyColor } from '$lib/data/precision.js';
-	import { jsonLdScript } from '$lib/util.js';
+	import { jsonLdScript, linkify } from '$lib/util.js';
 
 	let { data } = $props();
 
@@ -96,7 +96,8 @@
 			['위치 근거', node.locationBasis],
 			['출처', node.source],
 			['작성자', node.author],
-			['최종 수정자', node.updater]
+			['최종 수정자', node.updater],
+			['수정 내용', node.changeNote]
 		].filter(([, v]) => v)
 	);
 </script>
@@ -162,7 +163,7 @@
 					{#each facts as [k, v] (k)}
 						<div>
 							<dt>{k}</dt>
-							<dd>{v}</dd>
+							<dd>{@html linkify(v)}</dd>
 						</div>
 					{/each}
 				</dl>
