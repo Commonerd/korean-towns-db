@@ -1,10 +1,13 @@
 import { escapeHtml, linkify } from '$lib/util.js';
+import { localized } from '$lib/i18n/translations.js';
 import { renderAddressHtml, renderCertaintyGaugeHtml, renderLocationBasisHtml } from './htmlBits.js';
 import { t, typeLabel } from '$lib/i18n/store.svelte.js';
 
 /* 팝업 HTML 생성 (기존 attachPopupAndEvents 의 popupContent 이식)
    AI 해설 버튼은 전역 함수 대신 data-ai-id 로 위임 처리한다. */
-export function buildPopupHtml(item, rawData) {
+export function buildPopupHtml(item, rawData, locale = 'ko') {
+	/* 표시 이름·설명은 해당 언어로. 관계 매칭은 한국어 원문(d.relatedTown 등)으로 한다. */
+	const dispName = (n) => localized(n, 'name', locale);
 	let extraMetaHtml = '';
 	if (item.type === '조직' && item.orgType) {
 		extraMetaHtml += `<span class="chip" style="background:#eff6ff; color:#1e40af; border-color:#bfdbfe;"><i class="fa-solid fa-tag"></i> ${escapeHtml(
@@ -34,15 +37,15 @@ export function buildPopupHtml(item, rawData) {
 		const subEvents = rawData.filter((d) => d.type === '사건' && d.relatedTown === item.name);
 		if (subOrgs.length)
 			relationsHtml += `<div class="text-[11px] text-blue-700 mt-1"><b><i class="fa-solid fa-users"></i> ${t('popup.relatedOrgs')}(${subOrgs.length}):</b> ${escapeHtml(
-				subOrgs.map((d) => d.name).join(', ')
+				subOrgs.map(dispName).join(', ')
 			)}</div>`;
 		if (subPers.length)
 			relationsHtml += `<div class="text-[11px] text-green-700 mt-0.5"><b><i class="fa-solid fa-user"></i> ${t('popup.relatedPersons')}(${subPers.length}):</b> ${escapeHtml(
-				subPers.map((d) => d.name).join(', ')
+				subPers.map(dispName).join(', ')
 			)}</div>`;
 		if (subEvents.length)
 			relationsHtml += `<div class="text-[11px] text-purple-700 mt-0.5"><b><i class="fa-solid fa-bolt"></i> ${typeLabel('사건')}(${subEvents.length}):</b> ${escapeHtml(
-				subEvents.map((d) => d.name).join(', ')
+				subEvents.map(dispName).join(', ')
 			)}</div>`;
 	}
 
@@ -73,14 +76,14 @@ export function buildPopupHtml(item, rawData) {
 			<div class="text-[10px] text-slate-500 mb-1">${
 				item.type === '마을' ? typeLabel('마을', item.settlementType) : typeLabel(item.type)
 			}${item.relatedTown && item.type !== '사건' ? ` · ${t('popup.affil')}: ${escapeHtml(item.relatedTown)}` : ''}</div>
-			<div class="title">${escapeHtml(item.name)}</div>
+			<div class="title">${escapeHtml(dispName(item))}</div>
 			<div class="meta"><i class="fa-regular fa-clock"></i> ${escapeHtml(item.founded || t('common.unknown'))} ~ ${escapeHtml(
 				item.dissolved || t('common.unknown')
 			)}</div>
 			<div class="mb-2">${extraMetaHtml}</div>
 			${addressHtml}
 			<div class="desc mb-2">${
-				escapeHtml(item.description) || `<span class="italic text-slate-400">${t('common.noDescription')}</span>`
+				escapeHtml(localized(item, 'description', locale)) || `<span class="italic text-slate-400">${t('common.noDescription')}</span>`
 			}</div>
 			${uncertaintyHtml}
 			${locationBasisHtml}

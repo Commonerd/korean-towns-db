@@ -330,6 +330,7 @@
 				{yearRangeMin}
 				{yearRangeMax}
 				{darkOpacity}
+				locale={getLocale()}
 				{onSelectTown}
 				onAskAI={askAI}
 				onZoom={(z) => (zoom = z)}

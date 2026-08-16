@@ -11,6 +11,7 @@ import {
 } from './iconAtlas.js';
 import { buildPopupHtml } from './popup.js';
 import { filterData } from '$lib/data/filter.js';
+import { localized } from '$lib/i18n/translations.js';
 
 const WORLD_BBOX = [-180, -85, 180, 85];
 
@@ -65,6 +66,7 @@ export class MapController {
 		this.yearRangeMax = 2026;
 		this.selectedTownName = null;
 		this.darkOpacity = 0;
+		this.locale = 'ko';
 
 		this._markers = []; // DOM 마커 (저줌 클러스터 상태): { marker, itemId? }
 		this._positions = new Map(); // itemId -> { coord:[lng,lat], popupOffset } (DOM+GPU 공통, 라인/포커스용)
@@ -168,8 +170,19 @@ export class MapController {
 			this.darkOpacity = state.darkOpacity;
 			this._applyDark();
 		}
+		// 언어가 바뀌면 라벨·팝업 텍스트를 다시 만들어야 한다 (매칭 로직은 한국어 원문 유지)
+		if ('locale' in state && state.locale !== this.locale) {
+			this.locale = state.locale;
+			this._detailDirty = true;
+			this._closeAdHocPopup();
+		}
 		if (indexDirty) this._rebuildIndex();
 		this.scheduleRender();
+	}
+
+	/* 화면 표시용 이름 — 매칭·slug 는 항상 item.name(한국어)을 쓰고, 이건 표시에만 쓴다 */
+	_label(item) {
+		return localized(item, 'name', this.locale);
 	}
 
 	destroy() {
@@ -362,7 +375,7 @@ export class MapController {
 			}
 			labels.push({
 				type: 'Feature',
-				properties: { labelImageId: ensureLabelImage(this.map, item.name) },
+				properties: { labelImageId: ensureLabelImage(this.map, this._label(item)) },
 				geometry: { type: 'Point', coordinates: coord }
 			});
 		}
@@ -418,7 +431,7 @@ export class MapController {
 			}
 			labelFeatures.push({
 				type: 'Feature',
-				properties: { labelImageId: ensureLabelImage(this.map, item.name) },
+				properties: { labelImageId: ensureLabelImage(this.map, this._label(item)) },
 				geometry: { type: 'Point', coordinates: coord }
 			});
 		};
@@ -663,7 +676,7 @@ export class MapController {
 			certaintyScore: item.certaintyScore
 		});
 		this._wireMarker(el, item, popupOffset, item.lat, item.lng);
-		if (isDetailMode) this._addLabel(item.lat, item.lng, item.name);
+		if (isDetailMode) this._addLabel(item.lat, item.lng, this._label(item));
 	}
 
 	_addItemMarker(item, lat, lng, opts, isDetailMode) {
@@ -672,7 +685,7 @@ export class MapController {
 			certaintyScore: item.certaintyScore
 		});
 		this._wireMarker(el, item, popupOffset, lat, lng);
-		if (isDetailMode) this._addLabel(lat, lng, item.name);
+		if (isDetailMode) this._addLabel(lat, lng, this._label(item));
 	}
 
 	_wireMarker(el, item, popupOffset, lat, lng) {
@@ -961,7 +974,7 @@ export class MapController {
 			closeButton: true
 		})
 			.setLngLat(lngLat)
-			.setHTML(buildPopupHtml(item, this.rawData))
+			.setHTML(buildPopupHtml(item, this.rawData, this.locale))
 			.addTo(this.map);
 
 		if (centerInView) this._centerPopupInView();

@@ -2,7 +2,13 @@
 // 브라우저 기본 언어를 감지해 ko/en/ja/ru/zh 중 하나로 초기화하고,
 // 사용자가 고른 언어는 localStorage 에 보존한다.
 import { browser } from '$app/environment';
-import { translations } from './translations.js';
+import {
+	translate,
+	translateType,
+	translatePrecisionLabel,
+	translatePrecisionDesc,
+	localized
+} from './translations.js';
 
 export const SUPPORTED = ['ko', 'en', 'ja', 'ru', 'zh'];
 export const DEFAULT_LOCALE = 'ko';
@@ -63,39 +69,28 @@ export function initLocale() {
 	setLocale(detectInitial());
 }
 
-/* 번역 조회. 누락 시 기본 언어 → 키 순으로 폴백.
-   params 로 {name} 형태 플레이스홀더 치환 지원. */
+/* 아래 헬퍼들은 전부 translations.js 의 순수 함수에 "현재 언어"만 넘겨 위임한다.
+   (언어별로 프리렌더되는 아카이브 페이지는 순수 함수 쪽을 직접 쓴다 —
+    사전 조회 로직이 두 벌로 갈라지지 않게 한 곳에만 둔다.) */
 export function t(key, params) {
-	const dict = translations[locale] || translations[DEFAULT_LOCALE];
-	let str = dict[key];
-	if (str == null) str = translations[DEFAULT_LOCALE][key];
-	if (str == null) return key;
-	if (params) {
-		for (const p in params) {
-			str = str.split('{' + p + '}').join(String(params[p]));
-		}
-	}
-	return str;
+	return translate(locale, key, params);
 }
 
-/* 데이터 내부 키(마을/조직/인물/사건)를 현재 언어 표시 라벨로.
-   마을은 settlementType(타운/빌리지)에 따라 세분화 가능. */
+/* 데이터 내부 키(마을/조직/인물/사건)를 현재 언어 표시 라벨로. */
 export function typeLabel(type, settlementType) {
-	if (type === '마을') {
-		if (settlementType === '빌리지') return t('settlement.village');
-		if (settlementType === '타운') return t('settlement.town');
-		return t('type.town');
-	}
-	if (type === '조직') return t('type.org');
-	if (type === '인물') return t('type.person');
-	if (type === '사건') return t('type.event');
-	return type;
+	return translateType(locale, type, settlementType);
 }
 
 /* 위치 확실성 등급의 표시 라벨/설명 (precision.js 의 키 기준) */
 export function precisionLabel(key) {
-	return t('precision.' + (key || 'unknown') + '.label');
+	return translatePrecisionLabel(locale, key);
 }
 export function precisionDesc(key) {
-	return t('precision.' + (key || 'unknown') + '.desc');
+	return translatePrecisionDesc(locale, key);
+}
+
+/* 노드의 다국어 필드(nameI18n/descriptionI18n)를 현재 언어로.
+   지도·사이드바처럼 클라이언트에서 언어가 바뀌는 화면용. */
+export function localizedField(node, field) {
+	return localized(node, field, locale);
 }

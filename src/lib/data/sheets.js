@@ -7,6 +7,26 @@ import { normalizePrecision, getCertaintyScore } from './precision.js';
    (0 인 상태로 두면 마을 시트와 겹치므로 반드시 실제 gid 로 바꿔야 사건이 로드됩니다.) */
 const EVENTS_GID = 'REPLACE_WITH_EVENTS_GID';
 
+/* 시트의 name_ko/name_en/... , description_ko/... 다국어 칼럼을 한 객체로 모은다.
+
+   ⚠️ 여기서 모은 값은 "표시용"이다. 노드의 `name`(한국어)은 절대 바꾸지 않는다 —
+      slug 생성, related_town 매칭(buildIndex), 마을-자식 관계가 모두 한국어 이름을
+      키로 쓰기 때문에, name 을 번역하면 URL 과 관계망이 통째로 깨진다.
+
+   시트에 해당 언어 칼럼이 비어 있으면 한국어 원문으로 폴백한다
+   (towns 의 name_ko 는 실제로 절반 정도만 채워져 있어 폴백이 필수). */
+export const DATA_LOCALES = ['ko', 'en', 'ja', 'ru', 'zh'];
+
+function collectI18n(row, headerMap, base, fallback) {
+	const out = {};
+	for (const loc of DATA_LOCALES) {
+		out[loc] = getCol(row, headerMap, `${base}_${loc}`) || fallback;
+	}
+	// 한국어는 번역 칼럼보다 원문을 우선한다 (원문이 늘 정본).
+	out.ko = fallback || out.ko;
+	return out;
+}
+
 /* URL slug 생성 (name 기반, 타입별로 중복 시 -2, -3 ... 접미사) */
 function makeSlugger() {
 	const counts = new Map();
@@ -96,7 +116,9 @@ export async function loadGoogleSheetsData() {
 						type: '마을',
 						settlementType: isVillage ? '빌리지' : '타운',
 						name,
+						nameI18n: collectI18n(row, headerMap, 'name', name),
 						description: desc,
+						descriptionI18n: collectI18n(row, headerMap, 'description', desc),
 						founded: getCol(row, headerMap, 'start_year', 'founded', '설립'),
 						dissolved: getCol(row, headerMap, 'end_year', 'dissolved', '소멸'),
 						lat,
@@ -178,7 +200,14 @@ export async function loadGoogleSheetsData() {
 					slug: slugify(target.type, name),
 					type: target.type,
 					name,
+					nameI18n: collectI18n(row, headerMap, 'name', name),
 					description: getCol(row, headerMap, 'description', 'desc', '설명'),
+					descriptionI18n: collectI18n(
+						row,
+						headerMap,
+						'description',
+						getCol(row, headerMap, 'description', 'desc', '설명')
+					),
 					founded: getCol(row, headerMap, 'start_year', '설립'),
 					dissolved: getCol(row, headerMap, 'end_year', '소멸'),
 					lat,

@@ -1,7 +1,7 @@
 <script>
 	import { escapeHtml } from '$lib/util.js';
 	import { renderPrecisionChip, renderAddressHtml } from '$lib/map/htmlBits.js';
-	import { t, typeLabel } from '$lib/i18n/store.svelte.js';
+	import { t, typeLabel, localizedField } from '$lib/i18n/store.svelte.js';
 	import YearSlider from './YearSlider.svelte';
 
 	let {
@@ -193,7 +193,7 @@
 						>
 							{#if isChildOf(item)}<i
 									class="fa-solid fa-arrow-turn-up rotate-90 mr-1 text-slate-400"
-								></i>{/if}{item.name}
+								></i>{/if}{localizedField(item, 'name')}
 						</h3>
 						<span
 							class="text-[10px] px-2 py-0.5 rounded-full border font-medium flex-shrink-0 {badgeColor(
@@ -202,7 +202,7 @@
 						>
 					</div>
 					<p class="text-xs text-slate-500 mb-2 line-clamp-2">
-						{#if item.description}{item.description}{:else}<span class="italic text-slate-300"
+						{#if item.description}{localizedField(item, 'description')}{:else}<span class="italic text-slate-300"
 								>{t('common.noDescription')}</span
 							>{/if}
 					</p>

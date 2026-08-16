@@ -15,6 +15,7 @@
 		yearRangeMin = 1860,
 		yearRangeMax = 2026,
 		darkOpacity = 0,
+		locale = 'ko',
 		onSelectTown = () => {},
 		onAskAI = () => {},
 		onZoom = () => {},
@@ -73,7 +74,8 @@
 					yearMax,
 					yearRangeMin,
 					yearRangeMax,
-					darkOpacity
+					darkOpacity,
+					locale
 				});
 				controller.setData(rawData);
 				ready = true;
@@ -117,7 +119,8 @@
 			yearMax,
 			yearRangeMin,
 			yearRangeMax,
-			darkOpacity
+			darkOpacity,
+			locale
 		};
 		if (ready && controller) controller.update(state);
 	});

@@ -187,6 +187,33 @@ body.map-page {
 	filter: brightness(1.08);
 }
 
+/* ---- 언어 전환 (실제 이동 가능한 링크 — hreflang 은 크롤러 전용이라 별도로 둠) ---- */
+.archive-langs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 2px;
+	width: 100%;
+	padding-top: 4px;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	margin-top: 2px;
+}
+.archive-langs a {
+	padding: 3px 8px;
+	border-radius: 6px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.55);
+	text-decoration: none;
+}
+.archive-langs a:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: #fff;
+}
+.archive-langs a.is-current {
+	color: var(--amber);
+	font-weight: 600;
+}
+
 /* ---- 빵부스러기 ---- */
 .archive-crumbs {
 	padding-top: 18px;

@@ -261,6 +261,57 @@ export const translations = {
 		'precision.unknown.label': 'Unknown · 미상',
 		'precision.unknown.desc': '현재로서는 위치를 특정할 수 없는 기록입니다.',
 
+
+		/* ---- 아카이브(언어별 정적 페이지) ---- */
+		'arch.home': '홈',
+		'arch.viewMap': '지도로 보기 →',
+		'arch.brandDesc': '코리안 디아스포라 연구팀이 수집·검증한 재외동포 역사 데이터베이스입니다. 모든 항목은 출처를 명시합니다.',
+		'arch.footProject': '프로젝트 소개',
+		'arch.footMap': '인터랙티브 지도',
+		'arch.footLicense': '이용약관 · 라이선스',
+		'arch.footDataLicense': '데이터',
+		'arch.footMapCredit': '지도',
+		'arch.total': '총 <strong>{n}</strong>건',
+		'arch.empty': '아직 등록된 항목이 없습니다.',
+		'arch.relTown': '관련 마을: {name}',
+		'arch.facts': '기본 정보',
+		'arch.f.address': '어드레스',
+		'arch.f.founded': '성립 / 시작',
+		'arch.f.dissolved': '소멸 / 종료',
+		'arch.f.orgType': '조직 유형',
+		'arch.f.eventType': '사건 유형',
+		'arch.f.nationality': '국적',
+		'arch.f.job': '직업',
+		'arch.f.coords': '좌표',
+		'arch.f.locationBasis': '위치 근거',
+		'arch.f.source': '출처',
+		'arch.f.author': '작성자',
+		'arch.f.updater': '최종 수정자',
+		'arch.f.changeNote': '수정 내용',
+		'arch.noDesc': '아직 상세 설명이 등록되지 않은 항목입니다. 아래 기본 정보와 관련 기록을 참고하세요.',
+		'arch.notInDb': '아직 DB에 개별 항목으로 등록되지 않았습니다',
+		'arch.more': '외 {n}건',
+		'arch.mapCta': '지도에서 «{name}» 위치 보기 →',
+		'arch.allOf': '{title} 전체',
+		'arch.pagerNav': '{title} 목록 내 이동',
+		'arch.certainty': '위치 확실성',
+		'arch.rel.orgsOfTown': '이 마을의 조직',
+		'arch.rel.personsOfTown': '이 마을의 인물',
+		'arch.rel.eventsOfTown': '이 마을에서 일어난 사건',
+		'arch.rel.towns': '관련 마을',
+		'arch.rel.orgs': '관련 조직',
+		'arch.rel.persons': '관련 인물',
+		'arch.rel.siblings': '같은 마을({town})의 다른 기록',
+		'arch.title.towns': '한인 마을',
+		'arch.title.orgs': '한인 조직',
+		'arch.title.persons': '한인 인물',
+		'arch.title.events': '한인 사건',
+		'arch.desc.towns': '세계 각지에 형성된 한인 마을(코리아타운·빌리지)의 위치와 연혁 기록입니다.',
+		'arch.desc.orgs': '한인 마을을 기반으로 활동한 단체·학교·교회·언론 등 조직의 기록입니다.',
+		'arch.desc.persons': '한인 마을과 조직에서 활동한 인물의 기록입니다.',
+		'arch.desc.events': '한인 마을·조직·인물과 관련된 역사적 사건의 기록입니다.',
+		'arch.listTitle': '{title} 목록 ({n}건)',
+
 		'lang.switch': '언어 선택'
 	},
 
@@ -520,6 +571,57 @@ export const translations = {
 		'precision.region.desc': 'Confirmed only to the region level, with large location uncertainty.',
 		'precision.unknown.label': 'Unknown',
 		'precision.unknown.desc': 'A record whose location cannot currently be determined.',
+
+
+		/* ---- Archive (per-language static pages) ---- */
+		'arch.home': 'Home',
+		'arch.viewMap': 'View on map →',
+		'arch.brandDesc': 'A historical database of the Korean diaspora, collected and verified by the Korean Diaspora Research Team. Every record cites its sources.',
+		'arch.footProject': 'About the project',
+		'arch.footMap': 'Interactive map',
+		'arch.footLicense': 'Terms · License',
+		'arch.footDataLicense': 'Data',
+		'arch.footMapCredit': 'Map',
+		'arch.total': '<strong>{n}</strong> records',
+		'arch.empty': 'No records yet.',
+		'arch.relTown': 'Related community: {name}',
+		'arch.facts': 'Key details',
+		'arch.f.address': 'Address',
+		'arch.f.founded': 'Founded / start',
+		'arch.f.dissolved': 'Dissolved / end',
+		'arch.f.orgType': 'Organization type',
+		'arch.f.eventType': 'Event type',
+		'arch.f.nationality': 'Nationality',
+		'arch.f.job': 'Occupation',
+		'arch.f.coords': 'Coordinates',
+		'arch.f.locationBasis': 'Location basis',
+		'arch.f.source': 'Source',
+		'arch.f.author': 'Author',
+		'arch.f.updater': 'Last editor',
+		'arch.f.changeNote': 'Change note',
+		'arch.noDesc': 'No detailed description has been recorded yet. See the key details and related records below.',
+		'arch.notInDb': 'Not yet registered as an individual record in the database',
+		'arch.more': '{n} more',
+		'arch.mapCta': 'See «{name}» on the map →',
+		'arch.allOf': 'All {title}',
+		'arch.pagerNav': 'Navigate within {title}',
+		'arch.certainty': 'Location certainty',
+		'arch.rel.orgsOfTown': 'Organizations in this community',
+		'arch.rel.personsOfTown': 'People in this community',
+		'arch.rel.eventsOfTown': 'Events in this community',
+		'arch.rel.towns': 'Related communities',
+		'arch.rel.orgs': 'Related organizations',
+		'arch.rel.persons': 'Related people',
+		'arch.rel.siblings': 'Other records in {town}',
+		'arch.title.towns': 'Korean communities',
+		'arch.title.orgs': 'Korean organizations',
+		'arch.title.persons': 'Korean figures',
+		'arch.title.events': 'Korean historical events',
+		'arch.desc.towns': 'Locations and histories of Korean communities (Koreatowns and villages) formed around the world.',
+		'arch.desc.orgs': 'Records of organizations — associations, schools, churches, and press — based in Korean communities.',
+		'arch.desc.persons': 'Records of people active in Korean communities and organizations.',
+		'arch.desc.events': 'Records of historical events tied to Korean communities, organizations, and people.',
+		'arch.listTitle': '{title} ({n} records)',
 
 		'lang.switch': 'Select language'
 	},
@@ -781,6 +883,57 @@ export const translations = {
 		'precision.unknown.label': 'Unknown · 不明',
 		'precision.unknown.desc': '現時点では位置を特定できない記録です。',
 
+
+		/* ---- アーカイブ（言語別静的ページ） ---- */
+		'arch.home': 'ホーム',
+		'arch.viewMap': '地図で見る →',
+		'arch.brandDesc': 'コリアン・ディアスポラ研究チームが収集・検証した在外同胞の歴史データベースです。すべての項目に出典を明記しています。',
+		'arch.footProject': 'プロジェクト紹介',
+		'arch.footMap': 'インタラクティブ地図',
+		'arch.footLicense': '利用規約 · ライセンス',
+		'arch.footDataLicense': 'データ',
+		'arch.footMapCredit': '地図',
+		'arch.total': '全 <strong>{n}</strong> 件',
+		'arch.empty': 'まだ登録された項目はありません。',
+		'arch.relTown': '関連する町: {name}',
+		'arch.facts': '基本情報',
+		'arch.f.address': '住所',
+		'arch.f.founded': '成立 / 開始',
+		'arch.f.dissolved': '消滅 / 終了',
+		'arch.f.orgType': '組織の種類',
+		'arch.f.eventType': '事件の種類',
+		'arch.f.nationality': '国籍',
+		'arch.f.job': '職業',
+		'arch.f.coords': '座標',
+		'arch.f.locationBasis': '位置の根拠',
+		'arch.f.source': '出典',
+		'arch.f.author': '作成者',
+		'arch.f.updater': '最終更新者',
+		'arch.f.changeNote': '更新内容',
+		'arch.noDesc': 'まだ詳細な説明が登録されていない項目です。下記の基本情報と関連記録をご参照ください。',
+		'arch.notInDb': 'まだ個別項目としてデータベースに登録されていません',
+		'arch.more': '他 {n} 件',
+		'arch.mapCta': '地図で«{name}»の位置を見る →',
+		'arch.allOf': '{title} 一覧',
+		'arch.pagerNav': '{title} 一覧内の移動',
+		'arch.certainty': '位置の確実性',
+		'arch.rel.orgsOfTown': 'この町の組織',
+		'arch.rel.personsOfTown': 'この町の人物',
+		'arch.rel.eventsOfTown': 'この町で起きた事件',
+		'arch.rel.towns': '関連する町',
+		'arch.rel.orgs': '関連する組織',
+		'arch.rel.persons': '関連する人物',
+		'arch.rel.siblings': '同じ町（{town}）の他の記録',
+		'arch.title.towns': '韓人の町',
+		'arch.title.orgs': '韓人の組織',
+		'arch.title.persons': '韓人の人物',
+		'arch.title.events': '韓人関連の事件',
+		'arch.desc.towns': '世界各地に形成された韓人の町（コリアタウン・ビレッジ）の位置と沿革の記録です。',
+		'arch.desc.orgs': '韓人の町を基盤に活動した団体・学校・教会・言論などの組織の記録です。',
+		'arch.desc.persons': '韓人の町や組織で活動した人物の記録です。',
+		'arch.desc.events': '韓人の町・組織・人物に関わる歴史的事件の記録です。',
+		'arch.listTitle': '{title} 一覧（{n}件）',
+
 		'lang.switch': '言語を選択'
 	},
 
@@ -1040,6 +1193,57 @@ export const translations = {
 		'precision.region.desc': 'Подтверждено только до уровня региона, с большой неопределённостью местоположения.',
 		'precision.unknown.label': 'Unknown · Неизвестно',
 		'precision.unknown.desc': 'Запись, местоположение которой в настоящее время определить невозможно.',
+
+
+		/* ---- Архив (статические страницы по языкам) ---- */
+		'arch.home': 'Главная',
+		'arch.viewMap': 'Посмотреть на карте →',
+		'arch.brandDesc': 'База данных по истории корейской диаспоры, собранная и проверенная исследовательской группой Korean Diaspora Research Team. Каждая запись содержит указание источников.',
+		'arch.footProject': 'О проекте',
+		'arch.footMap': 'Интерактивная карта',
+		'arch.footLicense': 'Условия · Лицензия',
+		'arch.footDataLicense': 'Данные',
+		'arch.footMapCredit': 'Карта',
+		'arch.total': 'Всего <strong>{n}</strong> записей',
+		'arch.empty': 'Записей пока нет.',
+		'arch.relTown': 'Связанное поселение: {name}',
+		'arch.facts': 'Основные сведения',
+		'arch.f.address': 'Адрес',
+		'arch.f.founded': 'Основание / начало',
+		'arch.f.dissolved': 'Прекращение / конец',
+		'arch.f.orgType': 'Тип организации',
+		'arch.f.eventType': 'Тип события',
+		'arch.f.nationality': 'Гражданство',
+		'arch.f.job': 'Род занятий',
+		'arch.f.coords': 'Координаты',
+		'arch.f.locationBasis': 'Основание местоположения',
+		'arch.f.source': 'Источник',
+		'arch.f.author': 'Автор',
+		'arch.f.updater': 'Последний редактор',
+		'arch.f.changeNote': 'Заметка об изменении',
+		'arch.noDesc': 'Подробное описание пока не внесено. См. основные сведения и связанные записи ниже.',
+		'arch.notInDb': 'Ещё не внесено в базу данных как отдельная запись',
+		'arch.more': 'ещё {n}',
+		'arch.mapCta': 'Посмотреть «{name}» на карте →',
+		'arch.allOf': 'Все: {title}',
+		'arch.pagerNav': 'Навигация по разделу «{title}»',
+		'arch.certainty': 'Достоверность местоположения',
+		'arch.rel.orgsOfTown': 'Организации этого поселения',
+		'arch.rel.personsOfTown': 'Люди этого поселения',
+		'arch.rel.eventsOfTown': 'События в этом поселении',
+		'arch.rel.towns': 'Связанные поселения',
+		'arch.rel.orgs': 'Связанные организации',
+		'arch.rel.persons': 'Связанные люди',
+		'arch.rel.siblings': 'Другие записи поселения {town}',
+		'arch.title.towns': 'Корейские поселения',
+		'arch.title.orgs': 'Корейские организации',
+		'arch.title.persons': 'Корейские деятели',
+		'arch.title.events': 'Корейские исторические события',
+		'arch.desc.towns': 'Расположение и история корейских поселений (корейских кварталов и деревень), возникших по всему миру.',
+		'arch.desc.orgs': 'Записи об организациях — обществах, школах, церквях и печати, — действовавших в корейских поселениях.',
+		'arch.desc.persons': 'Записи о людях, действовавших в корейских поселениях и организациях.',
+		'arch.desc.events': 'Записи об исторических событиях, связанных с корейскими поселениями, организациями и людьми.',
+		'arch.listTitle': '{title} ({n} записей)',
 
 		'lang.switch': 'Выбрать язык'
 	},
@@ -1301,6 +1505,107 @@ export const translations = {
 		'precision.unknown.label': 'Unknown · 不详',
 		'precision.unknown.desc': '目前无法确定位置的记录。',
 
+
+		/* ---- 档案（各语言静态页面） ---- */
+		'arch.home': '首页',
+		'arch.viewMap': '在地图上查看 →',
+		'arch.brandDesc': '由韩国侨民研究团队收集并核验的海外同胞历史数据库。所有条目均标注出处。',
+		'arch.footProject': '项目介绍',
+		'arch.footMap': '互动地图',
+		'arch.footLicense': '使用条款 · 许可',
+		'arch.footDataLicense': '数据',
+		'arch.footMapCredit': '地图',
+		'arch.total': '共 <strong>{n}</strong> 条',
+		'arch.empty': '尚无已登记的条目。',
+		'arch.relTown': '相关村镇：{name}',
+		'arch.facts': '基本信息',
+		'arch.f.address': '地址',
+		'arch.f.founded': '成立 / 开始',
+		'arch.f.dissolved': '消亡 / 结束',
+		'arch.f.orgType': '组织类型',
+		'arch.f.eventType': '事件类型',
+		'arch.f.nationality': '国籍',
+		'arch.f.job': '职业',
+		'arch.f.coords': '坐标',
+		'arch.f.locationBasis': '定位依据',
+		'arch.f.source': '出处',
+		'arch.f.author': '编写者',
+		'arch.f.updater': '最后修改者',
+		'arch.f.changeNote': '修改内容',
+		'arch.noDesc': '该条目尚未登记详细说明。请参考下方的基本信息与相关记录。',
+		'arch.notInDb': '尚未作为独立条目登记入数据库',
+		'arch.more': '另有 {n} 条',
+		'arch.mapCta': '在地图上查看«{name}»的位置 →',
+		'arch.allOf': '{title} 全部',
+		'arch.pagerNav': '在 {title} 列表内导航',
+		'arch.certainty': '位置确定性',
+		'arch.rel.orgsOfTown': '该村镇的组织',
+		'arch.rel.personsOfTown': '该村镇的人物',
+		'arch.rel.eventsOfTown': '该村镇发生的事件',
+		'arch.rel.towns': '相关村镇',
+		'arch.rel.orgs': '相关组织',
+		'arch.rel.persons': '相关人物',
+		'arch.rel.siblings': '同一村镇（{town}）的其他记录',
+		'arch.title.towns': '韩人村镇',
+		'arch.title.orgs': '韩人组织',
+		'arch.title.persons': '韩人人物',
+		'arch.title.events': '韩人相关事件',
+		'arch.desc.towns': '世界各地形成的韩人村镇（韩国城·村落）的位置与沿革记录。',
+		'arch.desc.orgs': '以韩人村镇为基础活动的团体、学校、教会、媒体等组织的记录。',
+		'arch.desc.persons': '在韩人村镇与组织中活动的人物记录。',
+		'arch.desc.events': '与韩人村镇、组织、人物相关的历史事件记录。',
+		'arch.listTitle': '{title}（{n} 条）',
+
 		'lang.switch': '选择语言'
 	}
 };
+
+export const SUPPORTED_LOCALES = ['ko', 'en', 'ja', 'ru', 'zh'];
+export const FALLBACK_LOCALE = 'ko';
+
+/* ====== 순수 번역 조회 ======
+   store.svelte.js 의 t() 는 "현재 클라이언트 언어"를 읽으므로, 언어별로 각각
+   프리렌더되는 아카이브 페이지(/en/towns/... 등)에서는 쓸 수 없다.
+   (서버 렌더 시점엔 스토어가 항상 기본값 ko 라서 전부 한국어로 구워진다.)
+   그래서 언어를 인자로 받는 순수 함수를 따로 둔다. */
+export function translate(locale, key, params) {
+	const dict = translations[locale] || translations[FALLBACK_LOCALE];
+	let str = dict[key];
+	if (str == null) str = translations[FALLBACK_LOCALE][key];
+	if (str == null) return key;
+	if (params) {
+		for (const p in params) {
+			str = str.split('{' + p + '}').join(String(params[p]));
+		}
+	}
+	return str;
+}
+
+/* 데이터 내부 키(마을/조직/인물/사건) → 표시 라벨. typeLabel 의 언어 인자 버전. */
+export function translateType(locale, type, settlementType) {
+	if (type === '마을') {
+		if (settlementType === '빌리지') return translate(locale, 'settlement.village');
+		if (settlementType === '타운') return translate(locale, 'settlement.town');
+		return translate(locale, 'type.town');
+	}
+	if (type === '조직') return translate(locale, 'type.org');
+	if (type === '인물') return translate(locale, 'type.person');
+	if (type === '사건') return translate(locale, 'type.event');
+	return type;
+}
+
+export function translatePrecisionLabel(locale, key) {
+	return translate(locale, 'precision.' + (key || 'unknown') + '.label');
+}
+export function translatePrecisionDesc(locale, key) {
+	return translate(locale, 'precision.' + (key || 'unknown') + '.desc');
+}
+
+/* 노드의 다국어 필드(nameI18n/descriptionI18n)에서 해당 언어 값을 꺼낸다.
+   값이 없으면 한국어 원문으로 폴백. */
+export function localized(node, field, locale) {
+	if (!node) return '';
+	const bag = node[field + 'I18n'];
+	if (bag && bag[locale]) return bag[locale];
+	return node[field] || '';
+}

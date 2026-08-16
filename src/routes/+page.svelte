@@ -3,7 +3,8 @@
 	import { reveal } from '$lib/actions/reveal.js';
 	import { t, getLocale } from '$lib/i18n/store.svelte.js';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
-	import { COLLECTIONS, collectionHref } from '$lib/data/collections.js';
+	import { COLLECTIONS } from '$lib/data/collections.js';
+	import { localeCollectionHref, collectionTitle } from '$lib/data/locales.js';
 
 	let { data } = $props();
 
@@ -403,9 +404,9 @@
 				<ul class="archive-entry-list">
 					{#each COLLECTIONS as c (c.slug)}
 						<li>
-							<a href={collectionHref(c.slug)} style="--accent: {c.color}">
+							<a href={localeCollectionHref(getLocale(), c.slug)} style="--accent: {c.color}">
 								<span class="dot" style="background:{c.color}"></span>
-								<strong>{c.title}</strong>
+								<strong>{collectionTitle(getLocale(), c.slug)}</strong>
 								<em>{t('archive.count', { n: data.counts?.[c.slug] ?? 0 })}</em>
 							</a>
 						</li>
@@ -532,7 +533,7 @@
 						<li><a href="#team">{t('nav.team')}</a></li>
 						<li><a href="/map/">{t('btn.viewMap')}</a></li>
 						{#each COLLECTIONS as c (c.slug)}
-							<li><a href={collectionHref(c.slug)}>{c.title}</a></li>
+							<li><a href={localeCollectionHref(getLocale(), c.slug)}>{collectionTitle(getLocale(), c.slug)}</a></li>
 						{/each}
 						<li><a href="/license/">{t('footer.license')}</a></li>
 					</ul>
