@@ -318,6 +318,20 @@
 						<p>{t('log.item4.body2')}</p>
 					</div>
 				</div>
+				<div class="log-item" use:reveal>
+					<div class="log-date">2026.08.16</div>
+					<div class="log-body">
+						<span class="log-tag data">{t('log.tag.policy')}</span>
+						<p>{t('log.item5.body')}</p>
+					</div>
+				</div>
+				<div class="log-item" use:reveal>
+					<div class="log-date">2026.08.16</div>
+					<div class="log-body">
+						<span class="log-tag next">{t('log.tag.feature')}</span>
+						<p>{t('log.item6.body')}</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	</section>
