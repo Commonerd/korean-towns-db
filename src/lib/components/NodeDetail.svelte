@@ -177,7 +177,7 @@
 		<section class="archive-certainty" aria-label={tr('arch.certainty')}>
 			<div class="archive-certainty-head">
 				<strong>{node.precisionLabel}</strong>
-				<span style="color: {certaintyColor(certaintyPct)}">{certaintyPct}%</span>
+				<span style="color: {certaintyColor(certaintyPct)}"></span>
 			</div>
 			<div class="archive-meter" role="img" aria-label="{tr('arch.certainty')} {certaintyPct}%">
 				<span style="width: {certaintyPct}%; background: {certaintyColor(certaintyPct)}"></span>
