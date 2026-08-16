@@ -13,7 +13,8 @@ export async function GET() {
 
 	const urls = [
 		{ loc: absUrl('/'), priority: '1.0', changefreq: 'weekly' },
-		{ loc: absUrl('/map/'), priority: '0.9', changefreq: 'weekly' }
+		{ loc: absUrl('/map/'), priority: '0.9', changefreq: 'weekly' },
+		{ loc: absUrl('/license/'), priority: '0.3', changefreq: 'yearly' }
 	];
 
 	for (const c of COLLECTIONS) {

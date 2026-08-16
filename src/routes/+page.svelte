@@ -520,6 +520,7 @@
 						{#each COLLECTIONS as c (c.slug)}
 							<li><a href={collectionHref(c.slug)}>{c.title}</a></li>
 						{/each}
+						<li><a href="/license/">{t('footer.license')}</a></li>
 					</ul>
 				</div>
 				<div>
@@ -537,6 +538,7 @@
 		<div class="footer-bottom">
 			<span>{t('footer.copyright', { year })}</span>
 			<span>{t('footer.credits')}</span>
+			<span class="footer-license">{@html t('footer.licenseNote')}</span>
 		</div>
 	</div>
 </footer>
@@ -1602,6 +1604,19 @@
 		padding-top: 1.6rem;
 		font-size: 0.78rem;
 		color: var(--ink-faint);
+	}
+	.footer-license {
+		flex-basis: 100%;
+		padding-top: 0.7rem;
+		border-top: 1px solid var(--line);
+		font-size: 0.74rem;
+	}
+	.footer-license :global(a) {
+		color: inherit;
+		text-decoration: underline;
+	}
+	.footer-license :global(a:hover) {
+		color: var(--amber);
 	}
 
 	/* 분류별 색인 진입 블록 (#data 섹션 하단) */

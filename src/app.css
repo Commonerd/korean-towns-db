@@ -535,6 +535,19 @@ body.map-page {
 	color: var(--amber);
 	text-decoration: underline;
 }
+.archive-foot-license {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid rgba(255, 255, 255, 0.12);
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.5);
+}
+.archive-foot-license a {
+	color: rgba(255, 255, 255, 0.72);
+}
+.archive-foot-license a:hover {
+	color: var(--amber);
+}
 
 @media (max-width: 640px) {
 	.archive-nav {

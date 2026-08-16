@@ -62,6 +62,14 @@
 				{#each COLLECTIONS as c (c.slug)}
 					<a href={collectionHref(c.slug)}>{c.title}</a>
 				{/each}
+				<a href="/license/">이용약관 · 라이선스</a>
+			</p>
+			<p class="archive-foot-license">
+				데이터: <a
+					href="https://creativecommons.org/licenses/by/4.0/deed.ko"
+					target="_blank"
+					rel="license noopener noreferrer">CC BY 4.0</a
+				> · 지도: © OpenStreetMap contributors, © CARTO
 			</p>
 		</div>
 	</footer>
