@@ -134,7 +134,7 @@
 				>
 					<path class="route-line" d="M150,220 L378,86" fill="none" stroke="var(--navy)" stroke-width="2" />
 					<path class="route-line" d="M150,220 L392,338" fill="none" stroke="var(--navy)" stroke-width="2" />
-					<path d="M150,220 L486,178" fill="none" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 6" />
+					<path d="M150,220 L486,178" fill="none" stroke="var(--navy)" stroke-width="1.6" />
 					<path d="M150,220 L486,286" fill="none" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 6" />
 
 					<circle class="node-pulse" cx="378" cy="86" r="44" fill="var(--amber)" />
@@ -143,8 +143,8 @@
 					<circle class="node-pulse delay" cx="392" cy="338" r="44" fill="var(--amber)" />
 					<text x="392" y="343" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="#fff">{t('hero.svg.usa')}</text>
 
-					<circle cx="486" cy="178" r="44" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4" />
-					<text x="486" y="183" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="var(--navy-deep)">{t('hero.svg.japan')}</text>
+					<circle class="node-pulse" cx="486" cy="178" r="44" fill="var(--amber)" />
+					<text x="486" y="183" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="#fff">{t('hero.svg.japan')}</text>
 
 					<circle cx="486" cy="286" r="44" fill="var(--paper-warm)" stroke="#c7cdda" stroke-width="1.6" stroke-dasharray="3 4" />
 					<text x="486" y="291" text-anchor="middle" font-family="Noto Sans KR" font-size="20.8" font-weight="700" fill="var(--navy-deep)">{t('hero.svg.china')}</text>
@@ -259,9 +259,9 @@
 					<h3>{t('roadmap.p1.h3')}</h3>
 					<p>{t('roadmap.p1.p')}</p>
 				</div>
-				<div class="phase is-upcoming" use:reveal>
+				<div class="phase" use:reveal>
 					<div class="phase-num">02</div>
-					<span class="tag">{t('tag.planned')}</span>
+					<span class="tag">{t('tag.inProgress')}</span>
 					<h3>{t('roadmap.p2.h3')}</h3>
 					<p>{t('roadmap.p2.p')}</p>
 				</div>
@@ -450,6 +450,14 @@
 					<p class="role">{t('team.m3.role')}</p>
 					<p>{@html t('team.m3.affil')}</p>
 					<p>{t('team.m3.bio')}</p>
+				</div>
+
+				<div class="team-card" use:reveal>
+					<div class="avatar" style="background:var(--person);">{t('team.m4.initial')}</div>
+					<h3>{t('team.m4.name')}</h3>
+					<p class="role">{t('team.m4.role')}</p>
+					<p>{@html t('team.m4.affil')}</p>
+					<p>{t('team.m4.bio')}</p>
 				</div>
 			</div>
 		</div>

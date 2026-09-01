@@ -1,5 +1,8 @@
 import { ICON_BASE_SIZE } from './iconAtlas.js';
 
+// Optional Carto API key (set VITE_CARTO_API_KEY in .env if you have one)
+const CARTO_KEY = import.meta.env.VITE_CARTO_API_KEY ?? '';
+
 /* MapLibre 라스터 스타일 (키 불필요)
    - osm-light : OpenStreetMap 라스터 (밝음)
    - carto-dark: CARTO dark_all 라스터 (어두움)
@@ -27,12 +30,19 @@ export function createMapStyle() {
 			},
 			'carto-dark': {
 				type: 'raster',
-				tiles: [
-					'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-					'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-					'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-					'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-				],
+				tiles: CARTO_KEY
+					? [
+						  `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`,
+						  `https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`,
+						  `https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`,
+						  `https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`
+					  ]
+					: [
+						  'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+						  'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+						  'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+						  'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+					  ],
 				tileSize: 256,
 				maxzoom: 19,
 				attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
