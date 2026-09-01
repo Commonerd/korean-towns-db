@@ -453,7 +453,7 @@
 				</div>
 
 				<div class="team-card" use:reveal>
-					<div class="avatar" style="background:var(--person);">{t('team.m4.initial')}</div>
+					<div class="avatar" style="background:var(--event);">{t('team.m4.initial')}</div>
 					<h3>{t('team.m4.name')}</h3>
 					<p class="role">{t('team.m4.role')}</p>
 					<p>{@html t('team.m4.affil')}</p>
