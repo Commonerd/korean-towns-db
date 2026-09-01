@@ -32,10 +32,10 @@ export function createMapStyle() {
 				type: 'raster',
 				tiles: CARTO_KEY
 					? [
-						  `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`,
-						  `https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`,
-						  `https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`,
-						  `https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?apiKey=${CARTO_KEY}`
+						  `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=${CARTO_KEY}`,
+						  `https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=${CARTO_KEY}`,
+						  `https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=${CARTO_KEY}`,
+						  `https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=${CARTO_KEY}`
 					  ]
 					: [
 						  'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
