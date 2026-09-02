@@ -1,10 +1,16 @@
 <script>
 	import { t } from '$lib/i18n/store.svelte.js';
-	let { value = 0, onChange = () => {} } = $props();
+	let {
+		value = 0,
+		onChange = () => {},
+		terrainMode = 'terrain',
+		onTerrainModeChange = () => {}
+	} = $props();
 	let collapsed = $state(true);
 
 	const dark = $derived(value > 0.5);
 	const pct = $derived(Math.round(value * 100));
+	const isFlat = $derived(terrainMode === 'flat');
 </script>
 
 <div class="map-panel dark-control" class:collapsed class:is-dark={dark}>
@@ -28,7 +34,23 @@
 		</span>
 	</button>
 	<div class="panel-body">
-		<div class="flex items-center gap-2">
+		<div class="mode-switch" role="tablist" aria-label="지도 표면 모드">
+			<button
+				type="button"
+				class:active={!isFlat}
+				onclick={() => onTerrainModeChange('terrain')}
+			>
+				현재 상태
+			</button>
+			<button
+				type="button"
+				class:active={isFlat}
+				onclick={() => onTerrainModeChange('flat')}
+			>
+				평면
+			</button>
+		</div>
+		<div class="flex items-center gap-2 mt-3">
 			<i class="fa-solid fa-sun text-amber-400 text-xs flex-shrink-0"></i>
 			<input
 				type="range"
@@ -124,6 +146,29 @@
 		transform: rotate(180deg);
 	}
 
+	.mode-switch {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 6px;
+		margin-top: 4px;
+	}
+	.mode-switch button {
+		padding: 6px 8px;
+		border-radius: 8px;
+		border: 1px solid #dbe3f0;
+		background: #f8fafc;
+		color: #475569;
+		font-size: 11px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+	.mode-switch button.active {
+		background: #eef2ff;
+		border-color: #c7d2fe;
+		color: #3730a3;
+	}
+
 	.dark-control.is-dark {
 		background: rgba(15, 23, 42, 0.9);
 		border-color: rgba(255, 255, 255, 0.08);
@@ -131,6 +176,16 @@
 	.dark-control.is-dark .panel-header-label,
 	.dark-control.is-dark .text-slate-400 {
 		color: #94a3b8 !important;
+	}
+	.dark-control.is-dark .mode-switch button {
+		background: rgba(30, 41, 59, 0.9);
+		border-color: rgba(148, 163, 184, 0.25);
+		color: #e2e8f0;
+	}
+	.dark-control.is-dark .mode-switch button.active {
+		background: rgba(99, 102, 241, 0.18);
+		border-color: rgba(165, 180, 252, 0.5);
+		color: #c7d2fe;
 	}
 
 	/* 슬라이더 (기존 #darkMapSlider 스타일 이식) */

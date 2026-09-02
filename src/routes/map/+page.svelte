@@ -40,6 +40,7 @@
 	let yearRangeMax = $state(initialYears.max);
 
 	let darkOpacity = $state(0);
+	let terrainMode = $state('terrain');
 	let syncing = $state(false);
 	let sidebarCollapsed = $state(true);
 	let zoom = $state(5);
@@ -207,6 +208,11 @@
 		}
 	}
 
+	function handleTerrainModeChange(mode) {
+		terrainMode = mode;
+		mapView?.setTerrainMode?.(mode);
+	}
+
 	async function callGemini(modelPrompt) {
 		chatHistory.push({ role: 'user', parts: [{ text: modelPrompt }] });
 		chatLoading = true;
@@ -330,6 +336,7 @@
 				{yearRangeMin}
 				{yearRangeMax}
 				{darkOpacity}
+				{terrainMode}
 				locale={getLocale()}
 				{onSelectTown}
 				onAskAI={askAI}
@@ -348,7 +355,12 @@
 			</button>
 
 			<ZoomHint {zoom} {dark} />
-			<DarkMapControl value={darkOpacity} onChange={(v) => (darkOpacity = v)} />
+			<DarkMapControl
+				value={darkOpacity}
+				onChange={(v) => (darkOpacity = v)}
+				terrainMode={terrainMode}
+				onTerrainModeChange={handleTerrainModeChange}
+			/>
 			<Legend {dark} />
 		</div>
 	</main>
