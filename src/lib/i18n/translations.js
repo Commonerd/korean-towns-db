@@ -100,6 +100,7 @@ export const translations = {
 		'log.item4.body2': 'Svelte5와 MapLibre GL JS를 도입하고, GPU 렌더링을 사용해 시각화를 부드럽게 개선했습니다.',
 		'log.item5.body': '데이터 이용약관을 CC BY 4.0으로 공개하고, 각 항목에 최종 수정자와 수정 내용을 표기했습니다.',
 		'log.item6.body': '모바일 레이아웃을 정리했습니다 — 검색 패널과 지도 컨트롤이 화면 크기에 맞게 보이도록 개선했습니다.',
+		'log.item7.body': '지도에서 지형 고도와 평면 모드를 직접 전환할 수 있게 했습니다. 하단 지도 스타일 패널에서 즉시 변경할 수 있습니다.',
 
 		'data.eyebrow': '데이터와 방법론',
 		'data.h2': '출처가 곧 데이터의 중심입니다',
@@ -216,6 +217,8 @@ export const translations = {
 		'darkmap.toggle': '지도 스타일 패널 접기/펼치기',
 		'darkmap.light': '밝음',
 		'darkmap.dark': '어두움',
+		'darkmap.mode.current': '현재 상태',
+		'darkmap.mode.flat': '평면',
 
 		'aiPanel.title': 'AI 연구 보조원',
 		'aiPanel.close': 'AI 보조원 닫기',
@@ -415,6 +418,7 @@ export const translations = {
 		'log.item4.body2': 'Adopted Svelte 5 and MapLibre GL JS, using GPU rendering to make the visualization smoother.',
 		'log.item5.body': 'Published our data usage terms under CC BY 4.0, and each record now credits its last editor and what was changed.',
 		'log.item6.body': 'Cleaned up the mobile layout — the search panel and map controls now fit properly on smaller screens.',
+		'log.item7.body': 'Added map terrain and flat-mode switching. You can toggle between the terrain and flat view directly from the bottom map style panel.',
 
 		'data.eyebrow': 'Data & methodology',
 		'data.h2': 'Sources are the heart of the data',
@@ -532,6 +536,8 @@ export const translations = {
 		'darkmap.toggle': 'Collapse/expand map style panel',
 		'darkmap.light': 'Light',
 		'darkmap.dark': 'Dark',
+		'darkmap.mode.current': 'Current state',
+		'darkmap.mode.flat': 'Flat',
 
 		'aiPanel.title': 'AI Research Assistant',
 		'aiPanel.close': 'Close AI assistant',
@@ -731,6 +737,7 @@ export const translations = {
 		'log.item4.body2': 'Svelte 5とMapLibre GL JSを導入し、GPUレンダリングによって可視化を滑らかに改善しました。',
 		'log.item5.body': 'データ利用規約をCC BY 4.0で公開し、各項目に最終更新者と更新内容を表示するようにしました。',
 		'log.item6.body': 'モバイルレイアウトを整理しました — 検索パネルと地図コントロールが画面サイズに合わせて表示されるよう改善しました。',
+		'log.item7.body': '地図で地形の高度と平面モードを直接切り替えられるようにしました。下部の地図スタイルパネルからすぐ切り替えられます。',
 
 		'data.eyebrow': 'データと方法論',
 		'data.h2': '出典こそがデータの中心です',
@@ -848,6 +855,8 @@ export const translations = {
 		'darkmap.toggle': '地図スタイルパネルを折りたたむ/開く',
 		'darkmap.light': '明るい',
 		'darkmap.dark': '暗い',
+		'darkmap.mode.current': '現在の状態',
+		'darkmap.mode.flat': '平面',
 
 		'aiPanel.title': 'AI研究アシスタント',
 		'aiPanel.close': 'AIアシスタントを閉じる',
@@ -1047,6 +1056,7 @@ export const translations = {
 		'log.item4.body2': 'Внедрили Svelte 5 и MapLibre GL JS, применив рендеринг на GPU для более плавной визуализации.',
 		'log.item5.body': 'Опубликовали условия использования данных по лицензии CC BY 4.0; теперь в каждой записи указаны последний редактор и суть изменений.',
 		'log.item6.body': 'Привели в порядок мобильную вёрстку — панель поиска и элементы управления картой теперь корректно отображаются на небольших экранах.',
+		'log.item7.body': 'Добавили переключение между режимами рельефа и плоской карты. Переключение доступно прямо в нижней панели стиля карты.',
 
 		'data.eyebrow': 'Данные и методология',
 		'data.h2': 'Источники — это сердце данных',
@@ -1164,6 +1174,8 @@ export const translations = {
 		'darkmap.toggle': 'Свернуть/развернуть панель стиля карты',
 		'darkmap.light': 'Светлая',
 		'darkmap.dark': 'Тёмная',
+		'darkmap.mode.current': 'Текущее состояние',
+		'darkmap.mode.flat': 'Плоский',
 
 		'aiPanel.title': 'ИИ-ассистент по исследованиям',
 		'aiPanel.close': 'Закрыть ИИ-ассистента',
@@ -1363,6 +1375,7 @@ export const translations = {
 		'log.item4.body2': '引入 Svelte 5 与 MapLibre GL JS，采用 GPU 渲染使可视化更为流畅。',
 		'log.item5.body': '已将数据使用条款以 CC BY 4.0 公开，并在每条记录中标注最后修改者与修改内容。',
 		'log.item6.body': '整理了移动端布局 —— 搜索面板与地图控件现在能根据屏幕大小正确显示。',
+		'log.item7.body': '新增了地图地形与平面模式切换。可直接在底部地图样式面板中进行切换。',
 
 		'data.eyebrow': '数据与方法',
 		'data.h2': '出处即数据的核心',
@@ -1480,6 +1493,8 @@ export const translations = {
 		'darkmap.toggle': '折叠/展开地图样式面板',
 		'darkmap.light': '明亮',
 		'darkmap.dark': '暗色',
+		'darkmap.mode.current': '当前状态',
+		'darkmap.mode.flat': '平面',
 
 		'aiPanel.title': 'AI 研究助手',
 		'aiPanel.close': '关闭 AI 助手',

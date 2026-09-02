@@ -40,14 +40,14 @@
 				class:active={!isFlat}
 				onclick={() => onTerrainModeChange('terrain')}
 			>
-				현재 상태
+				{t('darkmap.mode.current')}
 			</button>
 			<button
 				type="button"
 				class:active={isFlat}
 				onclick={() => onTerrainModeChange('flat')}
 			>
-				평면
+				{t('darkmap.mode.flat')}
 			</button>
 		</div>
 		<div class="flex items-center gap-2 mt-3">

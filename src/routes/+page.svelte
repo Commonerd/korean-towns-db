@@ -333,6 +333,13 @@
 						<p>{t('log.item6.body')}</p>
 					</div>
 				</div>
+				<div class="log-item" use:reveal>
+					<div class="log-date">2026.09.02</div>
+					<div class="log-body">
+						<span class="log-tag next">{t('log.tag.feature')}</span>
+						<p>{t('log.item7.body')}</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	</section>
