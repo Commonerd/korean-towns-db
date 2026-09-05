@@ -122,7 +122,12 @@
 				<strong>전체 데이터 내려받기</strong>
 				<p>좌표를 가진 노드 전체를 GeoJSON(WGS84)으로 내보냅니다. QGIS·ArcGIS 등 GIS 도구에서 바로 열 수 있습니다.</p>
 			</div>
-			<a class="license-download-btn" href="/nodes.geojson" download data-sveltekit-reload>
+			<a
+				class="license-download-btn"
+				href="/nodes.geojson"
+				download="korean-towns-db-{data.generated}.geojson"
+				data-sveltekit-reload
+			>
 				<i class="fa-solid fa-download" aria-hidden="true"></i>
 				nodes.geojson
 			</a>
