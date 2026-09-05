@@ -13,6 +13,11 @@ import { spreadsheetId } from '$lib/config.js';
 import { loadGoogleSheetsData } from '$lib/data/sheets.js';
 import { buildIndex } from '$lib/data/relations.js';
 
+/* 빌드 시각(YYYY-MM-DD). 모듈이 처음 로드될 때 한 번만 확정되므로 빌드 전체가 같은 값을
+   공유한다. GeoJSON 내보내기의 `generated` 필드와 다운로드 파일명이 어긋나지 않게 하려고
+   날짜 계산을 여기 한 곳으로 모았다. */
+export const BUILD_DATE = new Date().toISOString().slice(0, 10);
+
 let cached = null;
 
 /** @returns {Promise<{nodes: any[], index: any}>} */
