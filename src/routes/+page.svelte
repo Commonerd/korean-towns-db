@@ -39,11 +39,14 @@
 	   복사할 값은 공개 절대 URL 이어야 하므로 absUrl 을 쓴다(로컬 주소를 주면 안 됨). */
 	let copied = $state(false);
 	async function copyGeojsonUrl() {
+		// 클릭했다는 사실은 클립보드 결과와 무관하게 기록한다.
+		// (writeText 가 NotAllowedError 등으로 실패하면 이 함수 자체가 중단돼
+		//  트래킹까지 같이 유실되는 버그가 있었다 — 분리해서 항상 기록되게 한다)
+		track('copy-url');
 		try {
 			await navigator.clipboard.writeText(absUrl('/nodes.geojson'));
 			copied = true;
 			setTimeout(() => (copied = false), 2400);
-			track('copy-url');
 		} catch {
 			/* 클립보드 권한이 없으면(비 HTTPS 등) 조용히 무시 */
 		}
@@ -1769,3 +1772,4 @@
 		color: var(--ink-faint);
 	}
 </style>
+ 
