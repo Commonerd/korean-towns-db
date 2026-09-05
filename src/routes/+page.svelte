@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { reveal } from '$lib/actions/reveal.js';
+	import { absUrl } from '$lib/config.js';
 	import { t, getLocale } from '$lib/i18n/store.svelte.js';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import { COLLECTIONS } from '$lib/data/collections.js';
@@ -398,6 +399,10 @@
 					</ul>
 
 					<div class="copyright-note">{t('data.copyright')}</div>
+					<a class="btn btn--ghost btn--sm data-export-link" href={absUrl('/nodes.geojson')}>
+						<i class="fa-solid fa-download" aria-hidden="true"></i>
+						{t('data.geojson')}
+					</a>
 				</div>
 			</div>
 
@@ -1452,6 +1457,9 @@
 		font-size: 0.72rem;
 		color: var(--ink-faint);
 		white-space: nowrap;
+	}
+	.data-export-link {
+		margin-top: 0.9rem;
 	}
 	.copyright-note {
 		margin-top: 1.4rem;
