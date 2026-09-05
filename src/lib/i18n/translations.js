@@ -1668,3 +1668,4 @@ export function localized(node, field, locale) {
 	if (bag && bag[locale]) return bag[locale];
 	return node[field] || '';
 }
+ 
