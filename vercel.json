@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    {
+      "source": "/nodes.geojson",
+      "headers": [
+        { "key": "content-type", "value": "application/geo+json; charset=utf-8" },
+        { "key": "content-disposition", "value": "attachment; filename=\"korean-towns-db.geojson\"" },
+        { "key": "access-control-allow-origin", "value": "*" },
+        { "key": "cache-control", "value": "public, max-age=3600" }
+      ]
+    }
+  ]
+}
