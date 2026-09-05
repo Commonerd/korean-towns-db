@@ -117,6 +117,17 @@
 			</div>
 		</div>
 
+		<div class="license-download">
+			<div>
+				<strong>전체 데이터 내려받기</strong>
+				<p>좌표를 가진 노드 전체를 GeoJSON(WGS84)으로 내보냅니다. QGIS·ArcGIS 등 GIS 도구에서 바로 열 수 있습니다.</p>
+			</div>
+			<a class="license-download-btn" href={absUrl('/nodes.geojson')}>
+				<i class="fa-solid fa-download" aria-hidden="true"></i>
+				nodes.geojson
+			</a>
+		</div>
+
 		<h2 class="archive-h2">허용되는 것</h2>
 		<div class="archive-body">
 			<p>출처를 표시하는 한, 다음이 모두 허용됩니다. 조건을 지키는 한 이 권리는 취소되지 않습니다.</p>
@@ -276,6 +287,49 @@ https://korean-towns-db.vercel.app/ (접속일: YYYY-MM-DD).</pre>
 		font-size: 14.5px;
 		color: var(--ink-soft);
 		word-break: keep-all;
+	}
+
+	.license-download {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		background: var(--bg-soft, #f8fafc);
+		padding: 16px 20px;
+		margin-bottom: 32px;
+	}
+	.license-download strong {
+		display: block;
+		font-size: 15px;
+		color: var(--navy-deep);
+		margin-bottom: 2px;
+	}
+	.license-download p {
+		margin: 0;
+		font-size: 13.5px;
+		color: var(--ink-soft);
+	}
+	.license-download-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		flex-shrink: 0;
+		background: var(--accent);
+		color: #fff;
+		font-family: var(--font-mono);
+		font-size: 13.5px;
+		font-weight: 700;
+		padding: 10px 16px;
+		border-radius: var(--radius-sm);
+		text-decoration: none;
+		white-space: nowrap;
+		transition: opacity 0.15s;
+	}
+	.license-download-btn:hover {
+		opacity: 0.85;
 	}
 
 	.license-allow {
