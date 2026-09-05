@@ -3,41 +3,41 @@
    실측하면 노드 1100여 건이 약 190만 자(= 150만 토큰 이상)라서 Gemini 요청이
    컨텍스트 한도를 넘겨 그대로 실패하거나 응답 없이 멈췄다.
 
-   용량의 대부분은 AI 답변에 쓸모없는 부분이었다:
-     - nameI18n/descriptionI18n : 같은 내용을 5개 언어로 중복 (약 54만 자)
-     - JSON 키 이름이 노드마다 반복 (약 45만 자)
+   ⚠️ 한 번은 "모든 노드에 작성자·수정자·수정내용·좌표·주소·출처·위치근거까지
+      전부" 넣어본 적이 있다. Gemini 2.5/3.6 Flash 의 컨텍스트 윈도우(100만 토큰)는
+      넉넉히 통과했지만(실측 약 21.6만 토큰), 무료 API 등급의 "분당 입력 토큰
+      한도"(gemini-3.6-flash 기준 250,000 토큰/분)를 첫 질문 한 번으로 86% 넘게
+      써버려서, 곧이어 두 번째 질문을 하면 바로 429(RESOURCE_EXHAUSTED)가 났다.
+      컨텍스트 윈도우와 분당 처리량 한도는 별개이니 둘 다 확인해야 한다.
 
-   그래서 JSON 대신 "구분자 한 줄 = 노드 하나" 형식으로 직렬화한다.
-   작성자·수정자·수정내용·좌표·주소·출처·위치근거까지 전부 포함해도
-   실측 1112건 전체가 약 29만 자(≈ 22만 토큰)로, Gemini 2.5 Flash 의
-   100만 토큰 한도의 약 1/5 수준이라 여유가 크다.
-   (2026-09 실측: 289,894자 → promptTokenCount 219,794)
-
-   그래도 데이터가 계속 늘어날 것에 대비해 글자수 예산(CONTEXT_CHAR_BUDGET)을
-   두고, 예산을 넘으면 아래 순서로 자동 축소한다:
-     설명 길이 축소 → 설명 생략(다른 필드는 유지) → 관련도 낮은 노드는 이름만
-     → 그래도 넘치면 건수만 표기.
-   출처·주소·좌표 등 요청된 필드는 이 축소 단계에서 잘리지 않는다
-   (단, 서지 인용문이 극단적으로 긴 이상치 하나가 예산을 독식하는 것만
-    SOURCE_HARD_CAP 으로 방지한다). */
+   그래서 지금은 두 단계로 나눈다:
+     1) 질문/선택 항목과 관련도 높은 노드(MAX_DETAIL_NODES 건)만 출처·주소·
+        좌표·위치근거·작성자·수정자·수정내용까지 상세로 싣는다.
+     2) 나머지 노드는 유형·이름·연도·소속마을·속성·설명만 간략히 싣는다
+        (예산이 부족하면 설명부터 단계적으로 줄인다).
+   이렇게 하면 1112건 전체를 담아도 한국어 기준 약 8만 자(≈6만 토큰) 안팎이라
+   분당 한도의 1/4 수준이라, 같은 1분 안에 여러 번 질문해도 여유가 있다. */
 
 import { DATA_LOCALES } from '$lib/data/sheets.js';
 
 /* 시스템 프롬프트에 실을 데이터 컨텍스트의 최대 글자수.
-   45만 자 ≈ 34만 토큰 안팎. 현재 데이터(전체 필드 포함 29만 자)보다
-   넉넉히 크게 잡아, 데이터가 지금의 1.5배로 늘어나도 축소 없이 전부
-   들어가게 하면서 Gemini 2.5 Flash 100만 토큰 한도에는 충분한 여유
-   (대화 기록·질문·응답 토큰 몫)를 남긴다. */
-export const CONTEXT_CHAR_BUDGET = 450_000;
+   15만 자 ≈ 11만 토큰 안팎. 분당 25만 토큰 한도 안에서 대화 한 번에 여러 질문을
+   주고받을 수 있도록 여유를 남긴 값이다(다국어 설명이 더 긴 언어에서도 안전하게). */
+export const CONTEXT_CHAR_BUDGET = 150_000;
 
-/* 서지 인용문 한 건이 비정상적으로 길어 예산을 독식하는 것만 막는 안전장치.
-   현재 데이터의 출처 평균 길이(약 100자)보다 한참 넉넉하다. */
+/* 질문/선택 항목과 관련된 노드만 출처·주소·위치근거·작성자 등까지 붙여 상세로 싣는다.
+   나머지 수백~수천 건까지 상세를 다 실으면 분당 토큰 한도를 넘기므로,
+   "지금 필요한 만큼만 깊게, 나머지는 넓게" 원칙으로 예산을 지킨다. */
+const MAX_DETAIL_NODES = 40;
+const DETAIL_BUDGET_RATIO = 0.6;
+
+/* 서지 인용문 한 건이 비정상적으로 길어 예산을 독식하는 것만 막는 안전장치. */
 const SOURCE_HARD_CAP = 1200;
 
 const DESC_NONE = -1;
 
 /* 설명 자르기 단계 — 예산에 맞을 때까지 위에서부터 시도한다.
-   0 = 자르지 않음, -1 = 설명 자체를 싣지 않음(다른 필드는 그대로 유지). */
+   0 = 자르지 않음, -1 = 설명 자체를 싣지 않음(이름·관계 위주). */
 const DESC_LIMITS = [0, 400, 200, 100, DESC_NONE];
 
 /* 파이프 구분 형식이 깨지지 않도록 값에서 개행/구분자를 제거 */
@@ -96,20 +96,23 @@ function attrs(n) {
 	return out.join(' ');
 }
 
-/* 노드 한 줄: 유형|이름|연도|소속마을|속성|설명 뒤에 메타 필드를
-   " ／ 라벨:값" 형식으로 이어 붙인다. descLimit 만 예산에 따라 줄어들고
-   나머지 필드(주소·좌표·출처·작성자 등)는 항상 그대로 싣는다. */
-function nodeLine(n, locale, descLimit) {
-	const parts = [
-		[
-			typeLabel(n),
-			nodeName(n, locale),
-			years(n),
-			clean(n.relatedTownAll || n.relatedTown),
-			attrs(n),
-			cut(nodeDesc(n, locale), descLimit)
-		].join('|')
-	];
+/* 목록용 한 줄: 유형|이름|연도|소속마을|속성|설명 */
+function compactLine(n, locale, descLimit) {
+	return [
+		typeLabel(n),
+		nodeName(n, locale),
+		years(n),
+		clean(n.relatedTownAll || n.relatedTown),
+		attrs(n),
+		cut(nodeDesc(n, locale), descLimit)
+	].join('|');
+}
+
+/* 상세용: 목록 줄에 주소·좌표·위치확실성·위치근거·출처·작성자·수정자·수정내용을
+   이어 붙인다. 질문과 직접 관련된 소수 노드에만 쓴다(전체에 쓰면 분당 토큰
+   한도를 넘긴다 — 파일 위 설명 참고). */
+function detailLine(n, locale) {
+	const parts = [compactLine(n, locale, 0)];
 	if (n.address) parts.push(`주소:${clean(n.address)}`);
 	if (n.lat && n.lng) parts.push(`좌표:${Number(n.lat).toFixed(4)},${Number(n.lng).toFixed(4)}`);
 	if (n.locationPrecision) parts.push(`위치확실성:${clean(n.locationPrecision)}`);
@@ -123,8 +126,7 @@ function nodeLine(n, locale, descLimit) {
 
 /* ====== 관련도 점수 ======
    질문에 나온 낱말과 지금 지도에서 고른 마을을 기준으로 점수를 매긴다.
-   전체가 예산 안에 들어가는 한 정렬 순서일 뿐이지만, 예산이 부족해
-   잘라내야 할 때는 이 점수 낮은 순으로 먼저 빠진다. */
+   예산이 부족해 잘라내야 할 때 무엇을 남길지, 어떤 노드를 상세로 실을지 정한다. */
 function tokenize(question) {
 	return [
 		...new Set(
@@ -213,19 +215,33 @@ export function buildDataContext(rawData, options = {}) {
 	const summary = buildSummary(nodes);
 	const terms = tokenize(question);
 
-	// 질문/선택 항목과 관련도 높은 노드를 앞쪽에 둔다 (예산 초과로 잘라낼 때 이 순서가 기준).
 	const ranked = nodes
 		.map((n) => ({ n, score: scoreNode(n, terms, focusName) }))
 		.sort((a, b) => b.score - a.score || a.n.id - b.n.id);
 
-	const listBudget = budget - summary.length - 400; // 400 = 머리말/범례 여유
+	/* 1) 질문과 직접 관련된 노드만 출처·주소·작성자 등까지 붙여 상세로 */
+	const detailBudget = Math.floor(budget * DETAIL_BUDGET_RATIO);
+	const detailIds = new Set();
+	const detailLines = [];
+	let detailChars = 0;
+	for (const { n, score } of ranked) {
+		if (detailLines.length >= MAX_DETAIL_NODES) break;
+		if (score < 3) break; // 관련 없는 노드까지 상세로 싣지 않는다
+		const line = detailLine(n, locale);
+		if (detailChars + line.length > detailBudget) break;
+		detailLines.push(line);
+		detailChars += line.length + 1;
+		detailIds.add(n.id);
+	}
 
-	/* 1) 설명 길이를 단계적으로 줄여가며 예산에 맞는지 확인한다.
-	   주소·좌표·출처·작성자 등 나머지 필드는 이 단계에서 손대지 않는다. */
+	/* 2) 나머지 전체 목록 — 예산에 맞을 때까지 설명 길이를 단계적으로 줄인다 */
+	const rest = ranked.filter(({ n }) => !detailIds.has(n.id));
+	const listBudget = budget - detailChars - summary.length - 700; // 700 = 머리말/범례 여유
+
 	let listLines = null;
 	let usedLimit = 0;
 	for (const limit of DESC_LIMITS) {
-		const lines = ranked.map(({ n }) => nodeLine(n, locale, limit));
+		const lines = rest.map(({ n }) => compactLine(n, locale, limit));
 		if (lines.reduce((sum, l) => sum + l.length + 1, 0) <= listBudget) {
 			listLines = lines;
 			usedLimit = limit;
@@ -233,22 +249,22 @@ export function buildDataContext(rawData, options = {}) {
 		}
 	}
 
-	/* 2) 설명을 다 지워도 넘치면 관련도 낮은 노드는 이름만, 그래도 넘치면 건수만 */
+	/* 3) 설명을 다 지워도 넘치면 관련도 낮은 노드는 이름만, 그래도 넘치면 건수만 */
 	let omittedNote = '';
 	if (!listLines) {
 		usedLimit = DESC_NONE;
 		listLines = [];
 		let used = 0;
 		let i = 0;
-		for (; i < ranked.length; i++) {
-			const line = nodeLine(ranked[i].n, locale, DESC_NONE);
+		for (; i < rest.length; i++) {
+			const line = compactLine(rest[i].n, locale, DESC_NONE);
 			if (used + line.length + 1 > listBudget * 0.8) break;
 			listLines.push(line);
 			used += line.length + 1;
 		}
 		const namesOnly = [];
-		for (; i < ranked.length; i++) {
-			const label = `${typeLabel(ranked[i].n)}:${nodeName(ranked[i].n, locale)}`;
+		for (; i < rest.length; i++) {
+			const label = `${typeLabel(rest[i].n)}:${nodeName(rest[i].n, locale)}`;
 			if (used + label.length + 2 > listBudget) break;
 			namesOnly.push(label);
 			used += label.length + 2;
@@ -256,7 +272,7 @@ export function buildDataContext(rawData, options = {}) {
 		if (namesOnly.length) {
 			listLines.push(`\n[이름만 수록 — 상세는 질문하면 조회 가능]\n${namesOnly.join(', ')}`);
 		}
-		const dropped = ranked.length - i;
+		const dropped = rest.length - i;
 		if (dropped > 0) {
 			omittedNote = `\n⚠️ 컨텍스트 한도로 ${dropped}건은 이번 답변에 포함되지 않았습니다. 해당 항목을 물어보면 다음 질문에서 우선 포함됩니다.`;
 		}
@@ -266,15 +282,17 @@ export function buildDataContext(rawData, options = {}) {
 		usedLimit === 0
 			? '설명은 원문 전체'
 			: usedLimit === DESC_NONE
-				? '설명 생략(다른 필드는 유지)'
+				? '설명 생략(이름·관계 위주)'
 				: `설명은 ${usedLimit}자까지만 수록`;
 
 	return [
 		'[DB 요약]',
 		summary,
 		'',
-		`[형식] 유형|이름|연도|소속마을|속성|설명 ／ 주소 ／ 좌표 ／ 위치확실성 ／ 위치근거 ／ 출처 ／ 작성자 ／ 수정자 ／ 수정내용`,
-		`(각 필드는 자료가 있을 때만 표시됩니다. ${descNote}. 질문/선택 항목과 관련도 높은 순으로 정렬됨)`,
+		`[형식] 유형|이름|연도|소속마을|속성|설명  (빈 칸은 자료 없음, ${descNote})`,
+		detailLines.length
+			? `\n[질문 관련 항목 — 출처·주소·좌표·작성자 등 포함]\n${detailLines.join('\n')}`
+			: '',
 		`\n[전체 목록 ${listLines.length}줄]\n${listLines.join('\n')}`,
 		omittedNote
 	]
