@@ -12,11 +12,12 @@ const MODEL = 'gemini-3.6-flash';
    최근 대화만 남긴다 (user/model 합쳐 12개 = 6턴). */
 const MAX_HISTORY_TURNS = 12;
 
-/* 답변 길이 상한. 2.5 Flash 는 기본적으로 "생각"에 출력 토큰을 쓰므로
-   thinkingBudget 을 0 으로 두어 답변이 통째로 잘려 빈 응답이 되는 것을 막는다.
-   (추론 품질을 더 원하면 thinkingBudget 을 512~2048 로 올리고
-    maxOutputTokens 도 함께 올리면 된다.) */
-const MAX_OUTPUT_TOKENS = 4096;
+/* 답변 길이 상한. gemini-3.6-flash 는 thinkingConfig 자체를 거부해서
+   (아래 post() 의 재시도 로직 참고) thinkingBudget 을 0 으로 강제할 수 없고,
+   "생각"에 쓰는 토큰도 이 상한을 함께 소모한다. 실측으로 생각에만
+   2000~3000 토큰을 쓰는 경우가 있어, 4096 이면 답변이 MAX_TOKENS 로 잘리는
+   사례가 나왔다. 8192 로 올려 그 여유를 확보했다. */
+const MAX_OUTPUT_TOKENS = 8192;
 const THINKING_BUDGET = 0;
 
 /* ====== Gemini AI ======
@@ -79,6 +80,9 @@ ${dataContext}
 
 		if (result?.error?.code === 403) {
 			return { status: 'forbidden', text: t('ai.forbidden') };
+		}
+		if (result?.error?.code === 429) {
+			return { status: 'rate-limited', text: t('ai.rateLimit') };
 		}
 		// 원인 파악용 — 사용자에게는 일반 오류 메시지를 보여준다
 		console.error('[Gemini] 응답에서 텍스트를 찾지 못했습니다', result);
