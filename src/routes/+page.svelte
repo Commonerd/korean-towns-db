@@ -359,6 +359,13 @@
 						<p>{t('log.item7.body')}</p>
 					</div>
 				</div>
+				<div class="log-item" use:reveal>
+					<div class="log-date">2026.09.05</div>
+					<div class="log-body">
+						<span class="log-tag data">{t('log.tag.data')}</span>
+						<p>{t('log.item8.body')}</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -1772,4 +1779,3 @@
 		color: var(--ink-faint);
 	}
 </style>
- 
