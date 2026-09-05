@@ -250,6 +250,7 @@ export const translations = {
 		'ai.langInstruction': '반드시 한국어로 답변하세요.',
 		'ai.noKey': 'Gemini API 키가 설정되지 않았습니다. .env 의 VITE_GEMINI_API_KEY 를 확인하세요.',
 		'ai.forbidden': "⚠️ <b>API 접근 권한 거부(403 Error)</b>: Google Cloud 콘솔의 'API 및 서비스 > 사용자 인증 정보'에서 사용 중인 API 키의 제한사항을 <b>'키 제한 안함'</b>으로 변경하거나, <b>'Generative Language API'</b>를 명시적으로 허용해 주셔야 해결됩니다.",
+		'ai.rateLimit': "⚠️ <b>일시적으로 요청이 많습니다(429 Error)</b>: 무료 API 등급의 분당 처리량 한도를 넘었습니다. 10~30초 정도 기다렸다가 다시 시도해 주세요.",
 		'ai.error': '자료를 분석하는 중에 에러가 발생했습니다.',
 		'ai.network': '네트워크 통신 오류가 발생했습니다.',
 
@@ -569,6 +570,7 @@ export const translations = {
 		'ai.langInstruction': 'You must respond in English.',
 		'ai.noKey': 'The Gemini API key is not set. Please check VITE_GEMINI_API_KEY in your .env file.',
 		'ai.forbidden': "⚠️ <b>API access denied (403 Error)</b>: In the Google Cloud console under 'APIs & Services > Credentials', change the restrictions on your API key to <b>'No restrictions'</b>, or explicitly allow the <b>'Generative Language API'</b>.",
+		'ai.rateLimit': "⚠️ <b>Too many requests right now (429 Error)</b>: You've hit the free API tier's per-minute limit. Please wait 10–30 seconds and try again.",
 		'ai.error': 'An error occurred while analyzing the material.',
 		'ai.network': 'A network communication error occurred.',
 
@@ -888,6 +890,7 @@ export const translations = {
 		'ai.langInstruction': '必ず日本語で回答してください。',
 		'ai.noKey': 'Gemini APIキーが設定されていません。.env の VITE_GEMINI_API_KEY を確認してください。',
 		'ai.forbidden': "⚠️ <b>APIアクセス拒否（403 Error）</b>: Google Cloudコンソールの「APIとサービス > 認証情報」で、使用中のAPIキーの制限を <b>「制限なし」</b> に変更するか、<b>「Generative Language API」</b> を明示的に許可してください。",
+		'ai.rateLimit': "⚠️ <b>現在リクエストが集中しています（429 Error）</b>: 無料APIプランの1分あたりの処理上限に達しました。10〜30秒ほど待ってから再度お試しください。",
 		'ai.error': '資料を分析中にエラーが発生しました。',
 		'ai.network': 'ネットワーク通信エラーが発生しました。',
 
@@ -1207,6 +1210,7 @@ export const translations = {
 		'ai.langInstruction': 'Отвечайте только на русском языке.',
 		'ai.noKey': 'Ключ Gemini API не задан. Проверьте VITE_GEMINI_API_KEY в файле .env.',
 		'ai.forbidden': "⚠️ <b>Доступ к API запрещён (403 Error)</b>: в консоли Google Cloud в разделе «API и сервисы > Учётные данные» измените ограничения используемого ключа API на <b>«Без ограничений»</b> или явно разрешите <b>«Generative Language API»</b>.",
+		'ai.rateLimit': "⚠️ <b>Слишком много запросов (429 Error)</b>: превышен лимит бесплатного тарифа API в минуту. Подождите 10–30 секунд и попробуйте снова.",
 		'ai.error': 'При анализе материала произошла ошибка.',
 		'ai.network': 'Произошла ошибка сетевого соединения.',
 
@@ -1526,6 +1530,7 @@ export const translations = {
 		'ai.langInstruction': '请务必用中文回答。',
 		'ai.noKey': '尚未设置 Gemini API 密钥。请检查 .env 中的 VITE_GEMINI_API_KEY。',
 		'ai.forbidden': "⚠️ <b>API 访问被拒绝（403 Error）</b>：请在 Google Cloud 控制台的「API 和服务 > 凭据」中，将所用 API 密钥的限制改为 <b>「不限制密钥」</b>，或明确允许 <b>「Generative Language API」</b>。",
+		'ai.rateLimit': "⚠️ <b>请求过多（429 Error）</b>：已超出免费版 API 每分钟处理上限。请等待 10~30 秒后重试。",
 		'ai.error': '分析资料时发生错误。',
 		'ai.network': '发生网络通信错误。',
 
