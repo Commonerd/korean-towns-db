@@ -94,3 +94,4 @@ function hostOf(value) {
 		return '';
 	}
 }
+ 
