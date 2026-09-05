@@ -1,6 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
 	import { reveal } from '$lib/actions/reveal.js';
+	import { absUrl } from '$lib/config.js';
+	import { track } from '$lib/track.js';
 	import { t, getLocale } from '$lib/i18n/store.svelte.js';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import { COLLECTIONS } from '$lib/data/collections.js';
@@ -31,6 +33,20 @@
 
 	function closeNav() {
 		navOpen = false;
+	}
+
+	/* GeoJSON URL 복사 — kepler.gl 처럼 "URL 붙여넣기"를 지원하는 도구용.
+	   복사할 값은 공개 절대 URL 이어야 하므로 absUrl 을 쓴다(로컬 주소를 주면 안 됨). */
+	let copied = $state(false);
+	async function copyGeojsonUrl() {
+		try {
+			await navigator.clipboard.writeText(absUrl('/nodes.geojson'));
+			copied = true;
+			setTimeout(() => (copied = false), 2400);
+			track('copy-url');
+		} catch {
+			/* 클립보드 권한이 없으면(비 HTTPS 등) 조용히 무시 */
+		}
 	}
 </script>
 
@@ -401,15 +417,22 @@
 					<!-- download 에 파일명을 명시한다. 프리렌더된 배포본에는 +server.js 의
 					     content-disposition 헤더가 남지 않으므로(본문만 정적 파일로 저장됨),
 					     이 속성이 없으면 브라우저가 URL 에서 이름을 추측한다. -->
-					<a
-						class="btn btn--ghost btn--sm data-export-link"
-						href="/nodes.geojson"
-						download="korean-towns-db-{data.generated}.geojson"
-						data-sveltekit-reload
-					>
-						<i class="fa-solid fa-download" aria-hidden="true"></i>
-						{t('data.geojson')}
-					</a>
+					<div class="data-export-row">
+						<a
+							class="btn btn--ghost btn--sm"
+							href="/nodes.geojson"
+							download="korean-towns-db-{data.generated}.geojson"
+							data-sveltekit-reload
+							onclick={() => track('download-file')}
+						>
+							<i class="fa-solid fa-download" aria-hidden="true"></i>
+							{t('data.geojson')}
+						</a>
+						<button type="button" class="btn btn--ghost btn--sm" onclick={copyGeojsonUrl}>
+							<i class="fa-solid {copied ? 'fa-check' : 'fa-link'}" aria-hidden="true"></i>
+							{copied ? t('data.copied') : t('data.copyUrl')}
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -1465,7 +1488,10 @@
 		color: var(--ink-faint);
 		white-space: nowrap;
 	}
-	.data-export-link {
+	.data-export-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
 		margin-top: 0.9rem;
 	}
 	.copyright-note {
