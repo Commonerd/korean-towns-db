@@ -213,10 +213,12 @@
 		mapView?.setTerrainMode?.(mode);
 	}
 
-	async function callGemini(modelPrompt) {
+	/* focusName 은 AI 컨텍스트에서 우선 수록할 대상(지금 보고 있는 마을/항목)이다.
+	   전체 DB 를 다 넣을 수 없을 때 무엇을 남길지 정하는 기준이 된다. */
+	async function callGemini(modelPrompt, focusName = selectedTownName ?? '') {
 		chatHistory.push({ role: 'user', parts: [{ text: modelPrompt }] });
 		chatLoading = true;
-		const res = await fetchGeminiResponse(chatHistory, rawData);
+		const res = await fetchGeminiResponse(chatHistory, rawData, { focusName });
 		chatLoading = false;
 		if (res.status === 'ok') {
 			chatHistory.push({ role: 'model', parts: [{ text: res.text }] });
@@ -265,7 +267,7 @@
 
 		const prompt = `'${item.name}'(${item.type})에 대해 학술적·역사적 배경을 자세히 설명해 줘. (DB 기초 정보: ${item.description}).${attrContext}${relationContext}`;
 		pushUser(t('ai.askPush', { name: item.name }));
-		callGemini(prompt);
+		callGemini(prompt, item.type === '마을' ? item.name : item.relatedTown || item.name);
 	}
 </script>
 
