@@ -1,6 +1,6 @@
 import { COLLECTIONS } from '$lib/data/collections.js';
 import { nodesOfType } from '$lib/data/relations.js';
-import { loadNodeIndex } from '$lib/server/nodes.js';
+import { BUILD_DATE, loadNodeIndex } from '$lib/server/nodes.js';
 
 export const prerender = true;
 
@@ -8,6 +8,8 @@ export const prerender = true;
 export async function load() {
 	const { index } = await loadNodeIndex();
 	return {
-		counts: Object.fromEntries(COLLECTIONS.map((c) => [c.slug, nodesOfType(index, c.type).length]))
+		counts: Object.fromEntries(COLLECTIONS.map((c) => [c.slug, nodesOfType(index, c.type).length])),
+		/* GeoJSON 다운로드 버튼의 파일명에 쓰는 빌드 날짜 */
+		generated: BUILD_DATE
 	};
 }
