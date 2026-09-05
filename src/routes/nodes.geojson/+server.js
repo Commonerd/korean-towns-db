@@ -54,7 +54,12 @@ export async function GET() {
 			license: 'CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/',
 			attribution: '코리아타운 DB (Korean Diaspora Research Team)',
 			source: absUrl('/'),
-			generated: BUILD_DATE
+			generated: BUILD_DATE,
+			/* 이 파일만 따로 돌아다녀도 인용 방법이 함께 가도록 문구를 심어 둔다.
+			   각 피처의 url 필드는 원본 항목 페이지를 가리키므로, GIS 도구의 팝업에
+			   그 필드를 노출하면 사료 근거까지 되짚어 올 수 있다. */
+			citation: `코리아타운 DB (코리안 디아스포라 연구팀), CC BY 4.0, ${absUrl('/')} (${BUILD_DATE} 스냅샷)`,
+			featureUrlField: 'url'
 		},
 		features
 	};
