@@ -10,11 +10,12 @@
 	   공개 절대 URL 이어야 하므로 absUrl 을 쓴다. */
 	let copied = $state(false);
 	async function copyGeojsonUrl() {
+		// 클릭했다는 사실은 클립보드 결과와 무관하게 기록한다.
+		track('copy-url');
 		try {
 			await navigator.clipboard.writeText(absUrl('/nodes.geojson'));
 			copied = true;
 			setTimeout(() => (copied = false), 2400);
-			track('copy-url');
 		} catch {
 			/* 클립보드 권한이 없으면 조용히 무시 */
 		}
@@ -515,3 +516,4 @@ https://korean-towns-db.vercel.app/ (접속일: YYYY-MM-DD).</pre>
 		}
 	}
 </style>
+ 
