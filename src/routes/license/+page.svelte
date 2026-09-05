@@ -1,9 +1,24 @@
 <script>
 	import ArchiveShell from '$lib/components/ArchiveShell.svelte';
 	import { absUrl } from '$lib/config.js';
+	import { track } from '$lib/track.js';
 	import { jsonLdScript } from '$lib/util.js';
 
 	let { data } = $props();
+
+	/* GeoJSON URL 복사 — 주소 붙여넣기를 지원하는 웹 GIS 도구용.
+	   공개 절대 URL 이어야 하므로 absUrl 을 쓴다. */
+	let copied = $state(false);
+	async function copyGeojsonUrl() {
+		try {
+			await navigator.clipboard.writeText(absUrl('/nodes.geojson'));
+			copied = true;
+			setTimeout(() => (copied = false), 2400);
+			track('copy-url');
+		} catch {
+			/* 클립보드 권한이 없으면 조용히 무시 */
+		}
+	}
 
 	const canonical = absUrl('/license/');
 	const title = '이용약관 및 데이터 라이선스 | 코리아타운 DB';
@@ -120,17 +135,40 @@
 		<div class="license-download">
 			<div>
 				<strong>전체 데이터 내려받기</strong>
-				<p>좌표를 가진 노드 전체를 GeoJSON(WGS84)으로 내보냅니다. QGIS·ArcGIS 등 GIS 도구에서 바로 열 수 있습니다.</p>
+				<p>
+					좌표를 가진 노드 전체를 GeoJSON(WGS84)으로 내보냅니다. 파일로 받아 QGIS·ArcGIS 에
+					끌어다 놓거나, URL 을 복사해 kepler.gl·Felt 처럼 주소 붙여넣기를 지원하는 도구에
+					바로 넣을 수 있습니다.
+				</p>
 			</div>
-			<a
-				class="license-download-btn"
-				href="/nodes.geojson"
-				download="korean-towns-db-{data.generated}.geojson"
-				data-sveltekit-reload
-			>
-				<i class="fa-solid fa-download" aria-hidden="true"></i>
-				nodes.geojson
-			</a>
+			<div class="license-download-actions">
+				<a
+					class="license-download-btn"
+					href="/nodes.geojson"
+					download="korean-towns-db-{data.generated}.geojson"
+					data-sveltekit-reload
+					onclick={() => track('download-file')}
+				>
+					<i class="fa-solid fa-download" aria-hidden="true"></i>
+					파일 내려받기
+				</a>
+				<button type="button" class="license-download-btn is-ghost" onclick={copyGeojsonUrl}>
+					<i class="fa-solid {copied ? 'fa-check' : 'fa-link'}" aria-hidden="true"></i>
+					{copied ? '복사됨!' : 'URL 복사'}
+				</button>
+			</div>
+		</div>
+
+		<!-- 역방향 인용 회수: 남의 도구에서 만든 지도가 이 사이트로 돌아오게 하는 장치.
+		     각 피처가 이미 url 필드를 들고 있으므로, 팝업에 그 필드만 노출하면 된다. -->
+		<div class="license-tip">
+			<strong>GIS 도구에서 열 때</strong>
+			<p>
+				각 지점에는 <code>url</code>(원본 항목 페이지), <code>source</code>(사료 출처),
+				<code>locationPrecision</code>(위치 확실성 등급)이 함께 들어 있습니다.
+				팝업에 <code>url</code> 필드를 표시하도록 설정해 두면, 그 지도를 보는 사람이
+				근거 사료까지 되짚어 올 수 있습니다.
+			</p>
 		</div>
 
 		<h2 class="archive-h2">허용되는 것</h2>
@@ -335,6 +373,45 @@ https://korean-towns-db.vercel.app/ (접속일: YYYY-MM-DD).</pre>
 	}
 	.license-download-btn:hover {
 		opacity: 0.85;
+	}
+	.license-download-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		flex-shrink: 0;
+	}
+	.license-download-btn.is-ghost {
+		background: transparent;
+		color: var(--accent);
+		border: 1px solid var(--accent);
+		cursor: pointer;
+	}
+
+	.license-tip {
+		border: 1px dashed var(--line);
+		border-radius: var(--radius-sm);
+		padding: 14px 18px;
+		margin-bottom: 32px;
+	}
+	.license-tip strong {
+		display: block;
+		font-size: 14px;
+		color: var(--navy-deep);
+		margin-bottom: 4px;
+	}
+	.license-tip p {
+		margin: 0;
+		font-size: 13.5px;
+		line-height: 1.75;
+		color: var(--ink-soft);
+		word-break: keep-all;
+	}
+	.license-tip code {
+		font-family: var(--font-mono);
+		font-size: 0.92em;
+		background: #f1f5f9;
+		padding: 1px 5px;
+		border-radius: 4px;
 	}
 
 	.license-allow {
