@@ -61,3 +61,4 @@ function fail(message) {
 	if (dev) console.warn(full + ' (dev 모드라 빈 목록으로 계속합니다)');
 	return [];
 }
+ 
