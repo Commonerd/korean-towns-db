@@ -398,7 +398,15 @@
 					</ul>
 
 					<div class="copyright-note">{t('data.copyright')}</div>
-					<a class="btn btn--ghost btn--sm data-export-link" href="/nodes.geojson" download data-sveltekit-reload>
+					<!-- download 에 파일명을 명시한다. 프리렌더된 배포본에는 +server.js 의
+					     content-disposition 헤더가 남지 않으므로(본문만 정적 파일로 저장됨),
+					     이 속성이 없으면 브라우저가 URL 에서 이름을 추측한다. -->
+					<a
+						class="btn btn--ghost btn--sm data-export-link"
+						href="/nodes.geojson"
+						download="korean-towns-db-{data.generated}.geojson"
+						data-sveltekit-reload
+					>
 						<i class="fa-solid fa-download" aria-hidden="true"></i>
 						{t('data.geojson')}
 					</a>
