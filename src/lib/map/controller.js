@@ -65,7 +65,6 @@ export class MapController {
 		this.yearRangeMin = 1860;
 		this.yearRangeMax = 2026;
 		this.selectedTownName = null;
-		this.darkOpacity = 0;
 		this.locale = 'ko';
 
 		this._markers = []; // DOM 마커 (저줌 클러스터 상태): { marker, itemId? }
@@ -165,10 +164,6 @@ export class MapController {
 		if ('selectedTownName' in state && state.selectedTownName !== this.selectedTownName) {
 			this.selectedTownName = state.selectedTownName;
 			this._detailDirty = true;
-		}
-		if ('darkOpacity' in state && state.darkOpacity !== this.darkOpacity) {
-			this.darkOpacity = state.darkOpacity;
-			this._applyDark();
 		}
 		// 언어가 바뀌면 라벨·팝업 텍스트를 다시 만들어야 한다 (매칭 로직은 한국어 원문 유지)
 		if ('locale' in state && state.locale !== this.locale) {
@@ -911,14 +906,6 @@ export class MapController {
 			}
 		};
 		this._dashTimer = requestAnimationFrame(tick);
-	}
-
-	/* ====== 다크맵 블렌드 ====== */
-	_applyDark() {
-		if (this.map.getLayer('osm-light'))
-			this.map.setPaintProperty('osm-light', 'raster-opacity', 1 - this.darkOpacity);
-		if (this.map.getLayer('carto-dark'))
-			this.map.setPaintProperty('carto-dark', 'raster-opacity', this.darkOpacity);
 	}
 
 	/* ====== 포커스 (기존 focusOnMap 의 지도 이동 부분 이식) ====== */
