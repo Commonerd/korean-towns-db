@@ -104,6 +104,7 @@ export const translations = {
 		'log.item7.body': '지도에서 지형 고도와 평면 모드를 직접 전환할 수 있게 했습니다. 하단 지도 스타일 패널에서 즉시 변경할 수 있습니다.',
 		'log.item8.body': 'GeoJSON으로 데이터를 내려받아 GIS 프로그램에서 직접 활용할 수 있게 했습니다.',
 		'log.item9.body': '지도에 위성 사진 보기와 지명 표시 전환 기능을 추가했습니다.',
+		'log.item10.body': '지도 우클릭으로 위경도·거리·면적을 재는 임시 도구를 추가했습니다.',
 
 		'data.eyebrow': '데이터와 방법론',
 		'data.h2': '출처가 곧 데이터의 중심입니다',
@@ -442,6 +443,7 @@ export const translations = {
 		'log.item7.body': 'Added map terrain and flat-mode switching. You can toggle between the terrain and flat view directly from the bottom map style panel.',
 		'log.item8.body': 'Made GeoJSON data available for download and direct use in GIS programs.',
 		'log.item9.body': 'Added a satellite view and a labels toggle to the map.',
+		'log.item10.body': 'Added a temporary tool: right-click the map to measure coordinates, distance, and area.',
 
 		'data.eyebrow': 'Data & methodology',
 		'data.h2': 'Sources are the heart of the data',
@@ -781,6 +783,7 @@ export const translations = {
 		'log.item7.body': '地図で地形の高度と平面モードを直接切り替えられるようにしました。下部の地図スタイルパネルからすぐ切り替えられます。',
 		'log.item8.body': 'GeoJSONでデータをダウンロードしてGISプログラムで直接活用できるようにしました。',
 		'log.item9.body': '地図に衛星写真表示と地名表示切替機能を追加しました。',
+		'log.item10.body': '地図を右クリックして座標・距離・面積を測れる仮のツールを追加しました。',
 
 		'data.eyebrow': 'データと方法論',
 		'data.h2': '出典こそがデータの中心です',
@@ -1120,6 +1123,7 @@ export const translations = {
 		'log.item7.body': 'Добавили переключение между режимами рельефа и плоской карты. Переключение доступно прямо в нижней панели стиля карты.',
 		'log.item8.body': 'Сделали возможным скачивание GeoJSON и использование данных в ГИС-программах.',
 		'log.item9.body': 'На карту добавлены спутниковый вид и переключение подписей.',
+		'log.item10.body': 'Добавили временный инструмент: клик правой кнопкой по карте — координаты, расстояние и площадь.',
 
 		'data.eyebrow': 'Данные и методология',
 		'data.h2': 'Источники — это сердце данных',
@@ -1459,6 +1463,7 @@ export const translations = {
 		'log.item7.body': '新增了地图地形与平面模式切换。可直接在底部地图样式面板中进行切换。',
 		'log.item8.body': '提供了 GeoJSON 下载，可在 GIS 程序中直接使用数据。',
 		'log.item9.body': '地图新增卫星视图和地名标注开关功能。',
+		'log.item10.body': '地图新增临时工具，右键点击即可测量经纬度、距离与面积。',
 
 		'data.eyebrow': '数据与方法',
 		'data.h2': '出处即数据的核心',
