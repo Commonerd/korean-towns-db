@@ -17,7 +17,7 @@
 | 좌표 보유 | 마을 926/989 (94%) · 조직 99/99 · 사건 18/18 · 인물 4/6 |
 | 출처 기재 | 마을 973/989 (98%) · 조직 97/99 · 사건 17/18 |
 | 관계 연결 | 조직·인물·사건 123건 중 `related_town` 기재 **40건** → 관계가 붙은 마을은 983개 중 **7개** |
-| 코드 규모 | `src/` 약 10,400줄 (번역 사전 1,655줄 포함) |
+| 코드 규모 | `src/` 약 11,000줄 (번역 사전 1,700줄 포함) |
 | 타입 점검 | `npm run check` — 오류 0, 경고 2 (미사용 CSS 선택자 오탐) |
 
 > 노드 수는 시트가 바뀌면 함께 바뀝니다. 위 값은 현 시점 스냅샷입니다.
@@ -79,8 +79,14 @@ Vercel 등 어떤 정적 호스팅에도 그대로 올릴 수 있습니다. 런�
 | `VITE_SPREADSHEET_ID` | **필수** | 구글 스프레드시트 ID (towns/organizations/persons/events 시트) |
 | `VITE_GEMINI_API_KEY` | 선택 | AI 연구 보조원. 없으면 챗 패널이 안내 메시지만 표시 |
 | `VITE_SITE_URL` | 선택 | 정식 도메인 (canonical·og:url·sitemap 기준). 기본값 `https://korean-towns-db.vercel.app` |
-| `VITE_CARTO_API_KEY` | 선택 | CARTO 다크 타일 키. 없으면 키 없는 공개 엔드포인트 사용 |
-| `VITE_TRACK_URL` | 선택 | GeoJSON 사용 로그를 받을 Apps Script 웹앱 URL. 없으면 트래킹이 통째로 비활성 |
+| `VITE_CARTO_API_KEY` | **사실상 필수** | CARTO 다크·라벨없음 타일 키. **CARTO가 2024년부터 키를 요구하기 시작해서, 비어 있으면 지도가 아니라 "API KEY REQUIRED" 워터마크가 그대로 뜬다**(요청 자체는 200 OK라 에러로도 안 잡힌다). [cartodb.com](https://carto.com/) 무료 계정에서 발급 |
+| `TRACK_URL` | 선택 | GeoJSON 사용 로그를 받을 Apps Script 웹앱 URL. **`VITE_` 접두어 없음** — 서버(루트 `middleware.js`)만 읽는 값이라 클라이언트에 노출하면 안 된다. 없으면 트래킹이 통째로 비활성 |
+
+> **사용 로그는 전부 루트의 `middleware.js`(Vercel Routing Middleware)를 거칩니다.**
+> 브라우저는 같은 오리진의 `/track` 으로만 핑을 보내고, middleware 가 요청 IP 와 출처를
+> 붙여 시트로 중계합니다. `/nodes.geojson` 직접 요청(kepler.gl·QGIS 등)도 같은 방식으로
+> 잡힙니다. 시트 주소가 클라이언트 번들에 노출되지 않는 것이 이 구조의 요점입니다 —
+> 차단이 아니라 기록이며, 실제 공격 방어는 Vercel 의 기본 보호 기능에 맡깁니다.
 
 > **`VITE_SPREADSHEET_ID` 는 빌드 환경에도 반드시 있어야 합니다.** Vercel 프로젝트 설정 →
 > Environment Variables 에 등록하세요. 빌드 중 시트를 못 읽으면 상세 페이지 전체가 사라진 채
@@ -164,7 +170,7 @@ Vercel 등 어떤 정적 호스팅에도 그대로 올릴 수 있습니다. 런�
 | hreflang | `<link rel="alternate">` + sitemap `xhtml:link` | 없음 (단일 URL) |
 | 색인 | 언어별로 각각 색인됨 | 한국어 1장만 색인됨 |
 
-- 사전은 `translations.js` 한 곳(1,445개 키)에 모여 있습니다. 일부 값은 `<br>`/`<strong>`
+- 사전은 `translations.js` 한 곳(언어별 298개 키)에 모여 있습니다. 일부 값은 `<br>`/`<strong>`
   같은 HTML 을 포함하며 `{@html}` 로 렌더합니다.
 - 데이터 자체의 번역은 시트의 `name_*` / `description_*` 칼럼에서 옵니다. 비어 있으면
   한국어 원문으로 폴백합니다.
@@ -192,7 +198,8 @@ Vercel 등 어떤 정적 호스팅에도 그대로 올릴 수 있습니다. 런�
 
 ## 지도 기능
 
-`src/lib/map/controller.js` (약 1,000줄)가 MapLibre 위의 렌더링을 전담합니다.
+`src/lib/map/controller.js` (약 1,000줄)가 마커·클러스터·관계선 렌더링을,
+`src/lib/components/MapView.svelte` 가 지도 스타일(베이스 레이어·지형·다크블렌드)을 전담합니다.
 
 - **2계층 렌더링** — 저줌에서는 `supercluster` + DOM 마커, 상세줌(zoom ≥ 10)에서는
   halo·아이콘·뱃지·라벨을 GPU 심볼/서클 레이어로 그립니다. 포인트가 늘어도 DOM reflow 가
@@ -200,11 +207,22 @@ Vercel 등 어떤 정적 호스팅에도 그대로 올릴 수 있습니다. 런�
 - **스파이더파이** — 확대해도 쪼개지지 않는 클러스터를 클릭하면 leaf 를 원/나선으로 펼치고
   중심과 잇는 다리 선을 애니메이션합니다.
 - **네트워크 라인** — 마을과 그에 속한 조직·인물·사건을 대시 애니메이션 선으로 잇습니다.
-- **다크맵 블렌드** — OSM 라이트와 CARTO 다크 라스터의 불투명도를 슬라이더로 섞습니다.
-  지형 고도/평면 모드도 전환할 수 있습니다.
+- **베이스 지도 전환** — 좌하단 "지도 스타일" 패널에서 전환합니다
+  (내부적으로는 라이트/다크 × 라벨유무 CARTO 라스터 4장 + 위성 1장을 조합).
+  - **[지도]/[위성]** — 도식 지도(OSM+CARTO) ↔ Esri 위성사진(키 불필요). 위성 모드에는
+    지명·도로가 없어 허전하므로, 같은 줄의 🏷 아이콘 버튼으로 Esri 참조 레이어를
+    얹은 "하이브리드" 보기를 켜고 끌 수 있습니다. 이 라벨 토글은 지도 모드에서도
+    동작합니다(CARTO 의 `_nolabels` 변형으로 전환).
+  - **[지형]/[평면]** — 지형(3D, DEM 기반 pitch+hillshade) ↔ 평면(2D 정투상) 전환.
+    지형 모드에서는 **줌아웃할수록 지형 과장 배율이 커져**(줌 4 이하 4.0배 → 줌 11 이상
+    2.5배 선형 보간) 멀리서도 산악 기복이 죽지 않습니다. Terrarium DEM 이 해저 지형(수심)도
+    담고 있어, `color-relief` 레이어로 해수면 이하를 가려 대양이 잔잔하게 보이도록 처리했습니다.
+  - **라이트/다크 슬라이더** — OSM 라이트와 CARTO 다크 라스터의 불투명도를 섞습니다.
+    위성 모드에서는 의미가 없어 슬라이더가 비활성화됩니다.
 - **연도 슬라이더** — `start_year`/`end_year` 로 시대별 필터링. 데이터에서 범위를 자동 감지합니다.
-- **키 불필요** — `glyphs`(폰트 서버)를 의도적으로 생략하고 라벨·뱃지까지 캔버스로 그려
-  이미지로 등록합니다. 스프라이트/글리프 서버 없이 동작합니다.
+- **라벨 서버 불필요** — `glyphs`(폰트 서버)를 의도적으로 생략하고 마커 라벨·뱃지까지
+  캔버스로 그려 이미지로 등록합니다(마커에는 스프라이트/글리프 서버 불필요).
+  ⚠️ 단, **CARTO 다크·라벨없음 타일은 별개로 API 키가 필요합니다** — 아래 환경 변수 참고.
 
 ## AI 연구 보조원
 
@@ -269,17 +287,17 @@ src/
     │   ├── relations.js     노드 색인 · 관계 해석 · 요약
     │   └── filter.js        타입/검색어/연도 필터 (순수 함수)
     ├── i18n/
-    │   ├── translations.js  5개 언어 사전 (1,445키) + 순수 조회 함수
+    │   ├── translations.js  5개 언어 사전 (언어별 298키) + 순수 조회 함수
     │   └── store.svelte.js  현재 언어 상태 (runes) + localStorage
     ├── ai/
     │   ├── gemini.js        Gemini 호출 · 재시도 · 마크다운 파싱
     │   └── context.js       토큰 예산 안에서 DB 컨텍스트 압축
     ├── map/
-    │   ├── mapStyle.js      MapLibre 스타일 (라스터 2종 + geojson 소스)
+    │   ├── mapStyle.js      MapLibre 스타일 (도식·위성·라벨오버레이 등 라스터 6종 + geojson 소스)
     │   ├── iconAtlas.js     캔버스로 아이콘·라벨·뱃지를 그려 GPU 이미지로 등록
     │   ├── icons.js         마커 시각 속성 계산
     │   ├── popup.js         팝업 · htmlBits.js  마크업 조각
-    │   ├── controller.js    렌더·클러스터·스파이더파이·네트워크선·포커스 (1,014줄)
+    │   ├── controller.js    렌더·클러스터·스파이더파이·네트워크선·포커스 (약 1,000줄)
     │   └── map.css
     └── components/          MapView · Sidebar · MapHeader · Legend · YearSlider ·
                              ZoomHint · DarkMapControl · AIChatPanel ·
@@ -296,7 +314,7 @@ src/
 
 - **소스 코드** — MIT (`LICENSE`)
 - **데이터** — CC BY 4.0 (`DATA-LICENSE.md`, 사이트에서는 `/license/`)
-- **지도 타일** — © OpenStreetMap contributors / © CARTO (각 제공자 라이선스)
+- **지도 타일** — © OpenStreetMap contributors / © CARTO / © Esri, Maxar, Earthstar Geographics (각 제공자 라이선스)
 - **AI 생성 텍스트** — 사료 검증을 거치지 않았으므로 인용 대상이 아닙니다
 
 ---
@@ -313,3 +331,6 @@ src/
   (`static/robots.txt` 의 sitemap 주소도 같은 상황입니다.)
 - 랜딩·지도 페이지는 언어별 URL 이 없어 한국어판만 색인됩니다. 번역 UI 는 이미 5개 언어가
   준비되어 있으므로, 언어별 프리렌더로 확장하면 색인 가능한 페이지가 그만큼 늘어납니다.
+- **`VITE_CARTO_API_KEY` 가 아직 미설정 상태입니다.** 빌드는 되지만 배포 사이트의
+  다크모드·지도 모드 라벨없음 보기는 지도 대신 "API KEY REQUIRED" 워터마크만 보여줍니다.
+  [carto.com](https://carto.com/) 무료 계정에서 키를 받아 Vercel 환경변수에 등록하세요.
