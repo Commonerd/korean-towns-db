@@ -222,8 +222,12 @@ export const translations = {
 		'darkmap.toggle': '지도 스타일 패널 접기/펼치기',
 		'darkmap.light': '밝음',
 		'darkmap.dark': '어두움',
-		'darkmap.mode.current': '현재 상태',
+		'darkmap.mode.current': '지형',
 		'darkmap.mode.flat': '평면',
+		'darkmap.base.map': '지도',
+		'darkmap.base.satellite': '위성',
+		'darkmap.base.disabledHint': '위성 모드에서는 밝기 조절이 적용되지 않습니다',
+		'darkmap.base.showLabels': '지명·도로 표시',
 
 		'aiPanel.title': 'AI 연구 보조원',
 		'aiPanel.close': 'AI 보조원 닫기',
@@ -547,8 +551,12 @@ export const translations = {
 		'darkmap.toggle': 'Collapse/expand map style panel',
 		'darkmap.light': 'Light',
 		'darkmap.dark': 'Dark',
-		'darkmap.mode.current': 'Current state',
+		'darkmap.mode.current': 'Terrain',
 		'darkmap.mode.flat': 'Flat',
+		'darkmap.base.map': 'Map',
+		'darkmap.base.satellite': 'Satellite',
+		'darkmap.base.disabledHint': 'Brightness has no effect in satellite mode',
+		'darkmap.base.showLabels': 'Show place names & roads',
 
 		'aiPanel.title': 'AI Research Assistant',
 		'aiPanel.close': 'Close AI assistant',
@@ -872,8 +880,12 @@ export const translations = {
 		'darkmap.toggle': '地図スタイルパネルを折りたたむ/開く',
 		'darkmap.light': '明るい',
 		'darkmap.dark': '暗い',
-		'darkmap.mode.current': '現在の状態',
+		'darkmap.mode.current': '地形',
 		'darkmap.mode.flat': '平面',
+		'darkmap.base.map': '地図',
+		'darkmap.base.satellite': '衛星',
+		'darkmap.base.disabledHint': '衛星モードでは明るさ調整は効きません',
+		'darkmap.base.showLabels': '地名・道路を表示',
 
 		'aiPanel.title': 'AI研究アシスタント',
 		'aiPanel.close': 'AIアシスタントを閉じる',
@@ -1197,8 +1209,12 @@ export const translations = {
 		'darkmap.toggle': 'Свернуть/развернуть панель стиля карты',
 		'darkmap.light': 'Светлая',
 		'darkmap.dark': 'Тёмная',
-		'darkmap.mode.current': 'Текущее состояние',
+		'darkmap.mode.current': 'Рельеф',
 		'darkmap.mode.flat': 'Плоский',
+		'darkmap.base.map': 'Карта',
+		'darkmap.base.satellite': 'Спутник',
+		'darkmap.base.disabledHint': 'В спутниковом режиме яркость не действует',
+		'darkmap.base.showLabels': 'Показывать названия и дороги',
 
 		'aiPanel.title': 'ИИ-ассистент по исследованиям',
 		'aiPanel.close': 'Закрыть ИИ-ассистента',
@@ -1522,8 +1538,12 @@ export const translations = {
 		'darkmap.toggle': '折叠/展开地图样式面板',
 		'darkmap.light': '明亮',
 		'darkmap.dark': '暗色',
-		'darkmap.mode.current': '当前状态',
+		'darkmap.mode.current': '地形',
 		'darkmap.mode.flat': '平面',
+		'darkmap.base.map': '地图',
+		'darkmap.base.satellite': '卫星',
+		'darkmap.base.disabledHint': '卫星模式下亮度调节无效',
+		'darkmap.base.showLabels': '显示地名和道路',
 
 		'aiPanel.title': 'AI 研究助手',
 		'aiPanel.close': '关闭 AI 助手',
@@ -1678,4 +1698,3 @@ export function localized(node, field, locale) {
 	if (bag && bag[locale]) return bag[locale];
 	return node[field] || '';
 }
- 
