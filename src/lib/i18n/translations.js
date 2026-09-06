@@ -154,6 +154,7 @@ export const translations = {
 		'team.m4.role': '일본지역 연구협력자',
 		'team.m4.affil': '도쿄대학 인문사회계 연구과 박사과정 (동아시아사상문화 전공)',
 		'team.m4.bio': '일본 지역 관련 협력',
+		'team.collabHeading': '자문 · 협력',
 		'join.eyebrow': '참여하기',
 		'join.h2': '함께 채워갈 분을 찾습니다',
 		'join.p': '작지만 꾸준한 협업을 이어가고 있습니다.',
@@ -493,6 +494,7 @@ export const translations = {
 		'team.m4.role': 'Japan research collaborator',
 		'team.m4.affil': 'Ph.D. candidate, Graduate School of Humanities and Sociology, University of Tokyo',
 		'team.m4.bio': 'Collaborator on Japan-related research.',
+		'team.collabHeading': 'Advisors & Collaborators',
 
 		'join.eyebrow': 'Get involved',
 		'join.h2': 'Looking for people to build this with us',
@@ -833,6 +835,7 @@ export const translations = {
 		'team.m4.role': '日本地域研究協力',
 		'team.m4.affil': '東京大学 文系研究科 博士課程 (東アジア史学・文化史学専攻)',
 		'team.m4.bio': '日本関連研究の協力者',
+		'team.collabHeading': '顧問・協力',
 
 		'join.eyebrow': '参加する',
 		'join.h2': '一緒に埋めていく方を探しています',
@@ -1173,6 +1176,7 @@ export const translations = {
 		'team.m4.role': 'Сотрудничество по исследованиям Японии',
 		'team.m4.affil': 'Докторант, факультет гуманитарных наук, Университет Токио (специализация: история и культура Восточной Азии)',
 		'team.m4.bio': 'Сотрудник по исследованиям Японии',
+		'team.collabHeading': 'Консультанты и партнёры',
 
 		'join.eyebrow': 'Участвовать',
 		'join.h2': 'Ищем тех, кто будет наполнять проект вместе с нами',
@@ -1513,6 +1517,7 @@ export const translations = {
 		'team.m4.role': '日本研究合作',
 		'team.m4.affil': '东京大学人文社会系博士生（专攻：东亚历史与文化）',
 		'team.m4.bio': '日本研究合作人员',
+		'team.collabHeading': '顾问与合作',
 
 		'join.eyebrow': '参与',
 		'join.h2': '寻找与我们一同充实内容的伙伴',
