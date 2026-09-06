@@ -4,13 +4,18 @@
 		value = 0,
 		onChange = () => {},
 		terrainMode = 'terrain',
-		onTerrainModeChange = () => {}
+		onTerrainModeChange = () => {},
+		baseLayer = 'map',
+		onBaseLayerChange = () => {},
+		showGeoLabels = true,
+		onGeoLabelsToggle = () => {}
 	} = $props();
 	let collapsed = $state(true);
 
 	const dark = $derived(value > 0.5);
 	const pct = $derived(Math.round(value * 100));
 	const isFlat = $derived(terrainMode === 'flat');
+	const isSatellite = $derived(baseLayer === 'satellite');
 </script>
 
 <div class="map-panel dark-control" class:collapsed class:is-dark={dark}>
@@ -34,7 +39,34 @@
 		</span>
 	</button>
 	<div class="panel-body">
-		<div class="mode-switch" role="tablist" aria-label="지도 표면 모드">
+		<div class="mode-switch mode-switch--base" role="group" aria-label="베이스 지도 종류">
+			<button
+				type="button"
+				class:active={!isSatellite}
+				onclick={() => onBaseLayerChange('map')}
+			>
+				{t('darkmap.base.map')}
+			</button>
+			<button
+				type="button"
+				class:active={isSatellite}
+				onclick={() => onBaseLayerChange('satellite')}
+			>
+				{t('darkmap.base.satellite')}
+			</button>
+			<button
+				type="button"
+				class="labels-toggle-btn"
+				class:active={showGeoLabels}
+				aria-pressed={showGeoLabels}
+				title={t('darkmap.base.showLabels')}
+				aria-label={t('darkmap.base.showLabels')}
+				onclick={onGeoLabelsToggle}
+			>
+				<i class="fa-solid fa-tag"></i>
+			</button>
+		</div>
+		<div class="mode-switch mt-2" role="tablist" aria-label="지도 표면 모드">
 			<button
 				type="button"
 				class:active={!isFlat}
@@ -50,7 +82,7 @@
 				{t('darkmap.mode.flat')}
 			</button>
 		</div>
-		<div class="flex items-center gap-2 mt-3">
+		<div class="flex items-center gap-2 mt-3" class:is-disabled={isSatellite} title={isSatellite ? t('darkmap.base.disabledHint') : undefined}>
 			<i class="fa-solid fa-sun text-amber-400 text-xs flex-shrink-0"></i>
 			<input
 				type="range"
@@ -58,6 +90,7 @@
 				max="1"
 				step="0.01"
 				{value}
+				disabled={isSatellite}
 				oninput={(e) => onChange(parseFloat(e.currentTarget.value))}
 				class="dark-slider flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
 			/>
@@ -167,6 +200,26 @@
 		background: #eef2ff;
 		border-color: #c7d2fe;
 		color: #3730a3;
+	}
+
+	/* 베이스 지도(지도/위성) 줄만 3번째 칸에 라벨 토글을 아이콘 버튼으로 얹는다.
+	   같은 필(pill) 스타일을 그대로 쓰되, 폭만 콘텐츠에 맞춰 좁혀서(auto) 앞의 두
+	   버튼(상호배타 선택)과 시각적으로는 통일되면서도 "이건 그 둘과 다른 종류의
+	   버튼(독립 토글)"이라는 걸 은은하게 드러낸다 — 별도 줄·체크박스 없이. */
+	.mode-switch--base {
+		grid-template-columns: 1fr 1fr auto;
+	}
+	.labels-toggle-btn {
+		padding-left: 10px;
+		padding-right: 10px;
+		margin-left: 2px;
+	}
+
+	.is-disabled {
+		opacity: 0.4;
+	}
+	.is-disabled .dark-slider {
+		cursor: not-allowed;
 	}
 
 	.dark-control.is-dark {
