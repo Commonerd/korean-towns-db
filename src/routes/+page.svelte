@@ -511,13 +511,18 @@
 					<p>{@html t('team.m3.affil')}</p>
 					<p>{t('team.m3.bio')}</p>
 				</div>
+			</div>
 
-				<div class="team-card" use:reveal>
-					<div class="avatar" style="background:var(--event);">{t('team.m4.initial')}</div>
-					<h3>{t('team.m4.name')}</h3>
-					<p class="role">{t('team.m4.role')}</p>
-					<p>{@html t('team.m4.affil')}</p>
-					<p>{t('team.m4.bio')}</p>
+			<div class="collab-heading" use:reveal>{t('team.collabHeading')}</div>
+			<div class="collab-list">
+				<div class="collab-item" use:reveal>
+					<div class="avatar">{t('team.m4.initial')}</div>
+					<div>
+						<h4>{t('team.m4.name')}</h4>
+						<p class="role">{t('team.m4.role')}</p>
+						<p>{@html t('team.m4.affil')}</p>
+						<p>{t('team.m4.bio')}</p>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1581,6 +1586,70 @@
 	@media (max-width: 900px) {
 		.team-grid {
 			grid-template-columns: 1fr;
+		}
+	}
+
+	/* 핵심 연구팀과 구분되는 자문·협력 목록 — 카드보다 가벼운 가로 항목으로,
+	   앞으로 협력자가 늘어도 세로로 이어붙이기만 하면 되는 구조. */
+	.collab-heading {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-faint);
+		margin: 2.4rem 0 1rem;
+	}
+	.collab-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.collab-item {
+		display: flex;
+		gap: 1.2rem;
+		background: var(--paper-warm);
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		padding: 1.3rem 1.5rem;
+	}
+	.collab-item .avatar {
+		width: 40px;
+		height: 40px;
+		flex-shrink: 0;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: 0.9rem;
+		border: 2px solid var(--ink-faint);
+		color: var(--ink-faint);
+	}
+	.collab-item h4 {
+		font-size: 0.98rem;
+		font-weight: 700;
+		color: var(--navy-deep);
+	}
+	.collab-item .role {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		color: var(--ink-faint);
+		margin: 0.25rem 0 0.5rem;
+	}
+	.collab-item p {
+		font-size: 0.85rem;
+		line-height: 1.6;
+		color: var(--ink-soft);
+		margin-bottom: 0.4rem;
+	}
+	.collab-item p:last-child {
+		margin-bottom: 0;
+	}
+	@media (max-width: 560px) {
+		.collab-item {
+			flex-direction: column;
 		}
 	}
 
