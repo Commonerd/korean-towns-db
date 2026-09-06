@@ -371,6 +371,7 @@
 					<div class="log-body">
 						<span class="log-tag next">{t('log.tag.feature')}</span>
 						<p>{t('log.item9.body')}</p>
+						<p>{t('log.item10.body')}</p>
 					</div>
 				</div>
 			</div>
