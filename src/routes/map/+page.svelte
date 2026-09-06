@@ -41,6 +41,8 @@
 
 	let darkOpacity = $state(0);
 	let terrainMode = $state('terrain');
+	let baseLayer = $state('map');
+	let showGeoLabels = $state(true);
 	let syncing = $state(false);
 	let sidebarCollapsed = $state(true);
 	let zoom = $state(5);
@@ -213,6 +215,16 @@
 		mapView?.setTerrainMode?.(mode);
 	}
 
+	function handleBaseLayerChange(layer) {
+		baseLayer = layer;
+		mapView?.setBaseLayer?.(layer, showGeoLabels);
+	}
+
+	function handleGeoLabelsToggle() {
+		showGeoLabels = !showGeoLabels;
+		mapView?.setBaseLayer?.(baseLayer, showGeoLabels);
+	}
+
 	/* focusName 은 AI 컨텍스트에서 우선 수록할 대상(지금 보고 있는 마을/항목)이다.
 	   전체 DB 를 다 넣을 수 없을 때 무엇을 남길지 정하는 기준이 된다. */
 	async function callGemini(modelPrompt, focusName = selectedTownName ?? '') {
@@ -339,6 +351,8 @@
 				{yearRangeMax}
 				{darkOpacity}
 				{terrainMode}
+				{baseLayer}
+				{showGeoLabels}
 				locale={getLocale()}
 				{onSelectTown}
 				onAskAI={askAI}
@@ -362,6 +376,10 @@
 				onChange={(v) => (darkOpacity = v)}
 				terrainMode={terrainMode}
 				onTerrainModeChange={handleTerrainModeChange}
+				baseLayer={baseLayer}
+				onBaseLayerChange={handleBaseLayerChange}
+				showGeoLabels={showGeoLabels}
+				onGeoLabelsToggle={handleGeoLabelsToggle}
 			/>
 			<Legend {dark} />
 		</div>
