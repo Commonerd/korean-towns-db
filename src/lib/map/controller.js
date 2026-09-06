@@ -11,7 +11,8 @@ import {
 } from './iconAtlas.js';
 import { buildPopupHtml } from './popup.js';
 import { filterData } from '$lib/data/filter.js';
-import { localized } from '$lib/i18n/translations.js';
+import { localized, translate } from '$lib/i18n/translations.js';
+import { escapeHtml } from '$lib/util.js';
 
 const WORLD_BBOX = [-180, -85, 180, 85];
 
@@ -20,6 +21,46 @@ function firstToken(str) {
 	if (!str) return '';
 	return str.split(',')[0].trim();
 }
+
+/* 두 좌표 사이 대권거리(m) — Haversine */
+function haversineMeters(a, b) {
+	const R = 6371000;
+	const toRad = (d) => (d * Math.PI) / 180;
+	const dLat = toRad(b.lat - a.lat);
+	const dLng = toRad(b.lng - a.lng);
+	const h =
+		Math.sin(dLat / 2) ** 2 +
+		Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+	return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function formatMeters(m) {
+	return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m).toLocaleString()} m`;
+}
+
+/* 구면 다각형 면적(m²) — 구면과잉(spherical excess) 공식.
+   ring 의 마지막 점이 첫 점과 같아도(닫힌 링) 그 구간은 0을 더하므로 그대로 넣어도 된다. */
+function sphericalAreaM2(ring) {
+	if (ring.length < 3) return 0;
+	const R = 6371008.8;
+	const toRad = (d) => (d * Math.PI) / 180;
+	let sum = 0;
+	for (let i = 0; i < ring.length; i++) {
+		const a = ring[i];
+		const b = ring[(i + 1) % ring.length];
+		sum += toRad(b.lng - a.lng) * (2 + Math.sin(toRad(a.lat)) + Math.sin(toRad(b.lat)));
+	}
+	return Math.abs((sum * R * R) / 2);
+}
+
+function formatArea(m2) {
+	return m2 >= 1e6
+		? `${(m2 / 1e6).toFixed(2)} km²`
+		: `${Math.round(m2).toLocaleString()} m²`;
+}
+
+/* 시작점 위에 다시 찍었다고 볼 화면상 거리(px) — 손으로 딱 맞추기 쉽도록 넉넉히 */
+const COORD_SNAP_PX = 18;
 
 const GPU_SOURCE_IDS = ['kt-halo', 'kt-icons', 'kt-badges', 'kt-labels'];
 
@@ -85,9 +126,13 @@ export class MapController {
 		this._spider = null; // 스파이더파이 상태 { clusterId, center, entries }
 		this._spiderMarkers = []; // 펼쳐진 leaf DOM 마커 (일반 렌더로 지워지지 않음)
 		this._spiderAnim = null; // 펼침/접힘 애니메이션 rAF 핸들
+		this._coordPoints = []; // 임시 좌표 측정 점들: [{ point:{lat,lng}, marker }]
+		this._coordPopup = null; // 임시 좌표 확인 팝업
+		this._coordClosed = false; // 시작점에 다시 찍어 링이 닫혔는지(= 면적 표시)
 
 		this._ensureLineLayer();
 		this._ensureGpuLayers();
+		this._ensureCoordLayer();
 
 		ensureIconImages(this.map).then(() => {
 			this._iconsReady = true;
@@ -121,12 +166,35 @@ export class MapController {
 		this.map.on('mouseenter', 'kt-icons', this._onIconEnter);
 		this.map.on('mouseleave', 'kt-icons', this._onIconLeave);
 
-		// 팝업 내 "AI 해설" 버튼 위임 처리
+		// 임시: 우클릭(모바일은 롱프레스)할 때마다 점을 이어 찍어 위경도·구간거리를 보여준다.
+		// 시트에 위경도를 입력할 때 쓰는 임시 기능 — 별도 UI 없이 지도 표준 제스처만 사용.
+		// ESC 로 전부 지운다.
+		this._onCoordPick = (e) => this._addCoordPoint(e.lngLat);
+		this.map.on('contextmenu', this._onCoordPick);
+		this._onKeyDown = (e) => {
+			if (e.key === 'Escape') this._clearCoordPoints();
+		};
+		document.addEventListener('keydown', this._onKeyDown);
+
+		// 팝업 내 "AI 해설" 버튼 / 좌표 복사 버튼 위임 처리
 		this._docClick = (e) => {
 			const btn = e.target.closest && e.target.closest('[data-ai-id]');
 			if (btn) {
 				const id = parseInt(btn.dataset.aiId, 10);
 				if (!Number.isNaN(id)) this.onAskAI(id);
+			}
+			const copyBtn = e.target.closest && e.target.closest('[data-copy-coord]');
+			if (copyBtn) {
+				navigator.clipboard?.writeText(copyBtn.dataset.copyCoord).then(() => {
+					const label = copyBtn.querySelector('span');
+					copyBtn.classList.add('copied');
+					if (label) label.textContent = copyBtn.dataset.copiedLabel;
+					clearTimeout(copyBtn._copyResetTimer);
+					copyBtn._copyResetTimer = setTimeout(() => {
+						copyBtn.classList.remove('copied');
+						if (label) label.textContent = copyBtn.dataset.copyLabel;
+					}, 1200);
+				});
 			}
 		};
 		document.addEventListener('click', this._docClick);
@@ -187,10 +255,13 @@ export class MapController {
 		this.map.off('click', 'kt-icons', this._onIconClick);
 		this.map.off('mouseenter', 'kt-icons', this._onIconEnter);
 		this.map.off('mouseleave', 'kt-icons', this._onIconLeave);
+		this.map.off('contextmenu', this._onCoordPick);
 		document.removeEventListener('click', this._docClick);
+		document.removeEventListener('keydown', this._onKeyDown);
 		if (this._raf) cancelAnimationFrame(this._raf);
 		if (this._dashTimer) cancelAnimationFrame(this._dashTimer);
 		this._closeAdHocPopup();
+		this._clearCoordPoints();
 		this._clearSpider();
 		this._clearMarkers();
 	}
@@ -991,6 +1062,224 @@ export class MapController {
 		if (this._activePopup) {
 			this._activePopup.remove();
 			this._activePopup = null;
+		}
+	}
+
+	/* 임시 좌표 측정 소스/레이어 존재 보장 (닫힌 면 + 구간 연결선 + 거리 라벨).
+	   면 → 선 → 라벨 순으로 추가해야 나중에 추가한 쪽이 위에 그려진다. */
+	_ensureCoordLayer() {
+		if (!this.map.getSource('coord-fill')) {
+			this.map.addSource('coord-fill', {
+				type: 'geojson',
+				data: { type: 'FeatureCollection', features: [] }
+			});
+			this.map.addLayer({
+				id: 'coord-fill',
+				type: 'fill',
+				source: 'coord-fill',
+				paint: { 'fill-color': '#dc2626', 'fill-opacity': 0.14 }
+			});
+		}
+		if (!this.map.getSource('coord-lines')) {
+			this.map.addSource('coord-lines', {
+				type: 'geojson',
+				data: { type: 'FeatureCollection', features: [] }
+			});
+			this.map.addLayer({
+				id: 'coord-lines',
+				type: 'line',
+				source: 'coord-lines',
+				layout: { 'line-cap': 'round', 'line-join': 'round' },
+				paint: { 'line-color': '#dc2626', 'line-width': 2, 'line-dasharray': [2, 2] }
+			});
+		}
+		if (!this.map.getSource('coord-distance-labels')) {
+			this.map.addSource('coord-distance-labels', {
+				type: 'geojson',
+				data: { type: 'FeatureCollection', features: [] }
+			});
+			this.map.addLayer({
+				id: 'coord-distance-labels',
+				type: 'symbol',
+				source: 'coord-distance-labels',
+				layout: {
+					'icon-image': ['get', 'labelImageId'],
+					'icon-allow-overlap': true,
+					'icon-ignore-placement': true
+				}
+			});
+		}
+	}
+
+	/* 임시: 우클릭할 때마다 점을 이어 찍어 위경도·직전 점과의 구간거리를 핀+팝업으로 표시
+	   (시트 입력용, 복사 버튼 제공). 전부 지우려면 ESC(_clearCoordPoints). */
+	_addCoordPoint(lngLat) {
+		// 이미 닫힌 도형에서 또 찍으면 새 측정을 시작한다 (별도 초기화 조작 없이)
+		if (this._coordClosed) this._clearCoordPoints();
+
+		let point = { lat: lngLat.lat, lng: lngLat.lng };
+		// 시작점 위(화면상 COORD_SNAP_PX 이내)에 찍으면 딱 맞물려 닫고 면적을 낸다
+		const first = this._coordPoints[0]?.point;
+		if (first && this._coordPoints.length >= 3 && this._screenDistance(first, point) <= COORD_SNAP_PX) {
+			point = { ...first };
+			this._coordClosed = true;
+		}
+
+		const el = document.createElement('div');
+		el.className = 'coord-pin';
+		const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+			.setLngLat(point)
+			.addTo(this.map);
+		this._coordPoints.push({ point, marker });
+		this._renderCoordLines();
+
+		const coordText = `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`;
+		const metrics = [];
+		if (this._coordPoints.length > 1) {
+			const prev = this._coordPoints[this._coordPoints.length - 2].point;
+			metrics.push([
+				translate(this.locale, 'coord.segment'),
+				formatMeters(haversineMeters(prev, point))
+			]);
+			metrics.push([translate(this.locale, 'coord.total'), formatMeters(this._coordTotalMeters())]);
+		}
+		if (this._coordClosed) {
+			metrics.push([
+				translate(this.locale, 'coord.area'),
+				formatArea(sphericalAreaM2(this._coordPoints.map((p) => p.point)))
+			]);
+		}
+		const metricsHtml = metrics.length
+			? `<div class="coord-popup-metrics">${metrics
+					.map(
+						([k, v], i) =>
+							`<div class="coord-metric${this._coordClosed && i === metrics.length - 1 ? ' coord-metric--area' : ''}"><span>${escapeHtml(k)}</span><b>${escapeHtml(v)}</b></div>`
+					)
+					.join('')}</div>`
+			: '';
+
+		// 3점 이상이고 아직 안 닫혔으면 "시작점을 다시 찍으면 면적" 안내를 앞에 붙인다
+		const hints = [];
+		if (this._coordPoints.length >= 3 && !this._coordClosed) {
+			hints.push(translate(this.locale, 'coord.closeHint'));
+		}
+		hints.push(translate(this.locale, 'coord.hint'));
+
+		const copyLabel = escapeHtml(translate(this.locale, 'coord.copy'));
+		const copiedLabel = escapeHtml(translate(this.locale, 'coord.copied'));
+
+		if (this._coordPopup) this._coordPopup.remove();
+		// anchor 를 고정하지 않아야 화면 위/가장자리에 찍었을 때 팝업이 알아서 반대편으로 뒤집힌다
+		this._coordPopup = new maplibregl.Popup({
+			offset: 12,
+			closeButton: true,
+			closeOnClick: false
+		})
+			.setLngLat(point)
+			.setHTML(
+				`<div class="coord-popup">
+					<div class="coord-popup-label"><i class="fa-solid fa-location-crosshairs"></i> ${escapeHtml(
+						translate(this.locale, 'coord.label')
+					)}</div>
+					<div class="coord-popup-value">${coordText}</div>
+					${metricsHtml}
+					<button type="button" class="coord-copy-btn" data-copy-coord="${coordText}" data-copy-label="${copyLabel}" data-copied-label="${copiedLabel}">
+						<i class="fa-solid fa-copy"></i> <span>${copyLabel}</span>
+					</button>
+					<div class="coord-popup-hint">${escapeHtml(hints.join(' · '))}</div>
+				</div>`
+			)
+			.addTo(this.map);
+		// ⚠️ Evented#on() 은 popup(this)이 아니라 {unsubscribe} 래퍼를 반환하므로 체이닝하지 않는다.
+		this._coordPopup.on('close', () => {
+			this._coordPopup = null;
+		});
+	}
+
+	/* 두 좌표의 화면(px) 거리 — 시작점 스냅 판정용 */
+	_screenDistance(a, b) {
+		const pa = this.map.project([a.lng, a.lat]);
+		const pb = this.map.project([b.lng, b.lat]);
+		return Math.hypot(pa.x - pb.x, pa.y - pb.y);
+	}
+
+	/* 찍은 점들을 순서대로 이은 전체 거리(m) */
+	_coordTotalMeters() {
+		let total = 0;
+		for (let i = 1; i < this._coordPoints.length; i++) {
+			total += haversineMeters(this._coordPoints[i - 1].point, this._coordPoints[i].point);
+		}
+		return total;
+	}
+
+	/* 점들을 순서대로 이은 구간선 + 각 구간 중점의 거리 라벨 + 닫혔으면 면을 다시 그린다 */
+	_renderCoordLines() {
+		const lineFeatures = [];
+		const labelFeatures = [];
+		for (let i = 1; i < this._coordPoints.length; i++) {
+			const a = this._coordPoints[i - 1].point;
+			const b = this._coordPoints[i].point;
+			lineFeatures.push({
+				type: 'Feature',
+				properties: {},
+				geometry: {
+					type: 'LineString',
+					coordinates: [
+						[a.lng, a.lat],
+						[b.lng, b.lat]
+					]
+				}
+			});
+			labelFeatures.push({
+				type: 'Feature',
+				properties: {
+					labelImageId: ensureLabelImage(this.map, formatMeters(haversineMeters(a, b)))
+				},
+				geometry: { type: 'Point', coordinates: [(a.lng + b.lng) / 2, (a.lat + b.lat) / 2] }
+			});
+		}
+		this._setGpuSourceData('coord-lines', lineFeatures);
+		this._setGpuSourceData('coord-distance-labels', labelFeatures);
+		this._setGpuSourceData(
+			'coord-fill',
+			this._coordClosed
+				? [
+						{
+							type: 'Feature',
+							properties: {},
+							geometry: {
+								type: 'Polygon',
+								coordinates: [this._coordPoints.map((p) => [p.point.lng, p.point.lat])]
+							}
+						}
+					]
+				: []
+			);
+
+		/* 닫을 수 있는 상태(3점 이상)에서는 시작점을 은은히 맥동시켜
+		   "여기를 다시 찍으면 닫힌다"를 글자 없이 알려준다. */
+		const firstEl = this._coordPoints[0]?.marker.getElement();
+		if (firstEl) {
+			firstEl.classList.toggle(
+				'coord-pin--target',
+				this._coordPoints.length >= 3 && !this._coordClosed
+			);
+		}
+	}
+
+	/* ESC 또는 컨트롤러 파괴 시 임시 좌표 측정 상태를 전부 지운다 */
+	_clearCoordPoints() {
+		if (!this._coordPoints.length && !this._coordPopup) return;
+		for (const p of this._coordPoints) p.marker.remove();
+		this._coordPoints = [];
+		this._coordClosed = false;
+		this._setGpuSourceData('coord-lines', []);
+		this._setGpuSourceData('coord-distance-labels', []);
+		this._setGpuSourceData('coord-fill', []);
+		if (this._coordPopup) {
+			const popup = this._coordPopup;
+			this._coordPopup = null;
+			popup.remove();
 		}
 	}
 
