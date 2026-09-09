@@ -512,6 +512,17 @@ body.map-page {
 .archive-cta a:hover {
 	background: var(--navy-deep);
 }
+/* 좌표가 아직 없어 지도 링크 대신 사유를 적는 자리. 버튼이 아니라 안내문이므로
+   본문 톤을 쓰되, 자리표시자처럼 보이지 않게 --ink-soft(대비 6.7:1)까지만 낮춘다. */
+.archive-cta--muted {
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--ink-soft);
+	padding: 11px 14px;
+	border: 1px dashed var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--paper-warm);
+}
 
 .archive-pager {
 	display: grid;
