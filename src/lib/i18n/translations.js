@@ -183,6 +183,7 @@ export const translations = {
 		'header.ai': 'AI 보조원',
 		'toast.synced': 'DB의 최신 데이터가 반영되었습니다.',
 		'toast.syncFail': '동기화에 실패했습니다.',
+		'toast.syncStale': '최신 데이터를 불러오지 못해 마지막으로 저장된 데이터를 표시합니다.',
 		'toast.focusNoLocation': '«{name}»: 위치 좌표가 없어 지도에 표시할 수 없습니다.',
 		'toast.focusNotFound': '지도에서 해당 항목을 찾을 수 없습니다.',
 
@@ -527,6 +528,7 @@ export const translations = {
 		'header.ai': 'AI assistant',
 		'toast.synced': 'The latest data from the DB has been applied.',
 		'toast.syncFail': 'Synchronization failed.',
+		'toast.syncStale': 'Could not load the latest data — showing the last saved snapshot.',
 		'toast.focusNoLocation': '«{name}»: no coordinates yet, so it cannot be shown on the map.',
 		'toast.focusNotFound': 'That record could not be found on the map.',
 
@@ -871,6 +873,7 @@ export const translations = {
 		'header.ai': 'AIアシスタント',
 		'toast.synced': 'DBの最新データが反映されました。',
 		'toast.syncFail': '同期に失敗しました。',
+		'toast.syncStale': '最新データを取得できないため、最後に保存されたデータを表示しています。',
 		'toast.focusNoLocation': '«{name}»: 位置座標がないため地図に表示できません。',
 		'toast.focusNotFound': '該当する項目が地図で見つかりませんでした。',
 
@@ -1215,6 +1218,7 @@ export const translations = {
 		'header.ai': 'ИИ-ассистент',
 		'toast.synced': 'Последние данные из БД применены.',
 		'toast.syncFail': 'Синхронизация не удалась.',
+		'toast.syncStale': 'Не удалось загрузить свежие данные — показан последний сохранённый снимок.',
 		'toast.focusNoLocation': '«{name}»: координат пока нет, показать на карте нельзя.',
 		'toast.focusNotFound': 'Эта запись не найдена на карте.',
 
@@ -1559,6 +1563,7 @@ export const translations = {
 		'header.ai': 'AI 助手',
 		'toast.synced': '数据库的最新数据已应用。',
 		'toast.syncFail': '同步失败。',
+		'toast.syncStale': '无法加载最新数据，正在显示最后保存的数据。',
 		'toast.focusNoLocation': '«{name}»：暂无坐标，无法在地图上显示。',
 		'toast.focusNotFound': '未能在地图上找到该条目。',
 
@@ -1773,4 +1778,3 @@ export function localized(node, field, locale) {
 	if (bag && bag[locale]) return bag[locale];
 	return node[field] || '';
 }
- 
