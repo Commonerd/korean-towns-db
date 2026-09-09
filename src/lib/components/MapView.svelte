@@ -134,6 +134,51 @@
                 }
             };
 
+            /* ====== 카메라 자세(pitch/bearing)는 "지형 모드가 실제로 바뀔 때"만 건드린다 ======
+
+               ⚠️ MapLibre 의 setPitch/setBearing 은 내부에서 jumpTo → stop() 을 타므로,
+                  호출하는 순간 진행 중인 flyTo/easeTo 를 **무조건 취소**한다.
+                  예전에는 applyTerrainMode 가 style.load·ready 전환·다크 슬라이더 변경 등
+                  지형과 무관한 시점마다 setPitch(50) 을 다시 불렀고, 그 호출이
+                  controller.focus() 가 막 시작한 flyTo 를 1 ms 만에 끊어버렸다 —
+                  «지도에서 … 위치 보기» 로 들어오면 지도가 초기 위치(한반도 우측)에 그대로
+                  멈추고 팝업도 열리지 않는다. 클러스터 클릭의 easeTo 도 같은 이유로 끊겼다.
+
+                  개발용 Mac 은 macOS «동작 줄이기(Reduce Motion)» 가 켜져 있어 flyTo 가
+                  즉시 점프로 처리된다 → 끊길 애니메이션 자체가 없어 증상이 보이지 않았다.
+                  그래서 "이 컴퓨터에서만 되고 다른 컴퓨터에서는 안 되는" 것처럼 보였다.
+
+               지도는 생성 시점에 이미 원하는 pitch 로 만들어지므로, 초기화·재적용 시점에는
+               카메라를 건드릴 이유가 전혀 없다. 사용자가 지형/평면을 실제로 토글했을 때만
+               움직이고, 그때 카메라가 이동 중이면 이동이 끝난 뒤로 미룬다. */
+            let cameraPoseMode = null; // 카메라가 마지막으로 맞춰진 모드 ('terrain' | 'flat')
+            let pendingCameraPose = null; // 이동 중이라 미뤄 둔 모드
+
+            const applyCameraPose = (mode) => {
+                if (!map || disposed) return;
+                const next = mode === 'flat' ? 'flat' : 'terrain';
+                if (next === cameraPoseMode) return;
+
+                // 이동/애니메이션 중이면 지금 건드리는 순간 그 이동이 취소된다 — 끝난 뒤로 미룬다.
+                if (map.isEasing() || map.isMoving()) {
+                    const alreadyWaiting = pendingCameraPose !== null;
+                    pendingCameraPose = next;
+                    if (!alreadyWaiting) {
+                        map.once('moveend', () => {
+                            const queued = pendingCameraPose;
+                            pendingCameraPose = null;
+                            if (queued !== null) applyCameraPose(queued);
+                        });
+                    }
+                    return;
+                }
+
+                pendingCameraPose = null;
+                cameraPoseMode = next;
+                map.setPitch(next === 'flat' ? 0 : 50);
+                map.setBearing(0);
+            };
+
             applyTerrainMode = (mode = terrainMode, opacity = darkOpacity) => {
                 if (!map || disposed) return;
                 const flat = mode === 'flat';
@@ -148,8 +193,7 @@
                         if (map.getLayer('color-relief')) {
                             map.setLayoutProperty('color-relief', 'visibility', 'none');
                         }
-                        map.setPitch(0);
-                        map.setBearing(0);
+                        applyCameraPose('flat');
                         return;
                     }
 
@@ -170,8 +214,7 @@
                     if (map.getLayer('color-relief')) {
                         map.setLayoutProperty('color-relief', 'visibility', 'visible');
                     }
-                    map.setPitch(50);
-                    map.setBearing(0);
+                    applyCameraPose('terrain');
                 } catch (err) {
                     console.warn('DEM terrain setup failed:', err);
                 }
@@ -210,18 +253,26 @@
                 }
             };
 
+            /* 초기 카메라 자세는 생성 옵션으로 끝낸다 — 만든 직후 setPitch 로 다시 맞추면
+               그 호출이 곧바로 시작될 포커싱 flyTo 를 취소한다(applyCameraPose 주석 참고). */
+            const initialPoseMode = terrainMode === 'flat' ? 'flat' : 'terrain';
+
             map = new maplibregl.Map({
                 container,
                 style: createMapStyle(),
                 center: [132.0, 43.0],
                 zoom: 5,
-                pitch: 50,
+                pitch: initialPoseMode === 'flat' ? 0 : 50,
                 maxPitch: 85,
                 minZoom: 2,
                 maxZoom: 19,
                 renderWorldCopies: true,
                 attributionControl: { compact: true }
             });
+
+            // 위에서 만든 자세를 그대로 기록해 둔다 → 이후 applyTerrainMode 가 몇 번 불려도
+            // 모드가 바뀌지 않는 한 카메라를 건드리지 않는다.
+            cameraPoseMode = initialPoseMode;
 
             map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-left');
             map.on('zoom', () => onZoom(map.getZoom()));
