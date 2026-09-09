@@ -1605,17 +1605,24 @@
 		flex-direction: column;
 		gap: 1rem;
 	}
+	/* ⚠️ 이 섹션(.section--tint)의 배경이 --paper-warm 이라, 카드 배경도 --paper-warm 이면
+	   1px 테두리만 남고 카드가 배경에 묻힌다. 핵심 팀 카드(흰 배경)는 떠 보이는데 자문·협력만
+	   납작해 보이던 원인 → 팀 카드와 같은 흰 배경으로 올리고, 위계는 크기·아바타 톤으로만 준다. */
 	.collab-item {
 		display: flex;
 		gap: 1.2rem;
-		background: var(--paper-warm);
+		background: #fff;
 		border: 1px solid var(--line);
 		border-radius: var(--radius);
-		padding: 1.3rem 1.5rem;
+		padding: 1.4rem 1.6rem;
 	}
+	/* 아바타: 예전엔 --ink-faint(팔레트에서 "흐릿한 보조 텍스트" 토큰) 로 테두리만 그린
+	   빈 원이었다. 대비 2.88:1 로 WCAG 비텍스트 최소치(3:1)에도 못 미쳐 실제로 "미완성
+	   자리표시자"처럼 보였다. 같은 브랜드 네이비의 옅은 톤으로 채워 8.9:1 로 올린다 —
+	   핵심 팀의 채도 높은 원색과는 톤으로 구분되므로 위계는 유지된다. */
 	.collab-item .avatar {
-		width: 40px;
-		height: 40px;
+		width: 44px;
+		height: 44px;
 		flex-shrink: 0;
 		border-radius: 50%;
 		display: flex;
@@ -1623,19 +1630,24 @@
 		justify-content: center;
 		font-family: var(--font-display);
 		font-weight: 700;
-		font-size: 0.9rem;
-		border: 2px solid var(--ink-faint);
-		color: var(--ink-faint);
+		font-size: 0.95rem;
+		background: var(--navy-tint);
+		color: var(--navy);
+		box-shadow: inset 0 0 0 1px rgba(30, 58, 138, 0.14);
 	}
 	.collab-item h4 {
 		font-size: 0.98rem;
 		font-weight: 700;
 		color: var(--navy-deep);
 	}
+	/* 팀 카드의 .role 은 --amber 악센트인데 자문·협력만 --ink-faint 라 아바타와 역할명이
+	   이중으로 눌려 있었다. 네이비 계열 악센트로 올려 "악센트가 있는 역할명"이라는
+	   같은 문법을 쓰되, 색으로 팀과 구분한다. */
 	.collab-item .role {
 		font-family: var(--font-mono);
 		font-size: 0.72rem;
-		color: var(--ink-faint);
+		font-weight: 600;
+		color: var(--navy-mid);
 		margin: 0.25rem 0 0.5rem;
 	}
 	.collab-item p {
