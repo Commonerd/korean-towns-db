@@ -7,6 +7,8 @@ import {
 	ensureIconImages,
 	ensureLabelImage,
 	ensureBadgeImage,
+	pruneLabelImages,
+	labelSizePx,
 	ICON_BASE_SIZE
 } from './iconAtlas.js';
 import { buildPopupHtml } from './popup.js';
@@ -63,6 +65,104 @@ function formatArea(m2) {
 const COORD_SNAP_PX = 18;
 
 const GPU_SOURCE_IDS = ['kt-halo', 'kt-icons', 'kt-badges', 'kt-labels'];
+
+/* 한 화면에 동시에 그릴 라벨 수 상한. 라벨은 글자마다 이미지 1장이고 그 전부가 타일
+   아이콘 아틀라스 텍스처 한 장에 팩킹되므로, 상한이 없으면 텍스처가 모바일 GPU 가
+   감당 못 할 크기까지 커진다. 화면을 촘촘히 채우기엔 충분한 값. */
+const MAX_VISIBLE_LABELS = 260;
+
+/* 화면 중심으로부터의 제곱거리(도 단위) — 라벨 상한을 넘겼을 때 우선순위용 */
+function distToCenterSq([lng, lat], cx, cy) {
+	return (lng - cx) ** 2 + (lat - cy) ** 2;
+}
+
+/* 라벨과 점 사이 여백(px) */
+const LABEL_GAP = 6;
+
+/* 라벨 후보 자리 8방향. anchor 는 "이미지의 어느 지점을 노드 좌표에 붙일지",
+   offset 은 그 뒤 화면 px 로 밀 양이다. 읽기 자연스러운 순서(아래→위→우→좌→대각)로
+   시도해서 처음 비어 있는 자리를 쓴다. */
+const LABEL_ANCHORS = ['top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right'];
+
+/* anchor·offset 조합이 화면에서 차지할 박스를 계산한다.
+   MapLibre 의 shapeIcon 과 같은 규칙: anchor 에 left/right 가 있으면 이미지가 그 방향으로
+   펼쳐지고(정렬계수 0 / 1), 없으면 가운데(0.5) 정렬된다. 세로도 top/bottom 으로 동일. */
+function labelCandidateBox(anchor, cx, cy, w, h, iconRadius) {
+	const d = iconRadius + LABEL_GAP;
+	const diag = Math.round(d * 0.72);
+	const hasLeft = anchor.includes('left');
+	const hasRight = anchor.includes('right');
+	const hasTop = anchor.includes('top');
+	const hasBottom = anchor.includes('bottom');
+
+	let ox = 0;
+	let oy = 0;
+	if (hasLeft && (hasTop || hasBottom)) ox = diag;
+	else if (hasRight && (hasTop || hasBottom)) ox = -diag;
+	else if (hasLeft) ox = d;
+	else if (hasRight) ox = -d;
+	if (hasTop && (hasLeft || hasRight)) oy = diag;
+	else if (hasBottom && (hasLeft || hasRight)) oy = -diag;
+	else if (hasTop) oy = d;
+	else if (hasBottom) oy = -d;
+
+	const alignX = hasLeft ? 0 : hasRight ? -w : -w / 2;
+	const alignY = hasTop ? 0 : hasBottom ? -h : -h / 2;
+	const l = cx + ox + alignX;
+	const t = cy + oy + alignY;
+	return { offset: [ox, oy], l, t, r: l + w, b: t + h };
+}
+
+/* 라벨 배치 우선순위(작을수록 먼저 자리를 잡는다). 자리가 부족할 때 어떤 이름을 살릴지
+   정하는 기준 — 선택된 노드 > 종속 노드가 딸린 마을 > 마을 > 조직 > 인물 > 사건. */
+function labelPriority(type, isHighlighted, childCount) {
+	if (isHighlighted) return 0;
+	if (type === '마을') return childCount > 0 ? 1 : 2;
+	if (type === '조직') return 3;
+	if (type === '인물') return 4;
+	return 5;
+}
+
+/* 라벨 배치용 공간 해시. 후보 박스마다 이미 놓인 것 전부를 훑지 않기 위한 것으로,
+   같은 셀에 걸친 박스만 비교한다 (라벨 260개 × 8후보에서도 비용이 무시할 만하다). */
+function makeBoxGrid(cell = 64) {
+	const cells = new Map();
+	const keysOf = (b) => {
+		const out = [];
+		const x1 = Math.floor(b.l / cell);
+		const x2 = Math.floor(b.r / cell);
+		const y1 = Math.floor(b.t / cell);
+		const y2 = Math.floor(b.b / cell);
+		for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) out.push(x + ':' + y);
+		return out;
+	};
+	return {
+		add(b) {
+			for (const k of keysOf(b)) {
+				let arr = cells.get(k);
+				if (!arr) cells.set(k, (arr = []));
+				arr.push(b);
+			}
+		},
+		collides(b) {
+			for (const k of keysOf(b)) {
+				const arr = cells.get(k);
+				if (!arr) continue;
+				for (const o of arr) if (b.l < o.r && o.l < b.r && b.t < o.b && o.t < b.b) return true;
+			}
+			return false;
+		}
+	};
+}
+
+/* icon-offset 은 icon-size 가 곱해진 뒤 화면에 적용된다(MapLibre shapeIcon → 렌더 시 스케일).
+   kt-icons 는 icon-size = markerSizePx/ICON_BASE_SIZE 이므로, 원하는 화면 px 를 얻으려면
+   미리 그 비율로 나눠 넣어야 한다. kt-badges·kt-labels 는 icon-size 가 없어 보정이 불필요. */
+function scaleIconOffset(fan, markerSizePx) {
+	if (!fan || (!fan[0] && !fan[1])) return [0, 0];
+	const scale = markerSizePx / ICON_BASE_SIZE;
+	return [fan[0] / scale, fan[1] / scale];
+}
 
 /* 애니메이션 대시 시퀀스 (MapLibre 공식 "animate a line" 예제 이식) */
 const DASH_SEQUENCE = [
@@ -121,7 +221,11 @@ export class MapController {
 		this._lastDashTs = 0;
 		this._iconsReady = false;
 		this._detailDirty = true; // 마을 GPU 피처 캐시 재계산 필요 여부
-		this._villageFeatures = null; // 캐시된 마을 GPU 피처 { icons, halo, badges, labels }
+		this._villageFeatures = null; // 캐시된 마을 GPU 피처 { icons, halo, badges }
+		this._villageLabelSpecs = null; // 캐시된 마을 라벨 명세 [{ coord, text }] (아직 래스터화 안 함)
+		this._labelSpecs = null; // 이번 렌더의 전체 라벨 명세 (마을 + 조직/인물)
+		this._fanOffsets = new Map(); // 좌표가 동일한 노드들의 화면 px 분산: itemId -> [dx, dy]
+		this._labelRaf = null; // 라벨 동기화 rAF 핸들
 		this._villagePositions = null; // 캐시된 마을 위치 Map(id -> {coord, popupOffset})
 		this._spider = null; // 스파이더파이 상태 { clusterId, center, entries }
 		this._spiderMarkers = []; // 펼쳐진 leaf DOM 마커 (일반 렌더로 지워지지 않음)
@@ -142,6 +246,14 @@ export class MapController {
 		// 줌 변화 시에만 재렌더 (기존 zoomend 동작과 동일, 패닝 시 깜빡임 방지)
 		this._onZoomEnd = () => this.scheduleRender();
 		this.map.on('zoomend', this._onZoomEnd);
+
+		// 라벨은 "화면에 들어온 것만" 래스터화하므로(_syncLabels), 줌이 아니라 단순 팬으로도
+		// 새로 보이게 된 라벨을 채워야 한다. 아이콘/점은 이미 다 올라가 있어 여기서 건드리지
+		// 않는다 — 팬 중 깜빡임 방지.
+		this._onMoveEnd = () => {
+			if (this.map.getZoom() >= ZOOM_DETAIL_THRESHOLD) this._scheduleLabelSync();
+		};
+		this.map.on('moveend', this._onMoveEnd);
 
 		// 줌 시작하면 펼쳐진 스파이더 정리
 		this._onZoomStart = () => this._clearSpider();
@@ -207,9 +319,58 @@ export class MapController {
 	/* ====== 외부 API ====== */
 	setData(rawData) {
 		this.rawData = rawData || [];
+		this._buildFanOffsets();
 		this._rebuildIndex();
 		this._detailDirty = true;
 		this.scheduleRender();
+	}
+
+	/* ====== 좌표가 사실상 동일한 노드 분산(부챗살) ======
+	   좌표가 소수점 5자리(≈1 m)까지 같은 노드들은 어떤 줌으로 확대해도 분리되지 않는다.
+	   그대로 두면 점 하나로 보이고, 클릭은 맨 위 하나만 잡히고, 이름도 하나만 읽힌다.
+	   실제 데이터에 이런 그룹이 23개(노드 53개) 있고 대부분 location_precision='town'
+	   (≈±10 km 근사)인 서로 다른 유적지다 — 즉 좌표가 같은 건 입력 오류가 아니라
+	   "마을 단위까지만 안다"는 뜻이다. 그래서 원본 좌표는 건드리지 않고 화면 px 로만
+	   살짝 부챗살로 벌려 각각을 보이고 누를 수 있게 한다(선언된 오차 ±10 km 안에서
+	   20 px 는 무시할 수 있는 표시상의 분산이다).
+
+	   ⚠️ 화면 px 오프셋이므로 줌과 무관하다 → 데이터가 바뀔 때 한 번만 계산해 캐시한다.
+	   ⚠️ id 순으로 고정해서, 필터·언어를 바꿔도 점이 자리를 바꾸며 튀지 않게 한다. */
+	_buildFanOffsets() {
+		const groups = new Map();
+		for (const d of this.rawData) {
+			if (!d.lat || !d.lng) continue;
+			/* 상세줌에서 "자기 좌표 그대로" 그려지는 노드만 센다. 조직·인물·사건 중
+			   isPrecise(exact/street)가 아닌 것은 _computeFloatingLatLng 로 부모 마을 주위에
+			   흩어 놓기 때문에 애초에 겹치지 않는다 — 이걸 같이 세면 실제로는 혼자 남는
+			   마을에까지 부챗살 오프셋이 붙어 점이 괜히 제자리를 벗어난다. */
+			if (d.type !== '마을' && !d.isPrecise) continue;
+			const key = `${d.lng.toFixed(5)},${d.lat.toFixed(5)}`;
+			let arr = groups.get(key);
+			if (!arr) groups.set(key, (arr = []));
+			arr.push(d);
+		}
+
+		const offsets = new Map();
+		for (const members of groups.values()) {
+			const k = members.length;
+			if (k < 2) continue;
+			/* 원 위에 k개를 놓을 때 이웃 간 거리는 2·R·sin(π/k) 이므로, 점(지름 ~30px)이
+			   서로 겹치지 않을 최소 반경은 15/sin(π/k) 이다. 상한을 둬서 그룹이 아주 커도
+			   너무 벌어지지 않게 한다 (너무 벌리면 위치 자체를 오해한다). */
+			const radius = Math.min(Math.ceil(15 / Math.sin(Math.PI / k)), 30);
+			// 2개면 좌우로 — 라벨이 가로로 길어서 위아래로 벌리면 라벨끼리 다시 부딪힌다.
+			const start = k === 2 ? Math.PI : -Math.PI / 2;
+			members.sort((a, b) => a.id - b.id);
+			members.forEach((d, i) => {
+				const angle = start + (i * 2 * Math.PI) / k;
+				offsets.set(d.id, [
+					Math.round(Math.cos(angle) * radius),
+					Math.round(Math.sin(angle) * radius)
+				]);
+			});
+		}
+		this._fanOffsets = offsets;
 	}
 
 	update(state = {}) {
@@ -250,6 +411,7 @@ export class MapController {
 
 	destroy() {
 		this.map.off('zoomend', this._onZoomEnd);
+		this.map.off('moveend', this._onMoveEnd);
 		this.map.off('zoomstart', this._onZoomStart);
 		this.map.off('click', this._onMapClick);
 		this.map.off('click', 'kt-icons', this._onIconClick);
@@ -259,6 +421,7 @@ export class MapController {
 		document.removeEventListener('click', this._docClick);
 		document.removeEventListener('keydown', this._onKeyDown);
 		if (this._raf) cancelAnimationFrame(this._raf);
+		if (this._labelRaf) cancelAnimationFrame(this._labelRaf);
 		if (this._dashTimer) cancelAnimationFrame(this._dashTimer);
 		this._closeAdHocPopup();
 		this._clearCoordPoints();
@@ -400,7 +563,7 @@ export class MapController {
 		const icons = [];
 		const halo = [];
 		const badges = [];
-		const labels = [];
+		const labelSpecs = [];
 		const positions = new Map();
 
 		for (const item of filteredVillages) {
@@ -413,7 +576,8 @@ export class MapController {
 				badgeCount: childCount
 			});
 			const coord = [item.lng, item.lat];
-			positions.set(item.id, { coord, popupOffset: Math.round(v.size / 2 + 6) });
+			const fan = this._fanOffsets.get(item.id) || null;
+			positions.set(item.id, { coord, popupOffset: Math.round(v.size / 2 + 6), fan });
 
 			icons.push({
 				type: 'Feature',
@@ -421,7 +585,8 @@ export class MapController {
 					itemId: item.id,
 					iconImageId: iconImageId('마을', item.settlementType, v.isHighlighted),
 					markerSizePx: v.size,
-					markerOpacity: v.markerOpacity
+					markerOpacity: v.markerOpacity,
+					iconOffset: scaleIconOffset(fan, v.size)
 				},
 				geometry: { type: 'Point', coordinates: coord }
 			});
@@ -435,18 +600,27 @@ export class MapController {
 			if (v.badgeCount > 0) {
 				badges.push({
 					type: 'Feature',
-					properties: { badgeImageId: ensureBadgeImage(this.map, v.badgeCount) },
+					properties: {
+						badgeImageId: ensureBadgeImage(this.map, v.badgeCount),
+						// 아이콘이 부챗살로 밀린 만큼 뱃지도 같이 밀어야 점에 붙어 있는다
+						offset: [14 + (fan ? fan[0] : 0), -14 + (fan ? fan[1] : 0)]
+					},
 					geometry: { type: 'Point', coordinates: coord }
 				});
 			}
-			labels.push({
-				type: 'Feature',
-				properties: { labelImageId: ensureLabelImage(this.map, this._label(item)) },
-				geometry: { type: 'Point', coordinates: coord }
+			// 라벨은 여기서 이미지로 굽지 않는다 — 텍스트/좌표만 모아두고, 실제 래스터화와
+			// 자리 찾기는 화면에 들어온 것만 _syncLabels() 에서 한다 (아래 주석 참고).
+			labelSpecs.push({
+				coord,
+				text: this._label(item),
+				fan,
+				iconRadius: v.size / 2,
+				priority: labelPriority('마을', v.isHighlighted, childCount)
 			});
 		}
 
-		this._villageFeatures = { icons, halo, badges, labels };
+		this._villageFeatures = { icons, halo, badges };
+		this._villageLabelSpecs = labelSpecs;
 		this._villagePositions = positions;
 	}
 
@@ -465,7 +639,7 @@ export class MapController {
 		const iconFeatures = this._villageFeatures.icons.slice();
 		const haloFeatures = this._villageFeatures.halo.slice();
 		const badgeFeatures = this._villageFeatures.badges.slice();
-		const labelFeatures = this._villageFeatures.labels.slice();
+		const labelSpecs = this._villageLabelSpecs.slice();
 
 		// 조직/인물: 개수가 적고(수십 건 수준) 선택 하이라이트가 자주 바뀌므로 매번 계산한다
 		const pushEntity = (item, lng, lat, opts) => {
@@ -476,7 +650,10 @@ export class MapController {
 				certaintyScore: item.certaintyScore
 			});
 			const coord = [lng, lat];
-			this._positions.set(item.id, { coord, popupOffset: Math.round(v.size / 2 + 6) });
+			// floating 노드는 _buildFanOffsets 에서 이미 제외되지만, 좌표를 옮겨 그리는
+			// 경로이므로 여기서도 한 번 더 막아 둔다.
+			const fan = opts.isFloating ? null : this._fanOffsets.get(item.id) || null;
+			this._positions.set(item.id, { coord, popupOffset: Math.round(v.size / 2 + 6), fan });
 
 			iconFeatures.push({
 				type: 'Feature',
@@ -484,7 +661,8 @@ export class MapController {
 					itemId: item.id,
 					iconImageId: iconImageId(item.type, item.settlementType, v.isHighlighted),
 					markerSizePx: v.size,
-					markerOpacity: v.markerOpacity
+					markerOpacity: v.markerOpacity,
+					iconOffset: scaleIconOffset(fan, v.size)
 				},
 				geometry: { type: 'Point', coordinates: coord }
 			});
@@ -495,10 +673,12 @@ export class MapController {
 					geometry: { type: 'Point', coordinates: coord }
 				});
 			}
-			labelFeatures.push({
-				type: 'Feature',
-				properties: { labelImageId: ensureLabelImage(this.map, this._label(item)) },
-				geometry: { type: 'Point', coordinates: coord }
+			labelSpecs.push({
+				coord,
+				text: this._label(item),
+				fan,
+				iconRadius: v.size / 2,
+				priority: labelPriority(item.type, v.isHighlighted, 0)
 			});
 		};
 
@@ -522,10 +702,113 @@ export class MapController {
 			pushEntity(item, flng, flat, { isHighlighted, isFloating: true });
 		});
 
+		// 1단계 — 점(아이콘/halo/뱃지)을 먼저 즉시 올린다. 이 세 레이어가 쓰는 이미지는
+		// 아이콘 10종 + 뱃지 숫자 몇 종뿐이라 이미 등록돼 있고, 아틀라스도 작아서
+		// 상세줌으로 들어온 그 프레임에 바로 그려진다.
 		this._setGpuSourceData('kt-halo', haloFeatures);
 		this._setGpuSourceData('kt-icons', iconFeatures);
 		this._setGpuSourceData('kt-badges', badgeFeatures);
+
+		// 2단계 — 라벨은 화면에 들어온 것만 골라 다음 프레임에 굽는다 (_syncLabels 주석 참고).
+		this._labelSpecs = labelSpecs;
+		this._scheduleLabelSync();
+	}
+
+	/* 라벨은 "글자마다 이미지 1장"이라 마을이 1,500개면 map.addImage() 도 1,500번이다.
+	   addImage() 한 번은 (a) 캔버스 래스터화 + getImageData 리드백,
+	   (b) 스타일에 등록된 전체 이미지 ID 목록을 워커로 broadcast — 를 하므로,
+	   N 장을 등록하면 (b) 때문에 O(N²) 비용이 든다. 게다가 등록된 라벨 중 타일이
+	   참조하는 것 전부가 아이콘 아틀라스 텍스처 한 장에 팩킹되므로, 라벨 1,500장이면
+	   텍스처가 수천만 픽셀(수십 MB)까지 커져 모바일 GPU 의 최대 텍스처 크기에 부딪힌다.
+	   → 상세줌에 들어간 직후 점이 사라졌다가 10~15초 뒤에야 나타나던 원인.
+
+	   그래서 라벨은 (1) 지금 화면(+여유분)에 들어온 것만, (2) MAX_VISIBLE_LABELS 까지만
+	   래스터화하고, (3) 점을 올리는 프레임과 분리해 굽는다. */
+	_scheduleLabelSync() {
+		if (this._labelRaf) return;
+		this._labelRaf = requestAnimationFrame(() => {
+			this._labelRaf = null;
+			this._syncLabels();
+		});
+	}
+
+	_syncLabels() {
+		if (!this.map || !this._labelSpecs) return;
+		// 저줌(클러스터 상태)에서는 라벨 레이어를 쓰지 않는다 — _clearGpuLayers 가 이미 비웠다.
+		if (this.map.getZoom() < ZOOM_DETAIL_THRESHOLD) return;
+
+		const bounds = this.map.getBounds();
+		const west = bounds.getWest();
+		const east = bounds.getEast();
+		const south = bounds.getSouth();
+		const north = bounds.getNorth();
+		// 화면 밖으로 각 변 20% 여유 — 살짝 팬했을 때 라벨이 뒤늦게 뜨는 걸 줄인다.
+		const padX = (east - west) * 0.2;
+		const padY = (north - south) * 0.2;
+		const cx = (west + east) / 2;
+		const cy = (south + north) / 2;
+
+		const visible = this._labelSpecs.filter(
+			({ coord: [lng, lat] }) =>
+				lng >= west - padX && lng <= east + padX && lat >= south - padY && lat <= north + padY
+		);
+		// 중요한 이름부터, 같은 등급이면 화면 중앙에 가까운 것부터 자리를 잡는다.
+		visible.sort(
+			(a, b) =>
+				a.priority - b.priority ||
+				distToCenterSq(a.coord, cx, cy) - distToCenterSq(b.coord, cx, cy)
+		);
+		if (visible.length > MAX_VISIBLE_LABELS) visible.length = MAX_VISIBLE_LABELS;
+
+		/* 점(아이콘) 박스를 먼저 격자에 넣는다 — 라벨이 다른 점 위에 얹히지 않게 하려는 것.
+		   부챗살 오프셋을 더한 "실제로 그려지는" 위치를 쓴다. */
+		const grid = makeBoxGrid();
+		const screen = visible.map((spec) => {
+			const p = this.map.project(spec.coord);
+			return { x: p.x + (spec.fan ? spec.fan[0] : 0), y: p.y + (spec.fan ? spec.fan[1] : 0) };
+		});
+		visible.forEach((spec, i) => {
+			const half = spec.iconRadius + 1;
+			const { x, y } = screen[i];
+			grid.add({ l: x - half, t: y - half, r: x + half, b: y + half });
+		});
+
+		const keepIds = new Set();
+		const labelFeatures = [];
+		visible.forEach((spec, i) => {
+			const { width, height } = labelSizePx(spec.text);
+			const { x, y } = screen[i];
+			for (const anchor of LABEL_ANCHORS) {
+				const box = labelCandidateBox(anchor, x, y, width, height, spec.iconRadius);
+				if (grid.collides(box)) continue;
+
+				grid.add(box);
+				const labelImageId = ensureLabelImage(this.map, spec.text);
+				keepIds.add(labelImageId);
+				labelFeatures.push({
+					type: 'Feature',
+					properties: {
+						labelImageId,
+						anchor,
+						// 라벨은 원 좌표에 얹히므로, 부챗살로 밀린 점을 따라가도록 fan 을 더한다
+						offset: [
+							box.offset[0] + (spec.fan ? spec.fan[0] : 0),
+							box.offset[1] + (spec.fan ? spec.fan[1] : 0)
+						],
+						// 배열 순서 = 우선순위 순서 → MapLibre 배치기도 같은 순서로 자리를 준다
+						sortKey: labelFeatures.length
+					},
+					geometry: { type: 'Point', coordinates: spec.coord }
+				});
+				return;
+			}
+			/* 8방향이 모두 막힌 라벨은 포기한다. 점은 그대로 보이고 눌러서 팝업으로 이름을
+			   확인할 수 있으며, 조금 더 확대하면 자리가 생겨 자연히 나타난다. */
+		});
+
 		this._setGpuSourceData('kt-labels', labelFeatures);
+		// 화면 밖으로 나간 라벨 이미지는 상한을 넘길 때만 정리 (지금 쓰는 건 절대 안 지움)
+		pruneLabelImages(this.map, keepIds);
 	}
 
 	_handleIconClick(e) {
@@ -1019,15 +1302,20 @@ export class MapController {
 
 		const pos = this._positions.get(id);
 		const item = this.rawData.find((d) => d.id === id);
-		if (pos && item) this._openAdHocPopup(item, pos.coord, pos.popupOffset, { centerInView });
+		if (pos && item)
+			this._openAdHocPopup(item, pos.coord, pos.popupOffset, { centerInView, fan: pos.fan });
 	}
 
 	/* 클릭/포커스로 여는 팝업 (DOM·GPU 마커 공통, 마커에 바인딩되지 않는다) */
-	_openAdHocPopup(item, lngLat, offset, { centerInView = false } = {}) {
+	_openAdHocPopup(item, lngLat, offset, { centerInView = false, fan = null } = {}) {
 		this._closeAdHocPopup();
+		/* anchor:'bottom' 에서 숫자 offset 은 MapLibre 가 [0, -offset] 로 바꿔 쓴다.
+		   점이 부챗살로 밀려 있으면 팝업 꼬리도 그만큼 따라가야 하므로 배열로 직접 준다. */
+		const popupOffset =
+			fan && (fan[0] || fan[1]) ? [fan[0], fan[1] - offset] : offset;
 		this._activePopup = new maplibregl.Popup({
 			anchor: 'bottom',
-			offset,
+			offset: popupOffset,
 			maxWidth: '340px',
 			closeButton: true
 		})
