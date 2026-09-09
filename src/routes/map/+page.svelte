@@ -109,6 +109,9 @@
 	   지도 컨트롤러 준비(onMapReady)와 데이터 도착 중 늦은 쪽에 맞춰 한 번만 실행한다. */
 	let pendingFocus = null;
 	let mapReady = false;
+	/* 첫 데이터 로드가 끝났는지. 끝나기 전에는 "아직 못 찾음"과 "없는 항목"을 구별할 수
+	   없으므로, 안내 토스트는 이 값이 true 가 된 뒤에만 띄운다. */
+	let dataSettled = false;
 
 	function readFocusParam() {
 		const raw = new URLSearchParams(window.location.search).get('focus');
@@ -123,9 +126,23 @@
 	function tryApplyFocus() {
 		if (!pendingFocus || !mapReady) return;
 		const item = rawData.find((d) => d.type === pendingFocus.type && d.slug === pendingFocus.slug);
-		if (!item) return;
+		if (!item) {
+			// 데이터가 아직 오는 중이면 다음 호출을 기다린다. 다 왔는데도 없으면 낡은 링크다.
+			if (dataSettled) {
+				pendingFocus = null;
+				showToast(t('toast.focusNotFound'), true);
+			}
+			return;
+		}
 		pendingFocus = null;
 		onFocus(item);
+		/* 좌표가 없는 노드는 controller.focus() 가 조용히 아무 것도 하지 않는다. 상세
+		   페이지에서는 링크 자체를 걸지 않지만, 좌표가 있던 시절의 링크·북마크·공유
+		   URL 로 들어올 수 있으므로 여기서 사유를 알려준다. (목록 선택은 그대로 두어
+		   사이드바에서는 항목을 찾을 수 있게 한다.) */
+		if (!item.lat || !item.lng) {
+			showToast(t('toast.focusNoLocation', { name: item.name }), true);
+		}
 	}
 
 	function onMapReady() {
@@ -148,6 +165,7 @@
 				console.error(e);
 			} finally {
 				loading = false;
+				dataSettled = true;
 				tryApplyFocus();
 			}
 		})();
