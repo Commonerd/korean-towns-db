@@ -1662,4 +1662,3 @@ export class MapController {
 		this._markers = [];
 	}
 }
- 
