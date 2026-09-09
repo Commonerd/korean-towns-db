@@ -70,8 +70,22 @@
 	const dark = $derived(darkOpacity > 0.5);
 
 	/* ====== 데이터 로드 ====== */
+	/* 시트에서 받은 결과가 지금 갖고 있는 데이터보다 확 작으면(네트워크 차단·쿼터 초과·
+	   시트 형식 변경 등으로 일부만 읽힌 경우) 덮어쓰지 않는다. 아카이브 데이터가 한 번에
+	   절반 이하로 줄어드는 정상적인 편집은 없다고 보고, 그런 결과는 실패로 취급한다.
+	   ⚠️ 예전에는 결과를 무조건 대입해서, 특정 네트워크에서 구글시트가 막히면 프리렌더로
+	      이미 갖고 있던 1,100여 건이 통째로 날아갔다 — 지도에 아무것도 안 뜨고 상세 페이지의
+	      «위치 보기» 도 대상을 못 찾아 아무 반응이 없었다(브라우저와 무관, 그 네트워크에서만
+	      재현되는 증상). 프리렌더 데이터는 언제나 유효한 폴백이므로 반드시 지킨다. */
+	const MIN_KEEP_RATIO = 0.5;
+
 	async function fetchLatestAndRender(firstLoad = false) {
 		const data = await loadGoogleSheetsData();
+		if (rawData.length && data.length < rawData.length * MIN_KEEP_RATIO) {
+			throw new Error(
+				`시트 응답이 비정상적으로 작습니다 (${data.length}건 < 기존 ${rawData.length}건) — 기존 데이터를 유지합니다.`
+			);
+		}
 		rawData = data;
 		const r = detectYearRange(data);
 		if (r) {
@@ -163,6 +177,9 @@
 				await fetchLatestAndRender(!hadServerData);
 			} catch (e) {
 				console.error(e);
+				// 프리렌더 데이터로는 계속 볼 수 있으므로, 최신화만 실패했음을 알린다.
+				if (rawData.length) showToast(t('toast.syncStale'), true);
+				else showToast(t('toast.syncFail'), true);
 			} finally {
 				loading = false;
 				dataSettled = true;
