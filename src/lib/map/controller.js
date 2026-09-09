@@ -66,6 +66,12 @@ const COORD_SNAP_PX = 18;
 
 const GPU_SOURCE_IDS = ['kt-halo', 'kt-icons', 'kt-badges', 'kt-labels'];
 
+/* 팝업 예약을 붙들고 있을 최대 시간(ms). flyTo 종료를 기다리기엔 넉넉하고, 실패한
+   예약이 한참 뒤에 뜬금없이 열리지 않을 만큼은 짧게. 아이콘 폰트가 아직 안 온 동안은
+   이 기한을 세지 않는다(_afterRender 참고) — 느린 첫 방문에서 시간만 흘러 예약이
+   만료되는 걸 막기 위한 것. */
+const PENDING_POPUP_TTL_MS = 12000;
+
 /* 한 화면에 동시에 그릴 라벨 수 상한. 라벨은 글자마다 이미지 1장이고 그 전부가 타일
    아이콘 아틀라스 텍스처 한 장에 팩킹되므로, 상한이 없으면 텍스처가 모바일 GPU 가
    감당 못 할 크기까지 커진다. 화면을 촘촘히 채우기엔 충분한 값. */
@@ -216,6 +222,7 @@ export class MapController {
 		this._raf = null;
 		this._pendingPopupId = null;
 		this._pendingPopupCenter = false;
+		this._pendingPopupUntil = 0; // 예약 기한 (performance.now() 기준)
 		this._dashStep = 0;
 		this._dashTimer = null;
 		this._lastDashTs = 0;
@@ -860,7 +867,7 @@ export class MapController {
 
 		// 선택 상태 변경이 트리거하는 재렌더가 방금 연 팝업을 지워버리지 않도록,
 		// 팝업은 직접 열지 않고 재렌더 이후(_afterRender)에 열리도록 예약한다.
-		this._pendingPopupId = item.id;
+		this._reservePopup(item.id);
 		this.scheduleRender();
 	}
 
@@ -1088,7 +1095,7 @@ export class MapController {
 			if (item.type === '마을') this.onSelectTown(item.name);
 			else if (item.relatedTown) this.onSelectTown(item.relatedTown);
 			// GPU 경로와 동일하게, 팝업은 재렌더 이후에 열리도록 예약한다 (레이스 방지).
-			this._pendingPopupId = item.id;
+			this._reservePopup(item.id);
 			this.scheduleRender();
 		});
 
@@ -1333,25 +1340,56 @@ export class MapController {
 
 		if (isNaN(targetLat) || isNaN(targetLng) || !targetLat || !targetLng) return;
 
-		this._pendingPopupId = item.id;
 		// 검색 결과 클릭 등 "포커싱" 경로로 열린 팝업은 내용 길이와 무관하게
 		// 화면 중앙에 통째로 보이도록 한 번 더 보정한다 (_centerPopupInView).
-		this._pendingPopupCenter = true;
+		this._reservePopup(item.id, { centerInView: true });
 		this.map.flyTo({ center: [targetLng, targetLat], zoom: targetZoom, duration: 800 });
 		this.map.once('moveend', () => this.scheduleRender());
 	}
 
+	/* 팝업 예약 — 렌더가 끝난 뒤 _afterRender 가 처리한다.
+	   (선택 상태 변경이 부르는 재렌더가 방금 연 팝업을 지우지 않게 하려는 기존 설계) */
+	_reservePopup(id, { centerInView = false } = {}) {
+		this._pendingPopupId = id;
+		this._pendingPopupCenter = centerInView;
+		this._pendingPopupUntil = performance.now() + PENDING_POPUP_TTL_MS;
+	}
+
+	_clearPendingPopup() {
+		this._pendingPopupId = null;
+		this._pendingPopupCenter = false;
+		this._pendingPopupUntil = 0;
+	}
+
+	/* ⚠️ 예약은 "실제로 열 수 있을 때"만 소비한다.
+	   예전에는 좌표를 찾기 전에 예약을 먼저 지워서, 그 렌더가 팝업을 못 열면 예약이
+	   영구히 유실됐다. 첫 방문(cdnjs Font Awesome 이 캐시에 없음)에서는 _renderDetailGPU
+	   가 _iconsReady 대기로 조기 반환하는데, 그 렌더가 예약을 먹어버리는 바람에 지도는
+	   이동하고 마을도 선택됐는데 팝업만 안 열리는 상태가 됐다 — 캐시가 더워진 뒤에는
+	   재현되지 않아 "이 컴퓨터에서는 되는데 저기서는 안 되는" 증상으로 보였다.
+	   그래서 좌표가 아직 없으면 예약을 남겨 다음 렌더(아이콘 준비 완료·flyTo 종료)를
+	   기다리고, 무한정 붙들지 않도록 기한을 둔다. */
 	_afterRender() {
 		if (this._pendingPopupId == null) return;
 		const id = this._pendingPopupId;
-		const centerInView = this._pendingPopupCenter;
-		this._pendingPopupId = null;
-		this._pendingPopupCenter = false;
-
 		const pos = this._positions.get(id);
 		const item = this.rawData.find((d) => d.id === id);
-		if (pos && item)
-			this._openAdHocPopup(item, pos.coord, pos.popupOffset, { centerInView, fan: pos.fan });
+
+		if (!pos || !item) {
+			/* 상세줌인데 아이콘이 아직 준비되지 않았으면 "그릴 수 없는 게 정상"인 구간이다.
+			   이때는 기한을 세지 않고 기다린다 — 폰트가 느린 첫 방문에서 기다리는 동안
+			   기한만 흘러가 예약이 만료되면 결국 같은 증상이 남는다. 폰트 로드가 끝나면
+			   ensureIconImages().then() 이 재렌더를 걸어 주므로 반드시 다시 들어온다. */
+			const notRenderableYet =
+				!this._iconsReady && this.map.getZoom() >= ZOOM_DETAIL_THRESHOLD;
+			if (notRenderableYet || performance.now() < this._pendingPopupUntil) return;
+			this._clearPendingPopup();
+			return;
+		}
+
+		const centerInView = this._pendingPopupCenter;
+		this._clearPendingPopup();
+		this._openAdHocPopup(item, pos.coord, pos.popupOffset, { centerInView, fan: pos.fan });
 	}
 
 	/* 클릭/포커스로 여는 팝업 (DOM·GPU 마커 공통, 마커에 바인딩되지 않는다) */
