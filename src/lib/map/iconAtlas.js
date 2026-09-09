@@ -24,7 +24,12 @@ function glyphChar(key) {
 
 const BASE_SIZE = 64; // 아이콘 캔버스 논리 크기(px). icon-size 표현식이 이 값으로 나눠 실제 크기를 맞춘다.
 const PIXEL_RATIO = 3; // 레티나 대응 배율
-const LABEL_SCALE = 3;
+/* 라벨/뱃지 래스터 배율. 3배는 저장 픽셀이 9배로 늘어 모바일 GPU 의 아이콘 아틀라스
+   텍스처를 수십 MB 로 부풀린다 — 기기 DPR 을 따르되 2배로 상한을 둔다. */
+const LABEL_SCALE = Math.min(
+	Math.max((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 1),
+	2
+);
 const LABEL_FONT = '700 13px "Noto Sans KR", sans-serif';
 
 function glyphKey(type, settlementType) {
@@ -109,12 +114,29 @@ export async function ensureIconImages(map) {
 export const ICON_BASE_SIZE = BASE_SIZE;
 
 /* ====== 라벨(장소명) 캔버스 래스터 — 문자열별로 1회만 생성/캐시 ====== */
+/* 폭 측정용 2D 컨텍스트는 1개만 만들어 재사용한다 — 라벨마다 캔버스를 새로 만들면
+   수백 개의 캔버스 컨텍스트가 한꺼번에 생겨 모바일에서 특히 느리다. */
+let measureCtx = null;
+function measureLabelWidth(text) {
+	if (!measureCtx) {
+		measureCtx = document.createElement('canvas').getContext('2d');
+		measureCtx.font = LABEL_FONT;
+	}
+	return Math.ceil(measureCtx.measureText(text).width);
+}
+
+/* 라벨 박스 크기(논리 px). 컨트롤러가 화면 좌표에서 라벨 충돌을 계산할 때 같은 값을
+   써야 하므로 상수로 빼고 labelSizePx() 로 노출한다. */
+const LABEL_PAD_X = 12;
+const LABEL_H = 22;
+
+/* 라벨 이미지가 차지할 크기 — _syncLabels 의 배치 계산용 (이미지는 굽지 않는다) */
+export function labelSizePx(text) {
+	return { width: measureLabelWidth(text) + LABEL_PAD_X, height: LABEL_H };
+}
+
 function drawLabelCanvas(text) {
-	const measureCtx = document.createElement('canvas').getContext('2d');
-	measureCtx.font = LABEL_FONT;
-	const textWidth = Math.ceil(measureCtx.measureText(text).width);
-	const width = textWidth + 12;
-	const height = 22;
+	const { width, height } = labelSizePx(text);
 
 	const canvas = document.createElement('canvas');
 	canvas.width = width * LABEL_SCALE;
@@ -138,12 +160,38 @@ function drawLabelCanvas(text) {
 	return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
+/* 등록한 라벨 이미지의 최근 사용 순서(LRU). map.addImage() 는 호출마다 스타일의
+   전체 이미지 ID 목록을 워커로 broadcast 하므로, 등록된 이미지 수 N 에 비례하는
+   비용이 매 호출에 붙는다(N 개 등록 = O(N²)). 지도를 계속 이동하며 새 라벨이
+   쌓이면 이 N 이 무한히 커지므로 상한을 두고 오래된 것부터 버린다. */
+const labelUse = new Map(); // imageId -> 사용 순번
+let labelTick = 0;
+const LABEL_CACHE_MAX = 600; // 이 수를 넘으면 정리 시작
+const LABEL_CACHE_TARGET = 300; // 정리 후 남길 수
+
 export function ensureLabelImage(map, text) {
 	const id = `kt-label:${text}`;
 	if (!map.hasImage(id)) {
 		map.addImage(id, drawLabelCanvas(text), { pixelRatio: LABEL_SCALE });
 	}
+	labelUse.set(id, ++labelTick);
 	return id;
+}
+
+/* 화면에 쓰이지 않는 라벨 이미지를 LRU 순으로 정리한다. keepIds 에 든 것(지금 화면에
+   올라간 라벨)은 절대 지우지 않는다 — 지우면 icon-image 참조가 깨져 라벨이 사라진다.
+   MAX 를 넘었을 때만 TARGET 까지 한 번에 줄여, 정리 자체가 자주 일어나지 않게 한다. */
+export function pruneLabelImages(map, keepIds) {
+	if (labelUse.size <= LABEL_CACHE_MAX) return;
+	const candidates = [...labelUse.entries()]
+		.filter(([id]) => !keepIds.has(id))
+		.sort((a, b) => a[1] - b[1]); // 오래 안 쓴 것부터
+	const removeCount = Math.min(candidates.length, labelUse.size - LABEL_CACHE_TARGET);
+	for (let i = 0; i < removeCount; i++) {
+		const id = candidates[i][0];
+		if (map.hasImage(id)) map.removeImage(id);
+		labelUse.delete(id);
+	}
 }
 
 /* ====== 뱃지(연결 개수) 캔버스 래스터 — 숫자별로 1회만 생성/캐시 ====== */
