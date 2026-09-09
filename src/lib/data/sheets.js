@@ -61,10 +61,20 @@ export async function loadGoogleSheetsData() {
 	const townCoords = {};
 	const slugify = makeSlugger();
 
-	/* 1단계: 마을 먼저 */
+	/* 1단계: 마을 먼저.
+
+	   ⚠️ 마을 시트는 이 데이터셋의 뼈대다 — 조직·인물·사건의 좌표가 townCoords 에서
+	      나오므로, 마을을 못 읽으면 나머지도 사실상 무의미해진다. 예전에는 여기서
+	      실패를 로그만 찍고 넘어가 "거의 빈 배열"을 정상 결과처럼 돌려줬는데, 호출부가
+	      그걸 그대로 대입해 프리렌더로 갖고 있던 정상 데이터를 지워버렸다(지도에 아무것도
+	      안 뜨고 «위치 보기» 도 먹지 않음). 그래서 이제는 조용히 넘기지 않고 throw 한다 —
+	      호출부가 "실패"를 구분해 기존 데이터를 지킬 수 있어야 한다. */
 	try {
 		const townTarget = targets.find((t) => t.type === '마을');
 		const response = await fetch(`${baseUrl}&gid=${townTarget.gid}`);
+		if (!response.ok) {
+			throw new Error(`마을 시트 응답 오류 (HTTP ${response.status})`);
+		}
 		if (response.ok) {
 			const records = csvToArray(await response.text());
 			if (records.length > 0) {
@@ -139,6 +149,13 @@ export async function loadGoogleSheetsData() {
 		}
 	} catch (e) {
 		console.error('마을 파싱 실패', e);
+		throw e instanceof Error ? e : new Error(String(e));
+	}
+
+	/* 마을을 한 건도 못 읽었으면(응답은 200이었지만 내용이 비었거나 형식이 바뀐 경우)
+	   역시 실패로 다룬다 — 빈 결과를 정상처럼 돌려주면 안 된다. */
+	if (!updatedData.length) {
+		throw new Error('마을 시트에서 노드를 한 건도 읽지 못했습니다.');
 	}
 
 	/* 2단계: 조직 & 인물 & 사건 */
