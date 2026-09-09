@@ -319,6 +319,8 @@ export class MapController {
 	/* ====== 외부 API ====== */
 	setData(rawData) {
 		this.rawData = rawData || [];
+		// _buildFanOffsets 가 _isOrphanGeocoded 를 통해 _villageMap 을 보므로 먼저 세운다.
+		this._buildVillageMap();
 		this._buildFanOffsets();
 		this._rebuildIndex();
 		this._detailDirty = true;
@@ -343,8 +345,9 @@ export class MapController {
 			/* 상세줌에서 "자기 좌표 그대로" 그려지는 노드만 센다. 조직·인물·사건 중
 			   isPrecise(exact/street)가 아닌 것은 _computeFloatingLatLng 로 부모 마을 주위에
 			   흩어 놓기 때문에 애초에 겹치지 않는다 — 이걸 같이 세면 실제로는 혼자 남는
-			   마을에까지 부챗살 오프셋이 붙어 점이 괜히 제자리를 벗어난다. */
-			if (d.type !== '마을' && !d.isPrecise) continue;
+			   마을에까지 부챗살 오프셋이 붙어 점이 괜히 제자리를 벗어난다.
+			   단, 부모 마을이 없어 자기 좌표에 그려지는 고아 노드는 겹칠 수 있으므로 포함한다. */
+			if (d.type !== '마을' && !d.isPrecise && !this._isOrphanGeocoded(d)) continue;
 			const key = `${d.lng.toFixed(5)},${d.lat.toFixed(5)}`;
 			let arr = groups.get(key);
 			if (!arr) groups.set(key, (arr = []));
@@ -452,17 +455,40 @@ export class MapController {
 		});
 	}
 
+	/* 마을 이름 -> 마을 노드. 부모 마을 조회(_villageMap)는 부챗살 계산과 클러스터
+	   인덱스 양쪽이 쓰므로, 둘보다 먼저 한 번만 세운다. */
+	_buildVillageMap() {
+		this._villageMap = {};
+		for (const d of this.rawData) {
+			if (d.type === '마을') this._villageMap[d.name] = d;
+		}
+	}
+
+	/* 부모 마을을 찾을 수 없는 비정확(region/town/unknown) 노드 중, 자기 좌표는 갖고 있는 것.
+
+	   이 노드들은 부유 배치(_computeFloatingLatLng)의 기준점이 없어서 예전에는 렌더 루프에서
+	   조용히 버려졌다 — 하와이(호놀룰루·힐로)처럼 towns 시트에 마을이 아예 없고 조직의
+	   related_town 도 비어 있는 지역이 통째로 빈 바다로 보인 원인. lat/lng 가 이미 있으므로
+	   (sheets.js 의 ownLat/ownLng 폴백) 자기 좌표에 그대로 그리는 것이 맞다. */
+	_isOrphanGeocoded(item) {
+		if (!item || item.type === '마을' || item.isPrecise) return false;
+		if (!item.lat || !item.lng) return false;
+		const parent = this._villageMap ? this._villageMap[item.relatedTown] : null;
+		return !parent || !parent.lat || !parent.lng;
+	}
+
 	/* ====== 내부: 클러스터 인덱스 ====== */
 	_rebuildIndex() {
-		const villagesAll = this.rawData.filter((d) => d.type === '마을');
-		this._villageMap = {};
-		villagesAll.forEach((v) => {
-			this._villageMap[v.name] = v;
-		});
+		this._buildVillageMap();
 
 		const filtered = this.getFilteredData();
-		const filteredVillages = filtered.filter((d) => d.type === '마을' && d.lat && d.lng);
-		const points = filteredVillages.map((v) => ({
+		/* 마을과 함께 '고아 노드'도 클러스터에 넣는다. 저줌에서 정확위치 조직/인물을
+		   숨기는 건(filter==='all') 부모 마을 점이 그 자리를 대신 표시해 주기 때문인데,
+		   고아 노드에는 그 대역이 없다 → 클러스터에 태워야 저줌에서도 지역이 보인다. */
+		const clusterable = filtered.filter(
+			(d) => d.lat && d.lng && (d.type === '마을' || this._isOrphanGeocoded(d))
+		);
+		const points = clusterable.map((v) => ({
 			type: 'Feature',
 			properties: { itemId: v.id },
 			geometry: { type: 'Point', coordinates: [v.lng, v.lat] }
@@ -522,12 +548,23 @@ export class MapController {
 					this._addClusterMarker(lng, lat, feature.properties);
 				} else {
 					const item = byId.get(feature.properties.itemId);
-					if (item) this._addVillageMarker(item, isDetailMode, childCountByTown);
+					// 클러스터 leaf 는 마을이거나 고아 노드다 (_rebuildIndex 참고).
+					if (!item) continue;
+					if (item.type === '마을') {
+						this._addVillageMarker(item, isDetailMode, childCountByTown);
+					} else {
+						const isHighlighted =
+							this.selectedTownName && item.relatedTown === this.selectedTownName;
+						this._addItemMarker(item, item.lat, item.lng, { isHighlighted }, isDetailMode);
+					}
 				}
 			}
 		}
 
 		filteredOrgsPersons.forEach((item) => {
+			// 고아 노드는 위 클러스터 인덱스 경로에서 이미 그려졌다 — 두 번 그리지 않는다.
+			if (this._isOrphanGeocoded(item)) return;
+
 			if (item.isPrecise && item.lat && item.lng) {
 				if (this.filter === 'all' && !isDetailMode) return;
 				const isHighlighted = this.selectedTownName && item.relatedTown === this.selectedTownName;
@@ -683,7 +720,9 @@ export class MapController {
 		};
 
 		filteredOrgsPersons.forEach((item) => {
-			if (item.isPrecise && item.lat && item.lng) {
+			/* 정확위치 노드, 그리고 부모 마을이 없는 고아 노드는 모두 자기 좌표에 그린다.
+			   (고아 노드를 여기서 빼면 하와이처럼 부모 마을이 없는 지역이 통째로 사라진다.) */
+			if ((item.isPrecise || this._isOrphanGeocoded(item)) && item.lat && item.lng) {
 				const isHighlighted = this.selectedTownName && item.relatedTown === this.selectedTownName;
 				pushEntity(item, item.lng, item.lat, { isHighlighted });
 				return;
@@ -871,7 +910,7 @@ export class MapController {
 		this._spiderfy(clusterId, center);
 	}
 
-	/* 스파이더파이: 클러스터 leaf(마을)들을 중심 주변에 원/나선으로 펼치고
+	/* 스파이더파이: 클러스터 leaf(마을·고아 노드)들을 중심 주변에 원/나선으로 펼치고
 	   각 leaf 를 중심과 잇는 다리(leg) 선을 그린다 (기존 Leaflet.markercluster spiderfy 재현).
 	   마커·다리는 중심에서 최종 위치까지 스프링 애니메이션으로 퍼진다. */
 	_spiderfy(clusterId, center) {
@@ -891,9 +930,13 @@ export class MapController {
 			const ll = this.map.unproject([centerPt.x + dx, centerPt.y + dy]);
 			const finalPos = [ll.lng, ll.lat];
 
-			const childCount = childCountByTown.get(item.name) || 0;
-			const isHighlighted = this.selectedTownName && item.name === this.selectedTownName;
-			const { el } = createMarkerEl('마을', {
+			// leaf 는 마을이거나 고아 노드다 (_rebuildIndex 참고) — 타입에 맞는 점을 만든다.
+			const isTown = item.type === '마을';
+			const childCount = isTown ? childCountByTown.get(item.name) || 0 : 0;
+			const isHighlighted =
+				this.selectedTownName &&
+				(isTown ? item.name : item.relatedTown) === this.selectedTownName;
+			const { el } = createMarkerEl(item.type, {
 				isHighlighted,
 				badgeCount: childCount,
 				settlementType: item.settlementType,
@@ -901,7 +944,8 @@ export class MapController {
 			});
 			el.addEventListener('click', (e) => {
 				e.stopPropagation();
-				this.onSelectTown(item.name);
+				if (isTown) this.onSelectTown(item.name);
+				else if (item.relatedTown) this.onSelectTown(item.relatedTown);
 				this._openAdHocPopup(item, finalPos, Math.round(28 / 2 + 6));
 			});
 			// 시작 위치는 중심 — 애니메이션으로 finalPos 까지 퍼진다
@@ -1276,6 +1320,10 @@ export class MapController {
 				targetLat = parent.lat;
 				targetLng = parent.lng;
 				targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 8);
+			} else {
+				/* 부모 마을이 없는 고아 노드 — 자기 좌표로 간다. 기본 zoom 8 은 상세줌
+				   임계값(10) 아래라 도착해도 클러스터만 보이므로 상세줌까지 당겨야 한다. */
+				targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 9);
 			}
 		} else if (item.type === '마을') {
 			targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 8);
@@ -1576,3 +1624,4 @@ export class MapController {
 		this._markers = [];
 	}
 }
+ 
