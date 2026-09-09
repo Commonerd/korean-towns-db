@@ -219,12 +219,20 @@
 			</section>
 		{/each}
 
-		<p class="archive-cta">
-			<!-- 지도는 한 페이지에서 언어를 전환하므로 접두어 없는 경로를 쓴다 -->
-			<a href="/map/?focus={collection.slug}/{encodeURIComponent(node.slug)}">
-				{tr('arch.mapCta', { name: node.name })}
-			</a>
-		</p>
+		<!-- 좌표가 없는 노드(현재 63건, 대부분 좌표 비정 전인 "터" 기록)에는 지도 링크를
+		     걸지 않는다. 걸어 두면 지도로 넘어가서 아무 일도 일어나지 않아(포커싱도, 팝업도,
+		     안내도 없음) 링크가 고장난 것처럼 보인다. 조직·인물·사건은 좌표가 없으면
+		     로드 시점에 관련 마을 좌표를 물려받으므로 lat/lng 유무만 보면 된다. -->
+		{#if hasCoords}
+			<p class="archive-cta">
+				<!-- 지도는 한 페이지에서 언어를 전환하므로 접두어 없는 경로를 쓴다 -->
+				<a href="/map/?focus={collection.slug}/{encodeURIComponent(node.slug)}">
+					{tr('arch.mapCta', { name: node.name })}
+				</a>
+			</p>
+		{:else}
+			<p class="archive-cta archive-cta--muted">{tr('arch.noMapLocation')}</p>
+		{/if}
 
 		<nav class="archive-pager" aria-label={tr('arch.pagerNav', { title: collection.title })}>
 			{#if data.prev}
@@ -243,3 +251,4 @@
 		</nav>
 	</article>
 </ArchiveShell>
+ 
