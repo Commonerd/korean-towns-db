@@ -183,6 +183,8 @@ export const translations = {
 		'header.ai': 'AI 보조원',
 		'toast.synced': 'DB의 최신 데이터가 반영되었습니다.',
 		'toast.syncFail': '동기화에 실패했습니다.',
+		'toast.focusNoLocation': '«{name}»: 위치 좌표가 없어 지도에 표시할 수 없습니다.',
+		'toast.focusNotFound': '지도에서 해당 항목을 찾을 수 없습니다.',
 
 		'sidebar.searchFilter': '검색 & 필터',
 		'sidebar.hideSearch': '검색 패널 숨기기',
@@ -321,6 +323,7 @@ export const translations = {
 		'arch.notInDb': '아직 DB에 개별 항목으로 등록되지 않았습니다',
 		'arch.more': '외 {n}건',
 		'arch.mapCta': '지도에서 «{name}» 위치 보기 →',
+		'arch.noMapLocation': '위치 좌표가 아직 확정되지 않아 지도에 표시할 수 없습니다.',
 		'arch.allOf': '{title} 전체',
 		'arch.pagerNav': '{title} 목록 내 이동',
 		'arch.certainty': '위치 확실성',
@@ -524,6 +527,8 @@ export const translations = {
 		'header.ai': 'AI assistant',
 		'toast.synced': 'The latest data from the DB has been applied.',
 		'toast.syncFail': 'Synchronization failed.',
+		'toast.focusNoLocation': '«{name}»: no coordinates yet, so it cannot be shown on the map.',
+		'toast.focusNotFound': 'That record could not be found on the map.',
 
 		'sidebar.searchFilter': 'Search & filter',
 		'sidebar.hideSearch': 'Hide search panel',
@@ -662,6 +667,7 @@ export const translations = {
 		'arch.notInDb': 'Not yet registered as an individual record in the database',
 		'arch.more': '{n} more',
 		'arch.mapCta': 'See «{name}» on the map →',
+		'arch.noMapLocation': 'The coordinates have not been established yet, so this record cannot be shown on the map.',
 		'arch.allOf': 'All {title}',
 		'arch.pagerNav': 'Navigate within {title}',
 		'arch.certainty': 'Location certainty',
@@ -865,6 +871,8 @@ export const translations = {
 		'header.ai': 'AIアシスタント',
 		'toast.synced': 'DBの最新データが反映されました。',
 		'toast.syncFail': '同期に失敗しました。',
+		'toast.focusNoLocation': '«{name}»: 位置座標がないため地図に表示できません。',
+		'toast.focusNotFound': '該当する項目が地図で見つかりませんでした。',
 
 		'sidebar.searchFilter': '検索 & フィルター',
 		'sidebar.hideSearch': '検索パネルを隠す',
@@ -1003,6 +1011,7 @@ export const translations = {
 		'arch.notInDb': 'まだ個別項目としてデータベースに登録されていません',
 		'arch.more': '他 {n} 件',
 		'arch.mapCta': '地図で«{name}»の位置を見る →',
+		'arch.noMapLocation': '位置座標が未確定のため、地図には表示できません。',
 		'arch.allOf': '{title} 一覧',
 		'arch.pagerNav': '{title} 一覧内の移動',
 		'arch.certainty': '位置の確実性',
@@ -1206,6 +1215,8 @@ export const translations = {
 		'header.ai': 'ИИ-ассистент',
 		'toast.synced': 'Последние данные из БД применены.',
 		'toast.syncFail': 'Синхронизация не удалась.',
+		'toast.focusNoLocation': '«{name}»: координат пока нет, показать на карте нельзя.',
+		'toast.focusNotFound': 'Эта запись не найдена на карте.',
 
 		'sidebar.searchFilter': 'Поиск и фильтр',
 		'sidebar.hideSearch': 'Скрыть панель поиска',
@@ -1344,6 +1355,7 @@ export const translations = {
 		'arch.notInDb': 'Ещё не внесено в базу данных как отдельная запись',
 		'arch.more': 'ещё {n}',
 		'arch.mapCta': 'Посмотреть «{name}» на карте →',
+		'arch.noMapLocation': 'Координаты пока не установлены, поэтому запись нельзя показать на карте.',
 		'arch.allOf': 'Все: {title}',
 		'arch.pagerNav': 'Навигация по разделу «{title}»',
 		'arch.certainty': 'Достоверность местоположения',
@@ -1547,6 +1559,8 @@ export const translations = {
 		'header.ai': 'AI 助手',
 		'toast.synced': '数据库的最新数据已应用。',
 		'toast.syncFail': '同步失败。',
+		'toast.focusNoLocation': '«{name}»：暂无坐标，无法在地图上显示。',
+		'toast.focusNotFound': '未能在地图上找到该条目。',
 
 		'sidebar.searchFilter': '搜索与筛选',
 		'sidebar.hideSearch': '隐藏搜索面板',
@@ -1685,6 +1699,7 @@ export const translations = {
 		'arch.notInDb': '尚未作为独立条目登记入数据库',
 		'arch.more': '另有 {n} 条',
 		'arch.mapCta': '在地图上查看«{name}»的位置 →',
+		'arch.noMapLocation': '坐标尚未确定，因此无法在地图上显示。',
 		'arch.allOf': '{title} 全部',
 		'arch.pagerNav': '在 {title} 列表内导航',
 		'arch.certainty': '位置确定性',
@@ -1758,3 +1773,4 @@ export function localized(node, field, locale) {
 	if (bag && bag[locale]) return bag[locale];
 	return node[field] || '';
 }
+ 
