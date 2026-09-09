@@ -168,6 +168,11 @@ export function createMapStyle() {
 				layout: {
 					'icon-image': ['get', 'iconImageId'],
 					'icon-size': ['/', ['get', 'markerSizePx'], ICON_BASE_SIZE],
+					/* 좌표가 완전히 같은 노드들을 화면에서만 부챗살로 벌린다(controller._fanOffsets).
+					   ⚠️ icon-offset 은 icon-size 가 곱해진 뒤 화면에 적용되므로, 컨트롤러가
+					      넣는 값은 이미 1/icon-size 로 나눠 보정한 값이다. */
+					'icon-offset': ['array', 'number', 2, ['get', 'iconOffset']],
+					// 점(데이터 자체)은 항상 보여야 하므로 겹쳐도 숨기지 않는다.
 					'icon-allow-overlap': true,
 					'icon-ignore-placement': true
 				},
@@ -181,23 +186,32 @@ export function createMapStyle() {
 				source: 'kt-badges',
 				layout: {
 					'icon-image': ['get', 'badgeImageId'],
-					// 노드 좌표에 얹고 픽셀 오프셋으로 우상단에 배치 (줌 무관, 항상 붙어있음)
-					'icon-offset': [14, -14],
+					/* 노드 좌표에 얹고 픽셀 오프셋으로 우상단에 배치 (줌 무관, 항상 붙어있음).
+					   부챗살 오프셋이 이미 더해진 값이 properties.offset 으로 들어온다.
+					   (이 레이어는 icon-size 를 두지 않아 값이 그대로 화면 px 이다) */
+					'icon-offset': ['array', 'number', 2, ['get', 'offset']],
 					'icon-allow-overlap': true,
 					'icon-ignore-placement': true
 				}
 			},
+			/* 라벨은 겹치면 읽을 수 없으므로 유일하게 충돌 처리를 켜는 레이어다.
+			   1차로 controller._syncLabels 가 화면 좌표에서 빈자리를 찾아 anchor/offset 을
+			   직접 정하고(아래/위/좌/우 8방향), 그래도 남는 충돌은 MapLibre 의 배치기가
+			   symbol-sort-key 순서대로 뒤쪽 라벨을 숨겨 최종적으로 보장한다.
+			   (icon-size 를 두지 않아 offset 값이 그대로 화면 px 이다) */
 			{
 				id: 'kt-labels',
 				type: 'symbol',
 				source: 'kt-labels',
 				layout: {
 					'icon-image': ['get', 'labelImageId'],
-					// 노드 좌표에 얹고 아래쪽으로 픽셀 오프셋 (줌 무관, 항상 붙어있음)
-					'icon-anchor': 'top',
-					'icon-offset': [0, 20],
-					'icon-allow-overlap': true,
-					'icon-ignore-placement': true
+					'icon-anchor': ['get', 'anchor'],
+					'icon-offset': ['array', 'number', 2, ['get', 'offset']],
+					'icon-allow-overlap': false,
+					'icon-ignore-placement': false,
+					'icon-padding': 2,
+					// 값이 작은 라벨이 먼저 자리를 잡는다 (_syncLabels 의 우선순위와 동일 순서)
+					'symbol-sort-key': ['get', 'sortKey']
 				}
 			}
 		]
