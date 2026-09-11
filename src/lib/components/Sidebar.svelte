@@ -65,7 +65,7 @@
 	function chipsHtml(item) {
 		let out = '';
 		if (item.type === '마을') {
-			const cnt = rawData.filter((d) => d.type !== '마을' && d.relatedTown === item.name).length;
+			const cnt = rawData.filter((d) => d.type !== '마을' && d.relatedTownId === item.townId).length;
 			if (cnt > 0)
 				out += `<span class="meta-chip" style="background:#fff7ed; color:#9a3412; border-color:#fed7aa;"><i class="fa-solid fa-diagram-project"></i> ${t('chip.connections', { n: cnt })}</span>`;
 		}

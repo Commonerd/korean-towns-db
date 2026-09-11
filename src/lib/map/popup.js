@@ -32,9 +32,9 @@ export function buildPopupHtml(item, rawData, locale = 'ko') {
 
 	let relationsHtml = '';
 	if (item.type === '마을') {
-		const subOrgs = rawData.filter((d) => d.type === '조직' && d.relatedTown === item.name);
-		const subPers = rawData.filter((d) => d.type === '인물' && d.relatedTown === item.name);
-		const subEvents = rawData.filter((d) => d.type === '사건' && d.relatedTown === item.name);
+		const subOrgs = rawData.filter((d) => d.type === '조직' && d.relatedTownId === item.townId);
+		const subPers = rawData.filter((d) => d.type === '인물' && d.relatedTownId === item.townId);
+		const subEvents = rawData.filter((d) => d.type === '사건' && d.relatedTownId === item.townId);
 		if (subOrgs.length)
 			relationsHtml += `<div class="text-[11px] text-blue-700 mt-1"><b><i class="fa-solid fa-users"></i> ${t('popup.relatedOrgs')}(${subOrgs.length}):</b> ${escapeHtml(
 				subOrgs.map(dispName).join(', ')

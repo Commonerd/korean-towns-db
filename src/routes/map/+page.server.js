@@ -1,5 +1,5 @@
 import { COLLECTIONS } from '$lib/data/collections.js';
-import { nodesOfType } from '$lib/data/relations.js';
+import { nodesOfType } from '$lib/data/relationsById.js';
 import { loadNodeIndex } from '$lib/server/nodes.js';
 
 export const prerender = true;

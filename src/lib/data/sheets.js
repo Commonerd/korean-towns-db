@@ -10,12 +10,22 @@ const EVENTS_GID = 'REPLACE_WITH_EVENTS_GID';
 /* 시트의 name_ko/name_en/... , description_ko/... 다국어 칼럼을 한 객체로 모은다.
 
    ⚠️ 여기서 모은 값은 "표시용"이다. 노드의 `name`(한국어)은 절대 바꾸지 않는다 —
-      slug 생성, related_town 매칭(buildIndex), 마을-자식 관계가 모두 한국어 이름을
-      키로 쓰기 때문에, name 을 번역하면 URL 과 관계망이 통째로 깨진다.
+	slug 생성은 표시 이름을 사용하지만, 관계망과 마을-자식 관계는 고유 ID를 사용한다.
 
    시트에 해당 언어 칼럼이 비어 있으면 한국어 원문으로 폴백한다
    (towns 의 name_ko 는 실제로 절반 정도만 채워져 있어 폴백이 필수). */
 export const DATA_LOCALES = ['ko', 'en', 'ja', 'ru', 'zh'];
+
+function splitIds(raw) {
+	return String(raw || '')
+		.split(',')
+		.map((value) => value.trim())
+		.filter(Boolean);
+}
+
+function firstId(row, headerMap, ...aliases) {
+	return getCol(row, headerMap, ...aliases);
+}
 
 function collectI18n(row, headerMap, base, fallback) {
 	const out = {};
@@ -58,7 +68,8 @@ export async function loadGoogleSheetsData() {
 
 	let globalId = 1;
 	const updatedData = [];
-	const townCoords = {};
+	const townsById = new Map();
+	const townCoords = new Map();
 	const slugify = makeSlugger();
 
 	/* 1단계: 마을 먼저.
@@ -81,13 +92,14 @@ export async function loadGoogleSheetsData() {
 				const headerMap = buildHeaderMap(records[0]);
 				for (let i = 1; i < records.length; i++) {
 					const row = records[i];
+					const townId = firstId(row, headerMap, 'town_id', 'townid', '마을_id', '마을id');
 					const name = getCol(row, headerMap, 'name', 'village_name', '이름');
-					if (!name) continue;
+					if (!name || !townId) continue;
 
 					const lat = parseFloat(getCol(row, headerMap, 'lat', 'latitude', '위도')) || 0;
 					const lng =
 						parseFloat(getCol(row, headerMap, 'lng', 'lon', 'longitude', '경도')) || 0;
-					if (lat && lng) townCoords[name] = { lat, lng };
+					if (lat && lng) townCoords.set(townId, { lat, lng });
 
 					let desc = getCol(row, headerMap, 'description', 'desc', '설명');
 					const population = getCol(row, headerMap, 'population', '인구');
@@ -122,6 +134,8 @@ export async function loadGoogleSheetsData() {
 
 					updatedData.push({
 						id: globalId++,
+						townId,
+						externalId: townId,
 						slug: slugify('마을', name),
 						type: '마을',
 						settlementType: isVillage ? '빌리지' : '타운',
@@ -144,6 +158,7 @@ export async function loadGoogleSheetsData() {
 						locationBasis: getCol(row, headerMap, 'location_basis', '위치_근거', '위치근거'),
 						certaintyScore: getCertaintyScore(precision)
 					});
+					townsById.set(townId, updatedData[updatedData.length - 1]);
 				}
 			}
 		}
@@ -173,7 +188,12 @@ export async function loadGoogleSheetsData() {
 			for (let i = 1; i < records.length; i++) {
 				const row = records[i];
 				const name = getCol(row, headerMap, 'name', '이름');
-				if (!name) continue;
+				const externalId = target.type === '조직'
+					? firstId(row, headerMap, 'org_id', 'orgid', '조직_id', '조직id')
+					: target.type === '인물'
+						? firstId(row, headerMap, 'prs_id', 'prs_is', 'prsid', 'prsis', '인물_id', '인물id')
+						: firstId(row, headerMap, 'evt_id', 'evtid', '사건_id', '사건id');
+				if (!name || !externalId) continue;
 
 				const rawPrecision = getCol(
 					row,
@@ -186,10 +206,12 @@ export async function loadGoogleSheetsData() {
 				const precision = normalizePrecision(rawPrecision, 'unknown');
 				// 사건은 여러 마을이 쉼표로 들어올 수 있음 → 좌표 비정·부유 위치는 첫 마을 기준,
 				// 전체 목록은 relatedTownAll 로 보존
-				const relatedTownRaw = getCol(row, headerMap, 'related_town', '소속마을', '관련마을');
-				const relatedTown = relatedTownRaw.includes(',')
-					? relatedTownRaw.split(',')[0].trim()
-					: relatedTownRaw;
+				const relatedTownIds = splitIds(
+					getCol(row, headerMap, 'related_town_id', 'related_town_ids', '소속마을_id', '관련마을_id')
+				);
+				const relatedTowns = relatedTownIds.map((id) => townsById.get(id)).filter(Boolean);
+				const relatedTown = relatedTowns[0]?.name || '';
+				const relatedTownAll = relatedTowns.map((town) => town.name).join(', ');
 				const ownLat = parseFloat(getCol(row, headerMap, 'lat', 'latitude', '위도')) || 0;
 				const ownLng = parseFloat(getCol(row, headerMap, 'lng', 'lon', 'longitude', '경도')) || 0;
 
@@ -201,9 +223,9 @@ export async function loadGoogleSheetsData() {
 				if (isPrecise && ownLat && ownLng) {
 					lat = ownLat;
 					lng = ownLng;
-				} else if (townCoords[relatedTown]) {
-					lat = townCoords[relatedTown].lat;
-					lng = townCoords[relatedTown].lng;
+				} else if (townCoords.has(relatedTownIds[0])) {
+					lat = townCoords.get(relatedTownIds[0]).lat;
+					lng = townCoords.get(relatedTownIds[0]).lng;
 				} else if (ownLat && ownLng) {
 					lat = ownLat;
 					lng = ownLng;
@@ -214,6 +236,7 @@ export async function loadGoogleSheetsData() {
 
 				const item = {
 					id: globalId++,
+					externalId,
 					slug: slugify(target.type, name),
 					type: target.type,
 					name,
@@ -230,7 +253,9 @@ export async function loadGoogleSheetsData() {
 					lat,
 					lng,
 					relatedTown,
-					relatedTownAll: relatedTownRaw,
+					relatedTownId: relatedTownIds[0] || '',
+					relatedTownIds,
+					relatedTownAll,
 					relatedOrg: '',
 					relatedPerson: '',
 					source: getCol(row, headerMap, 'source', '출처'),
@@ -245,41 +270,43 @@ export async function loadGoogleSheetsData() {
 				};
 
 				if (target.type === '조직') {
+					item.orgId = externalId;
 					item.orgType = getCol(row, headerMap, 'type', 'organization_type', '유형');
 				} else if (target.type === '인물') {
-					item.relatedOrg = getCol(
-						row,
-						headerMap,
-						'related_organization',
-						'related_org',
-						'소속조직'
+					item.prsId = externalId;
+					item.relatedOrgIds = splitIds(
+						getCol(row, headerMap, 'related_org_id', 'related_org_ids', '소속조직_id')
 					);
 					item.nationality = getCol(row, headerMap, 'nationality', '국적');
 					item.job = getCol(row, headerMap, 'job', 'occupation', '직업');
 				} else if (target.type === '사건') {
+					item.evtId = externalId;
+					item.relatedOrgIds = splitIds(
+						getCol(row, headerMap, 'related_org_id', 'related_org_ids', '관련조직_id')
+					);
+					item.relatedPersonIds = splitIds(
+						getCol(row, headerMap, 'related_prs_id', 'related_prs_ids', '관련인물_id')
+					);
 					// 사건은 마을·조직·인물 모두와 연결될 수 있다 (한 값 또는 쉼표로 여러 값)
 					item.eventType = getCol(row, headerMap, 'event_type', 'type', '유형', '사건유형');
-					item.relatedOrg = getCol(
-						row,
-						headerMap,
-						'related_organization',
-						'related_org',
-						'관련조직',
-						'소속조직'
-					);
-					item.relatedPerson = getCol(
-						row,
-						headerMap,
-						'related_person',
-						'related_people',
-						'관련인물'
-					);
 				}
 				updatedData.push(item);
 			}
 		} catch (error) {
 			console.error(`${target.type} 파싱 실패`, error);
 		}
+	}
+
+	const nodesById = new Map(updatedData.map((node) => [`${node.type}:${node.externalId}`, node]));
+	for (const node of updatedData) {
+		node.relatedOrg = (node.relatedOrgIds || [])
+			.map((id) => nodesById.get(`조직:${id}`)?.name)
+			.filter(Boolean)
+			.join(', ');
+		node.relatedPerson = (node.relatedPersonIds || [])
+			.map((id) => nodesById.get(`인물:${id}`)?.name)
+			.filter(Boolean)
+			.join(', ');
 	}
 
 	return updatedData;

@@ -288,10 +288,10 @@
 		let relationContext = '';
 		if (item.type === '마을') {
 			const childOrgs = rawData
-				.filter((d) => d.type === '조직' && d.relatedTown === item.name)
+				.filter((d) => d.type === '조직' && d.relatedTownId === item.townId)
 				.map((d) => d.name);
 			const childPers = rawData
-				.filter((d) => d.type === '인물' && d.relatedTown === item.name)
+				.filter((d) => d.type === '인물' && d.relatedTownId === item.townId)
 				.map((d) => d.name);
 			relationContext = ` 이 마을에 종속된 조직: [${childOrgs.join(', ')}]. 인물: [${childPers.join(', ')}].`;
 		} else if (item.relatedTown) {

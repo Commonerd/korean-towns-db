@@ -4,7 +4,7 @@
    (로직이 두 벌로 갈라지면 언어별로 내용이 어긋나기 시작한다) */
 import { error } from '@sveltejs/kit';
 import { COLLECTIONS, collectionBySlug } from '$lib/data/collections.js';
-import { nodesOfType, relationsFor, summarize, yearRangeText } from '$lib/data/relations.js';
+import { nodesOfType, relationsFor, summarize, yearRangeText } from '$lib/data/relationsById.js';
 import { PRECISION_INFO } from '$lib/data/precision.js';
 import { loadNodeIndex } from '$lib/server/nodes.js';
 import {

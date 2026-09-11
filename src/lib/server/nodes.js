@@ -11,7 +11,7 @@
 import { building, dev } from '$app/environment';
 import { spreadsheetId } from '$lib/config.js';
 import { loadGoogleSheetsData } from '$lib/data/sheets.js';
-import { buildIndex } from '$lib/data/relations.js';
+import { buildIndex } from '$lib/data/relationsById.js';
 
 /* 빌드 시각(YYYY-MM-DD). 모듈이 처음 로드될 때 한 번만 확정되므로 빌드 전체가 같은 값을
    공유한다. GeoJSON 내보내기의 `generated` 필드와 다운로드 파일명이 어긋나지 않게 하려고

@@ -18,12 +18,6 @@ import { escapeHtml } from '$lib/util.js';
 
 const WORLD_BBOX = [-180, -85, 180, 85];
 
-/* 쉼표로 구분된 관련 대상(예: 사건의 related_person)에서 첫 값만 반환 */
-function firstToken(str) {
-	if (!str) return '';
-	return str.split(',')[0].trim();
-}
-
 /* 두 좌표 사이 대권거리(m) — Haversine */
 function haversineMeters(a, b) {
 	const R = 6371000;
@@ -462,12 +456,12 @@ export class MapController {
 		});
 	}
 
-	/* 마을 이름 -> 마을 노드. 부모 마을 조회(_villageMap)는 부챗살 계산과 클러스터
+	/* town_id -> 마을 노드. 부모 마을 조회(_villageMap)는 부챗살 계산과 클러스터
 	   인덱스 양쪽이 쓰므로, 둘보다 먼저 한 번만 세운다. */
 	_buildVillageMap() {
 		this._villageMap = {};
 		for (const d of this.rawData) {
-			if (d.type === '마을') this._villageMap[d.name] = d;
+			if (d.type === '마을') this._villageMap[d.townId] = d;
 		}
 	}
 
@@ -475,12 +469,12 @@ export class MapController {
 
 	   이 노드들은 부유 배치(_computeFloatingLatLng)의 기준점이 없어서 예전에는 렌더 루프에서
 	   조용히 버려졌다 — 하와이(호놀룰루·힐로)처럼 towns 시트에 마을이 아예 없고 조직의
-	   related_town 도 비어 있는 지역이 통째로 빈 바다로 보인 원인. lat/lng 가 이미 있으므로
+	   related_town_id 도 비어 있는 지역이 통째로 빈 바다로 보인 원인. lat/lng 가 이미 있으므로
 	   (sheets.js 의 ownLat/ownLng 폴백) 자기 좌표에 그대로 그리는 것이 맞다. */
 	_isOrphanGeocoded(item) {
 		if (!item || item.type === '마을' || item.isPrecise) return false;
 		if (!item.lat || !item.lng) return false;
-		const parent = this._villageMap ? this._villageMap[item.relatedTown] : null;
+		const parent = this._villageMap ? this._villageMap[item.relatedTownId] : null;
 		return !parent || !parent.lat || !parent.lng;
 	}
 
@@ -535,8 +529,8 @@ export class MapController {
 	_buildChildCountMap() {
 		const map = new Map();
 		this.rawData.forEach((d) => {
-			if (d.type !== '마을' && d.relatedTown) {
-				map.set(d.relatedTown, (map.get(d.relatedTown) || 0) + 1);
+			if (d.type !== '마을' && d.relatedTownId) {
+				map.set(d.relatedTownId, (map.get(d.relatedTownId) || 0) + 1);
 			}
 		});
 		return map;
@@ -582,11 +576,11 @@ export class MapController {
 			const showFloating = isDetailMode || this.filter === item.type;
 			if (!showFloating) return;
 
-			const parentVillage = this._villageMap[item.relatedTown];
+			const parentVillage = this._villageMap[item.relatedTownId];
 			if (!parentVillage || !parentVillage.lat || !parentVillage.lng) return;
 
 			const siblings = this.rawData.filter(
-				(d) => d.type !== '마을' && !d.isPrecise && d.relatedTown === parentVillage.name
+				(d) => d.type !== '마을' && !d.isPrecise && d.relatedTownId === parentVillage.townId
 			);
 			const idx = siblings.findIndex((s) => s.id === item.id);
 			const total = siblings.length || 1;
@@ -735,11 +729,11 @@ export class MapController {
 				return;
 			}
 
-			const parentVillage = this._villageMap[item.relatedTown];
+			const parentVillage = this._villageMap[item.relatedTownId];
 			if (!parentVillage || !parentVillage.lat || !parentVillage.lng) return;
 
 			const siblings = this.rawData.filter(
-				(d) => d.type !== '마을' && !d.isPrecise && d.relatedTown === parentVillage.name
+				(d) => d.type !== '마을' && !d.isPrecise && d.relatedTownId === parentVillage.townId
 			);
 			const idx = siblings.findIndex((s) => s.id === item.id);
 			const total = siblings.length || 1;
@@ -1236,30 +1230,34 @@ export class MapController {
 			let target = null;
 			let color = '#64748b';
 
-			if (item.type === '조직' && item.relatedTown) {
-				target = this.rawData.find((d) => d.type === '마을' && d.name === item.relatedTown);
+			if (item.type === '조직' && item.relatedTownId) {
+				target = this.rawData.find((d) => d.type === '마을' && d.townId === item.relatedTownId);
 				color = '#2563eb';
 			} else if (item.type === '인물') {
-				if (item.relatedOrg) {
-					target = this.rawData.find((d) => d.type === '조직' && d.name === item.relatedOrg);
+				if (item.relatedOrgIds?.length) {
+					target = this.rawData.find(
+						(d) => d.type === '조직' && d.externalId === item.relatedOrgIds[0]
+					);
 					color = '#16a34a';
 				}
-				if (!target && item.relatedTown) {
-					target = this.rawData.find((d) => d.type === '마을' && d.name === item.relatedTown);
+				if (!target && item.relatedTownId) {
+					target = this.rawData.find((d) => d.type === '마을' && d.townId === item.relatedTownId);
 					color = '#16a34a';
 				}
 			} else if (item.type === '사건') {
 				// 사건은 가장 구체적인 관련 대상(인물 → 조직 → 마을)에 연결
-				const firstPerson = firstToken(item.relatedPerson);
-				const firstOrg = firstToken(item.relatedOrg);
-				if (firstPerson) {
-					target = this.rawData.find((d) => d.type === '인물' && d.name === firstPerson);
+				if (item.relatedPersonIds?.length) {
+					target = this.rawData.find(
+						(d) => d.type === '인물' && d.externalId === item.relatedPersonIds[0]
+					);
 				}
-				if (!target && firstOrg) {
-					target = this.rawData.find((d) => d.type === '조직' && d.name === firstOrg);
+				if (!target && item.relatedOrgIds?.length) {
+					target = this.rawData.find(
+						(d) => d.type === '조직' && d.externalId === item.relatedOrgIds[0]
+					);
 				}
-				if (!target && item.relatedTown) {
-					target = this.rawData.find((d) => d.type === '마을' && d.name === item.relatedTown);
+				if (!target && item.relatedTownId) {
+					target = this.rawData.find((d) => d.type === '마을' && d.townId === item.relatedTownId);
 				}
 				color = '#9333ea';
 			}
@@ -1322,7 +1320,7 @@ export class MapController {
 			targetZoom = 8;
 
 		if (item.type !== '마을' && !item.isPrecise) {
-			const parent = this.rawData.find((d) => d.type === '마을' && d.name === item.relatedTown);
+			const parent = this.rawData.find((d) => d.type === '마을' && d.townId === item.relatedTownId);
 			if (parent && parent.lat && parent.lng) {
 				targetLat = parent.lat;
 				targetLng = parent.lng;
