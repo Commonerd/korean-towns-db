@@ -67,6 +67,9 @@ export class Movement3DLayer {
 		this.scene.add(this.group);
 
 		this.routes = [];
+
+		this.dashMaterials = [];
+		this.arrowObjects = [];
 	}
 
 	onAdd(map, gl) {
@@ -122,6 +125,9 @@ export class Movement3DLayer {
 
 			this.group.remove(child);
 		}
+
+		this.dashMaterials = [];
+		this.arrowObjects = [];
 	}
 
 	_rebuild() {
@@ -130,6 +136,46 @@ export class Movement3DLayer {
 		if (!this.map || !this.routes.length) {
 			return;
 		}
+
+		const zoom = this.map.getZoom();
+
+		/*
+		 * ----------------------------------------
+		 * 줌에 따른 전체 크기 보정
+		 *
+		 * 변화폭을 너무 크게 하지 않음
+		 * ----------------------------------------
+		 */
+
+		const zoomFactor = Math.pow(
+			2,
+			(zoom - 8) * 0.35
+		);
+
+		/*
+		 * ----------------------------------------
+		 * 고도 보정
+		 *
+		 * 줌인 → 낮아짐
+		 * 줌아웃 → 높아짐
+		 *
+		 * 이전보다 조금 더 강하게 적용
+		 * ----------------------------------------
+		 */
+
+		const altitudeZoomFactor = Math.pow(
+			2,
+			(8 - zoom) * 0.50
+		);
+
+		const clampedAltitudeFactor =
+			Math.max(
+				0.2,
+				Math.min(
+					2.5,
+					altitudeZoomFactor
+				)
+			);
 
 		for (const route of this.routes) {
 			if (
@@ -143,7 +189,7 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
-			 * 1. 출발점을 이 route의 로컬 원점으로 설정
+			 * 1. 출발점
 			 * ----------------------------------------
 			 */
 
@@ -161,7 +207,7 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
-			 * 2. 도착점의 Mercator 좌표
+			 * 2. 도착점
 			 * ----------------------------------------
 			 */
 
@@ -173,20 +219,24 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
-			 * 3. Mercator 기준 지상거리
+			 * 3. 지상거리
 			 * ----------------------------------------
 			 */
 
-			const dx = destination.x - origin.x;
-			const dy = destination.y - origin.y;
+			const dx =
+				destination.x - origin.x;
 
-			const groundDistance = Math.sqrt(
-				dx * dx + dy * dy
-			);
+			const dy =
+				destination.y - origin.y;
+
+			const groundDistance =
+				Math.sqrt(
+					dx * dx + dy * dy
+				);
 
 			/*
 			 * ----------------------------------------
-			 * 4. 해당 위도에서 실제 meter → Mercator 변환
+			 * 4. Mercator 단위
 			 * ----------------------------------------
 			 */
 
@@ -195,30 +245,36 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
-			 * 5. 비행/이동 경로의 최대 고도
+			 * 5. 최대 고도
 			 * ----------------------------------------
 			 */
 
-			const maxAltitude = Math.max(
-				groundDistance * 0.03,
-				metersPerMercator * 1200
+			const baseMaxAltitude =
+				Math.max(
+					groundDistance * 0.02,
+					metersPerMercator * 700
+				);
+
+			const maxAltitude =
+				baseMaxAltitude *
+				clampedAltitudeFactor;
+
+			/*
+			 * ----------------------------------------
+			 * 6. Route Group
+			 * ----------------------------------------
+			 */
+
+			const routeGroup =
+				new THREE.Group();
+
+			routeGroup.position.copy(
+				originVector
 			);
 
 			/*
 			 * ----------------------------------------
-			 * 6. route 전용 Group
-			 *
-			 * 모든 점을 출발점 기준 local coordinate로 만든다.
-			 * ----------------------------------------
-			 */
-
-			const routeGroup = new THREE.Group();
-
-			routeGroup.position.copy(originVector);
-
-			/*
-			 * ----------------------------------------
-			 * 7. 경로 점 생성
+			 * 7. 경로 생성
 			 * ----------------------------------------
 			 */
 
@@ -227,11 +283,12 @@ export class Movement3DLayer {
 			for (let i = 0; i <= 64; i++) {
 				const t = i / 64;
 
-				const location = sphericalPoint(
-					route.from,
-					route.to,
-					t
-				);
+				const location =
+					sphericalPoint(
+						route.from,
+						route.to,
+						t
+					);
 
 				const mercator =
 					maplibregl.MercatorCoordinate.fromLngLat(
@@ -242,17 +299,13 @@ export class Movement3DLayer {
 						0
 					);
 
-				/*
-				 * 출발점 기준 상대 좌표
-				 */
+				const x =
+					mercator.x -
+					origin.x;
 
-				const x = mercator.x - origin.x;
-				const y = mercator.y - origin.y;
-
-				/*
-				 * 양 끝은 0,
-				 * 가운데에서 최대 고도
-				 */
+				const y =
+					mercator.y -
+					origin.y;
 
 				const altitude =
 					Math.pow(
@@ -276,7 +329,7 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
-			 * 8. 부드러운 곡선
+			 * 8. 곡선
 			 * ----------------------------------------
 			 */
 
@@ -289,19 +342,24 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
-			 * 9. 선 굵기
+			 * 9. 이동선 두께
 			 * ----------------------------------------
 			 */
 
-			const tubeRadius = Math.max(
-				groundDistance * 0.001,
-				metersPerMercator * 40
-			);
+			const baseTubeRadius =
+				Math.max(
+					groundDistance * 0.0015,
+					metersPerMercator * 60
+				);
+
+			const tubeRadius =
+				baseTubeRadius /
+				zoomFactor;
 
 			const tube =
 				new THREE.TubeGeometry(
 					curve,
-					64,
+					128,
 					tubeRadius,
 					8,
 					false
@@ -309,98 +367,219 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
-			 * 10. 선 material
+			 * 10. 움직이는 점선
 			 * ----------------------------------------
 			 */
 
-			const material =
-				new THREE.MeshBasicMaterial({
-					color: 0x14532d,
-					transparent: true,
-					opacity: 0.95,
+			const dashCount = Math.max(
+				10,
+				Math.min(
+					50,
+					groundDistance * 50000
+				)
+			);
 
-					/*
-					 * 지도/지형에 묻히지 않도록
-					 * 우선 false로 테스트
-					 */
+			const dashMaterial =
+				new THREE.ShaderMaterial({
+					transparent: true,
 					depthTest: false,
-					depthWrite: false
+					depthWrite: false,
+
+					uniforms: {
+						uTime: {
+							value: 0
+						},
+
+						uDashCount: {
+							value: dashCount
+						},
+
+						uDashSize: {
+							value: 0.55
+						},
+
+						uOpacity: {
+							value: 0.95
+						},
+
+						uColor: {
+							value: new THREE.Color(
+								0x14532d
+							)
+						}
+					},
+
+					vertexShader: `
+						varying float vTubePosition;
+
+						void main() {
+							vTubePosition = uv.x;
+
+							gl_Position =
+								projectionMatrix *
+								modelViewMatrix *
+								vec4(
+									position,
+									1.0
+								);
+						}
+					`,
+
+					fragmentShader: `
+						uniform float uTime;
+						uniform float uDashCount;
+						uniform float uDashSize;
+						uniform float uOpacity;
+						uniform vec3 uColor;
+
+						varying float vTubePosition;
+
+						void main() {
+							float position =
+								vTubePosition *
+								uDashCount;
+
+							float movingPosition =
+								position -
+								uTime;
+
+							float dash =
+								mod(
+									movingPosition,
+									1.0
+								);
+
+							float edge = 0.04;
+
+							float smoothAlpha =
+								smoothstep(
+									0.0,
+									edge,
+									dash
+								) *
+								(
+									1.0 -
+									smoothstep(
+										uDashSize - edge,
+										uDashSize,
+										dash
+									)
+								);
+
+							gl_FragColor =
+								vec4(
+									uColor,
+									smoothAlpha *
+									uOpacity
+								);
+						}
+					`
 				});
+
+			this.dashMaterials.push(
+				dashMaterial
+			);
 
 			const tubeMesh =
 				new THREE.Mesh(
 					tube,
-					material
+					dashMaterial
 				);
 
-			routeGroup.add(tubeMesh);
+			routeGroup.add(
+				tubeMesh
+			);
 
 			/*
 			 * ----------------------------------------
 			 * 11. 화살표
 			 * ----------------------------------------
+			 *
+			 * 화살표 자체도 render()에서
+			 * 경로를 따라 이동시킨다.
 			 */
 
-			const arrowT = 0.92;
+			const arrow =
+				new THREE.Mesh(
+					new THREE.ConeGeometry(
+						1,
+						1,
+						8
+					),
+					new THREE.MeshBasicMaterial({
+						color: 0x14532d,
+						transparent: true,
+						opacity: 1,
+						depthTest: false,
+						depthWrite: false
+					})
+				);
 
-			const arrowPoint =
-				curve.getPointAt(arrowT);
+			/*
+			 * 기본 크기는 일단 1로 만들고
+			 * 아래에서 실제 크기를 적용
+			 */
 
-			const tangent =
-				curve
-					.getTangentAt(arrowT)
-					.normalize();
+			const baseArrowHeight =
+				Math.max(
+					groundDistance * 0.015,
+					metersPerMercator * 700
+				);
 
-			const arrowHeight = Math.max(
-				groundDistance * 0.015,
-				metersPerMercator * 700
+			const baseArrowRadius =
+				Math.max(
+					groundDistance * 0.003,
+					metersPerMercator * 180
+				);
+
+			const arrowZoomFactor = Math.pow(
+				2,
+				(zoom - 8) * 0.28
 			);
 
-			const arrowRadius = Math.max(
-				groundDistance * 0.003,
-				metersPerMercator * 180
-			);
+			const arrowHeight =
+				baseArrowHeight /
+				arrowZoomFactor;
 
-			const arrowGeometry =
+			const arrowRadius =
+				baseArrowRadius /
+				arrowZoomFactor;
+
+			arrow.geometry.dispose();
+
+			arrow.geometry =
 				new THREE.ConeGeometry(
 					arrowRadius,
 					arrowHeight,
 					8
 				);
 
-			const arrowMaterial =
-				new THREE.MeshBasicMaterial({
-					color: 0x14532d,
-					transparent: true,
-					opacity: 1,
-					depthTest: false,
-					depthWrite: false
-				});
+			/*
+			 * 화살표 애니메이션에 필요한 정보 저장
+			 */
 
-			const arrow =
-				new THREE.Mesh(
-					arrowGeometry,
-					arrowMaterial
-				);
+			this.arrowObjects.push({
+				arrow,
+				curve,
+				speed: 0.3 + Math.random() * 0.1,
+				offset: Math.random(),
+				minT: 0.72,
+				maxT: 0.96
+			});
 
-			arrow.position.copy(
-				arrowPoint
+			routeGroup.add(
+				arrow
 			);
-
-			arrow.quaternion.setFromUnitVectors(
-				new THREE.Vector3(0, 1, 0),
-				tangent
-			);
-
-			routeGroup.add(arrow);
 
 			/*
 			 * ----------------------------------------
-			 * 12. 이 route를 전체 scene에 추가
+			 * 12. Scene에 추가
 			 * ----------------------------------------
 			 */
 
-			this.group.add(routeGroup);
+			this.group.add(
+				routeGroup
+			);
 		}
 	}
 
@@ -412,8 +591,71 @@ export class Movement3DLayer {
 			return;
 		}
 
+		const time =
+			performance.now() * 0.001;
+
 		/*
-		 * MapLibre가 제공하는 projection matrix
+		 * ----------------------------------------
+		 * 1. 점선 이동
+		 * ----------------------------------------
+		 */
+
+		for (const material of this.dashMaterials) {
+			if (material.uniforms?.uTime) {
+				material.uniforms.uTime.value =
+					time * 0.8;
+			}
+		}
+
+		/*
+		 * ----------------------------------------
+		 * 2. 화살표 이동
+		 *
+		 * 경로의 72% → 96% 구간을
+		 * 반복해서 이동
+		 * ----------------------------------------
+		 */
+
+		for (const item of this.arrowObjects) {
+			const range =
+				item.maxT -
+				item.minT;
+
+			const phase =
+				(time * item.speed +
+					item.offset) %
+				1;
+
+			const t =
+				item.minT +
+				phase * range;
+
+			const point =
+				item.curve.getPointAt(t);
+
+			const tangent =
+				item.curve
+					.getTangentAt(t)
+					.normalize();
+
+			item.arrow.position.copy(
+				point
+			);
+
+			item.arrow.quaternion.setFromUnitVectors(
+				new THREE.Vector3(
+					0,
+					1,
+					0
+				),
+				tangent
+			);
+		}
+
+		/*
+		 * ----------------------------------------
+		 * 3. MapLibre projection
+		 * ----------------------------------------
 		 */
 
 		const matrix =
