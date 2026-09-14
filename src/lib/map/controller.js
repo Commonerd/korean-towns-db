@@ -1268,7 +1268,7 @@ export class MapController {
 			if (!previousTown?.lat || !previousTown?.lng || !currentTown?.lat || !currentTown?.lng) return;
 			movementRoutes.push({
 				from: { lat: previousTown.lat, lng: previousTown.lng },
-				to: { lat: currentTown.lat, lng: currentTown.lng }
+				to: { lat: currentTown.lat, lng: currentTown.lng },
 			});
 		};
 		this.rawData.forEach((item) => {
@@ -1279,7 +1279,7 @@ export class MapController {
 				for (let i = 1; i < movementRows.length; i++) {
 					addMovementSegment(
 						townById.get(movementRows[i - 1].townId),
-						townById.get(movementRows[i].townId)
+						townById.get(movementRows[i].townId),
 					);
 				}
 			}

@@ -256,8 +256,9 @@ export class Movement3DLayer {
 				);
 
 			const maxAltitude =
-				baseMaxAltitude *
-				clampedAltitudeFactor;
+					baseMaxAltitude *
+					clampedAltitudeFactor *
+					1.5;
 
 			/*
 			 * ----------------------------------------
@@ -348,7 +349,7 @@ export class Movement3DLayer {
 
 			const baseTubeRadius =
 				Math.max(
-					groundDistance * 0.0015,
+					groundDistance * 0.0007,
 					metersPerMercator * 60
 				);
 
@@ -399,7 +400,7 @@ export class Movement3DLayer {
 						},
 
 						uOpacity: {
-							value: 0.95
+							value: 0.85
 						},
 
 						uColor: {
@@ -509,7 +510,7 @@ export class Movement3DLayer {
 					new THREE.MeshBasicMaterial({
 						color: 0x14532d,
 						transparent: true,
-						opacity: 1,
+						opacity: 0.9,
 						depthTest: false,
 						depthWrite: false
 					})
