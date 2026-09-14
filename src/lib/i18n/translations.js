@@ -105,6 +105,7 @@ export const translations = {
 		'log.item8.body': 'GeoJSON으로 데이터를 내려받아 GIS 프로그램에서 직접 활용할 수 있게 했습니다.',
 		'log.item9.body': '지도에 위성 사진 보기와 지명 표시 전환 기능을 추가했습니다.',
 		'log.item10.body': '지도 우클릭으로 위경도·거리·면적을 재는 임시 도구를 추가했습니다.',
+		'log.item11.body': '인물 이동 경로 표시 기능 추가했습니다. 해당 인물을 누르면 이동 경로가 화살표 선으로 표시됩니다.',
 
 		'data.eyebrow': '데이터와 방법론',
 		'data.h2': '출처가 곧 데이터의 중심입니다',
@@ -451,6 +452,7 @@ export const translations = {
 		'log.item8.body': 'Made GeoJSON data available for download and direct use in GIS programs.',
 		'log.item9.body': 'Added a satellite view and a labels toggle to the map.',
 		'log.item10.body': 'Added a temporary tool: right-click the map to measure coordinates, distance, and area.',
+		'log.item11.body': 'Added a feature to display the movement path of a person. Click on a person to see their movement path represented by arrows.',
 
 		'data.eyebrow': 'Data & methodology',
 		'data.h2': 'Sources are the heart of the data',
@@ -798,6 +800,7 @@ export const translations = {
 		'log.item8.body': 'GeoJSONでデータをダウンロードしてGISプログラムで直接活用できるようにしました。',
 		'log.item9.body': '地図に衛星写真表示と地名表示切替機能を追加しました。',
 		'log.item10.body': '地図を右クリックして座標・距離・面積を測れる仮のツールを追加しました。',
+		'log.item11.body': '人物の移動経路を表示する機能を追加しました。人物をクリックすると、矢印で表現された移動経路が表示されます。',
 
 		'data.eyebrow': 'データと方法論',
 		'data.h2': '出典こそがデータの中心です',
@@ -1145,6 +1148,7 @@ export const translations = {
 		'log.item8.body': 'Сделали возможным скачивание GeoJSON и использование данных в ГИС-программах.',
 		'log.item9.body': 'На карту добавлены спутниковый вид и переключение подписей.',
 		'log.item10.body': 'Добавили временный инструмент: клик правой кнопкой по карте — координаты, расстояние и площадь.',
+		'log.item11.body': 'Добавили AI-помощника для анализа данных и исторического контекста.',
 
 		'data.eyebrow': 'Данные и методология',
 		'data.h2': 'Источники — это сердце данных',
@@ -1492,6 +1496,7 @@ export const translations = {
 		'log.item8.body': '提供了 GeoJSON 下载，可在 GIS 程序中直接使用数据。',
 		'log.item9.body': '地图新增卫星视图和地名标注开关功能。',
 		'log.item10.body': '地图新增临时工具，右键点击即可测量经纬度、距离与面积。',
+		'log.item11.body': '新增 AI 助手，可分析数据与历史背景。',
 
 		'data.eyebrow': '数据与方法',
 		'data.h2': '出处即数据的核心',
