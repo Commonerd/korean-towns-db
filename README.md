@@ -113,7 +113,7 @@ Vercel 등 어떤 정적 호스팅에도 그대로 올릴 수 있습니다. 런�
 
 ### 시트 스키마
 
-4개 시트가 gid 로 고정되어 있습니다 (`src/lib/data/sheets.js` 의 `targets`).
+기본 4개 시트가 gid 로 고정되어 있고, 이동 시트는 `movements` 탭 이름으로 자동 연결합니다.
 
 | 시트 | gid | 고유 필드 |
 | --- | --- | --- |
@@ -121,6 +121,7 @@ Vercel 등 어떤 정적 호스팅에도 그대로 올릴 수 있습니다. 런�
 | 조직 organizations | `1633831664` | `type`(조직 유형) |
 | 인물 persons | `997795861` | `nationality`, `job`, `related_organization` |
 | 사건 events | `1560552606` | `event_type`, `related_organization`, `related_person` |
+| 이동 movements | 탭 이름 `movements` | `prs_id`, `town_id`, `sequence`, `start_year`, `end_year` |
 
 공통 필드: `name` `description` `start_year` `end_year` `latitude` `longitude`
 `source` `creator` `updater` `update_note` `address` `location_precision` `location_basis`
@@ -132,6 +133,26 @@ Vercel 등 어떤 정적 호스팅에도 그대로 올릴 수 있습니다. 런�
 - **관계 매칭은 항상 한국어 `name` 원문 기준**입니다. 번역 칼럼은 표시용일 뿐이며,
   `name` 을 번역하면 slug·관계망이 통째로 깨집니다.
 - 좌표가 없는 조직/인물/사건은 `related_town` 의 마을 좌표로 폴백합니다.
+
+### 이동 시트 스키마
+
+이동 시트는 한 행에 한 장소를 입력합니다. 같은 인물의 행을 `sequence` 오름차순으로 정렬해
+지도에서 곡선 이동 경로와 화살표로 표시합니다. `sequence`가 비어 있으면 시트의 행 순서를 사용합니다.
+
+필수 필드: `prs_id`(인물 시트의 `prs_id`와 동일), `town_id`(마을 시트의 `town_id`와 동일)
+
+권장 필드: `sequence`, `start_year`, `end_year`, `source`, `note`
+
+예시:
+
+| prs_id | town_id | sequence | start_year | end_year | source | note |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| P001 | T001 | 1 | 1905 | 1910 | 출처1 | 초기 활동 |
+| P001 | T005 | 2 | 1911 | 1915 | 출처2 | 이주 |
+| P001 | T012 | 3 | 1916 | 1920 | 출처3 | 정착 |
+
+탭 이름은 반드시 `movements`로 유지해야 합니다. 탭이 없거나 읽지 못하면 기존 인물 시트의
+`related_town_id` 데이터를 자동으로 사용합니다.
 
 ### 위치 정확도 (`location_precision`)
 

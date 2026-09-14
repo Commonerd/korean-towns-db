@@ -121,6 +121,8 @@ export async function loadNodePage(collectionSlug, slug, locale) {
 			job: node.job || '',
 			nationality: node.nationality || '',
 			eventType: node.eventType || '',
+			movementCount: node.movements?.length || 0,
+			movements: (node.movements || []).map((movement) => ({ ...movement })),
 			locationBasis: node.locationBasis || '',
 			certaintyScore: node.certaintyScore ?? 0,
 			precisionKey,

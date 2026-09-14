@@ -59,8 +59,19 @@ export function relationsFor(node, index, locale = 'ko') {
 		}
 		return groups;
 	}
-	const towns = resolveIds(index, '마을', node.relatedTownIds, locale);
-	if (towns.length) groups.push({ label: tr('arch.rel.towns'), items: towns });
+	const movementTownIds = node.movements?.map((movement) => movement.townId).filter(Boolean);
+	const towns = movementTownIds?.length
+		? resolveIds(index, '마을', movementTownIds, locale).map((town, i) => ({
+			...town,
+			period: [node.movements[i].startYear, node.movements[i].endYear]
+				.filter(Boolean)
+				.join('–')
+		}))
+		: resolveIds(index, '마을', node.relatedTownIds, locale);
+	if (towns.length) {
+		const isMovement = node.type === '인물' && towns.length > 1;
+		groups.push({ label: tr(isMovement ? 'arch.rel.movement' : 'arch.rel.towns'), items: towns, isMovement });
+	}
 	const orgs = resolveIds(index, '조직', node.relatedOrgIds, locale);
 	if (orgs.length) groups.push({ label: tr('arch.rel.orgs'), items: orgs });
 	const persons = resolveIds(index, '인물', node.relatedPersonIds, locale);

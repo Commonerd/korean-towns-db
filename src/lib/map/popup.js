@@ -23,6 +23,10 @@ export function buildPopupHtml(item, rawData, locale = 'ko') {
 			extraMetaHtml += `<span class="chip" style="background:#fdf4ff; color:#86198f; border-color:#f5d0fe;"><i class="fa-solid fa-briefcase"></i> ${escapeHtml(
 				item.job
 			)}</span>`;
+		if ((item.movements?.length || item.relatedTownIds?.length || 0) > 1)
+			extraMetaHtml += `<span class="chip" style="background:#f0fdf4; color:#166534; border-color:#bbf7d0;"><i class="fa-solid fa-route"></i> ${escapeHtml(
+				t('popup.movement')
+			)}</span>`;
 	}
 	if (item.type === '사건' && item.eventType) {
 		extraMetaHtml += `<span class="chip" style="background:#faf5ff; color:#6b21a8; border-color:#e9d5ff;"><i class="fa-solid fa-bolt"></i> ${escapeHtml(
@@ -92,6 +96,13 @@ export function buildPopupHtml(item, rawData, locale = 'ko') {
 					? `<div class="text-[11px] text-purple-700 mb-1"><i class="fa-solid fa-sitemap"></i> ${t('popup.orgOf')}: ${escapeHtml(
 							item.relatedOrg
 						)}</div>`
+					: ''
+			}
+			${
+				item.type === '인물' && (item.movements?.length || item.relatedTownIds?.length || 0) > 1
+					? `<div class="text-[11px] text-green-700 mb-1"><i class="fa-solid fa-route"></i> ${t('popup.movement')}: ${escapeHtml(
+						item.movements?.map((movement) => `${movement.townName || movement.townId}${movement.startYear ? ` (${movement.startYear}${movement.endYear ? `–${movement.endYear}` : ''})` : ''}`).join(' → ') || item.relatedTownAll || item.relatedTown
+					)} </div>`
 					: ''
 			}
 			${eventRelationsHtml}

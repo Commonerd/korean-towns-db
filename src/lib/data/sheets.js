@@ -6,6 +6,8 @@ import { normalizePrecision, getCertaintyScore } from './precision.js';
    구글시트에서 events 탭을 연 뒤 주소창의 `...#gid=숫자` 값을 그대로 넣으면 됩니다.
    (0 인 상태로 두면 마을 시트와 겹치므로 반드시 실제 gid 로 바꿔야 사건이 로드됩니다.) */
 const EVENTS_GID = 'REPLACE_WITH_EVENTS_GID';
+/* 이동 시트는 탭 이름으로 조회한다. 탭이 없거나 읽지 못하면 기존 related_town_id 로 폴백한다. */
+const MOVEMENTS_SHEET_NAME = 'movements';
 
 /* 시트의 name_ko/name_en/... , description_ko/... 다국어 칼럼을 한 객체로 모은다.
 
@@ -18,8 +20,8 @@ export const DATA_LOCALES = ['ko', 'en', 'ja', 'ru', 'zh'];
 
 function splitIds(raw) {
 	return String(raw || '')
-		.split(',')
-		.map((value) => value.trim())
+		.split(/[,，;；\n]+/)
+		.map((value) => value.trim().replace(/^['\"]|['\"]$/g, ''))
 		.filter(Boolean);
 }
 
@@ -297,6 +299,49 @@ export async function loadGoogleSheetsData() {
 		}
 	}
 
+	/* 3단계: 이동 시트는 노드가 아니라 인물-마을의 시간순 관계 행이다. */
+	const movementsByPerson = new Map();
+	try {
+		const response = await fetch(
+			`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MOVEMENTS_SHEET_NAME)}`
+		);
+		if (response.ok) {
+			const records = csvToArray(await response.text());
+			if (records.length > 0) {
+				const headerMap = buildHeaderMap(records[0]);
+				for (let i = 1; i < records.length; i++) {
+					const row = records[i];
+					const personId = firstId(row, headerMap, 'prs_id', 'person_id', 'personid', '인물_id', '인물id');
+					const townId = firstId(
+						row,
+						headerMap,
+						'town_id',
+						'related_town_id',
+						'마을_id',
+						'마을id',
+						'이동마을_id'
+					);
+					if (!personId || !townId) continue;
+
+					const sequenceRaw = getCol(row, headerMap, 'sequence', 'order', '순서', '이동순서');
+					const movement = {
+						townId,
+						townName: townsById.get(townId)?.name || townId,
+						sequence: Number.isFinite(Number(sequenceRaw)) ? Number(sequenceRaw) : i,
+						startYear: getCol(row, headerMap, 'start_year', 'from_year', 'year_start', '시작연도', '시작년도'),
+						endYear: getCol(row, headerMap, 'end_year', 'to_year', 'year_end', '종료연도', '종료년도'),
+						source: getCol(row, headerMap, 'source', '출처'),
+						note: getCol(row, headerMap, 'note', 'description', '설명', '비고')
+					};
+					if (!movementsByPerson.has(personId)) movementsByPerson.set(personId, []);
+					movementsByPerson.get(personId).push(movement);
+					}
+				}
+			}
+	} catch (error) {
+		console.error('이동 시트 파싱 실패', error);
+	}
+
 	const nodesById = new Map(updatedData.map((node) => [`${node.type}:${node.externalId}`, node]));
 	for (const node of updatedData) {
 		node.relatedOrg = (node.relatedOrgIds || [])
@@ -307,6 +352,11 @@ export async function loadGoogleSheetsData() {
 			.map((id) => nodesById.get(`인물:${id}`)?.name)
 			.filter(Boolean)
 			.join(', ');
+		if (node.type === '인물') {
+			node.movements = (movementsByPerson.get(node.externalId) || []).sort(
+				(a, b) => a.sequence - b.sequence || (parseInt(a.startYear) || 0) - (parseInt(b.startYear) || 0)
+			);
+		}
 	}
 
 	return updatedData;
@@ -315,7 +365,11 @@ export async function loadGoogleSheetsData() {
 /* 데이터에서 연도 범위 자동 감지 */
 export function detectYearRange(rawData) {
 	const years = rawData
-		.flatMap((d) => [parseInt(d.founded), parseInt(d.dissolved)])
+		.flatMap((d) => [
+			parseInt(d.founded),
+			parseInt(d.dissolved),
+			...(d.movements || []).flatMap((movement) => [parseInt(movement.startYear), parseInt(movement.endYear)])
+		])
 		.filter((y) => y && y > 1000 && y < 2100);
 	if (years.length === 0) return null;
 	return { min: Math.min(...years), max: Math.max(...years) };

@@ -133,9 +133,9 @@ export function createMapStyle() {
 				source: 'network-lines',
 				layout: { 'line-cap': 'round', 'line-join': 'round' },
 				paint: {
-					'line-color': ['get', 'color'],
-					'line-width': 2,
-					'line-opacity': 0.6,
+					'line-color': ['case', ['get', 'selected'], '#14532d', ['get', 'color']],
+					'line-width': ['case', ['get', 'selected'], 3.6, 2],
+					'line-opacity': ['case', ['get', 'selected'], 0.95, 0.6],
 					'line-dasharray': [0, 4, 3]
 				}
 			},

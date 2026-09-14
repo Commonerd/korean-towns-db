@@ -15,6 +15,7 @@ import { buildPopupHtml } from './popup.js';
 import { filterData } from '$lib/data/filter.js';
 import { localized, translate } from '$lib/i18n/translations.js';
 import { escapeHtml } from '$lib/util.js';
+import { Movement3DLayer } from './movement3d.js';
 
 const WORLD_BBOX = [-180, -85, 180, 85];
 
@@ -59,6 +60,24 @@ function formatArea(m2) {
 const COORD_SNAP_PX = 18;
 
 const GPU_SOURCE_IDS = ['kt-halo', 'kt-icons', 'kt-badges', 'kt-labels'];
+
+function ensureMovementArrowImage(map) {
+	if (map.hasImage('movement-arrow')) return;
+	const size = 24;
+	const canvas = document.createElement('canvas');
+	canvas.width = size;
+	canvas.height = size;
+	const context = canvas.getContext('2d');
+	context.fillStyle = '#3f7658';
+	context.beginPath();
+	context.moveTo(size / 2, 2);
+	context.lineTo(size - 3, size - 4);
+	context.lineTo(size / 2, size - 8);
+	context.lineTo(3, size - 4);
+	context.closePath();
+	context.fill();
+	map.addImage('movement-arrow', context.getImageData(0, 0, size, size), { pixelRatio: 2 });
+}
 
 /* 팝업 예약을 붙들고 있을 최대 시간(ms). flyTo 종료를 기다리기엔 넉넉하고, 실패한
    예약이 한참 뒤에 뜬금없이 열리지 않을 만큼은 짧게. 아이콘 폰트가 아직 안 온 동안은
@@ -206,6 +225,7 @@ export class MapController {
 		this.yearRangeMin = 1860;
 		this.yearRangeMax = 2026;
 		this.selectedTownName = null;
+		this.selectedMovementPersonId = null;
 		this.locale = 'ko';
 
 		this._markers = []; // DOM 마커 (저줌 클러스터 상태): { marker, itemId? }
@@ -236,6 +256,8 @@ export class MapController {
 		this._coordClosed = false; // 시작점에 다시 찍어 링이 닫혔는지(= 면적 표시)
 
 		this._ensureLineLayer();
+		this._movement3D = new Movement3DLayer();
+		this.map.addLayer(this._movement3D);
 		this._ensureGpuLayers();
 		this._ensureCoordLayer();
 
@@ -431,6 +453,8 @@ export class MapController {
 		this._clearCoordPoints();
 		this._clearSpider();
 		this._clearMarkers();
+		if (this.map.getLayer(this._movement3D.id)) this.map.removeLayer(this._movement3D.id);
+		this._movement3D = null;
 	}
 
 	/* ====== 필터 (공용 filterData 사용) ====== */
@@ -858,11 +882,17 @@ export class MapController {
 		if (!item) return;
 		if (item.type === '마을') this.onSelectTown(item.name);
 		else if (item.relatedTown) this.onSelectTown(item.relatedTown);
+		this._selectMovementPerson(item);
 
 		// 선택 상태 변경이 트리거하는 재렌더가 방금 연 팝업을 지워버리지 않도록,
 		// 팝업은 직접 열지 않고 재렌더 이후(_afterRender)에 열리도록 예약한다.
 		this._reservePopup(item.id);
 		this.scheduleRender();
+	}
+
+	_selectMovementPerson(item) {
+		const count = item.movements?.length || item.relatedTownIds?.length || 0;
+		this.selectedMovementPersonId = item.type === '인물' && count > 1 ? item.id : null;
 	}
 
 	_setGpuSourceData(id, features) {
@@ -947,6 +977,8 @@ export class MapController {
 				e.stopPropagation();
 				if (isTown) this.onSelectTown(item.name);
 				else if (item.relatedTown) this.onSelectTown(item.relatedTown);
+				this._selectMovementPerson(item);
+				this.scheduleRender();
 				this._openAdHocPopup(item, finalPos, Math.round(28 / 2 + 6));
 			});
 			// 시작 위치는 중심 — 애니메이션으로 finalPos 까지 퍼진다
@@ -1088,6 +1120,7 @@ export class MapController {
 		el.addEventListener('click', () => {
 			if (item.type === '마을') this.onSelectTown(item.name);
 			else if (item.relatedTown) this.onSelectTown(item.relatedTown);
+			this._selectMovementPerson(item);
 			// GPU 경로와 동일하게, 팝업은 재렌더 이후에 열리도록 예약한다 (레이스 방지).
 			this._reservePopup(item.id);
 			this.scheduleRender();
@@ -1121,23 +1154,24 @@ export class MapController {
 	   source/layer 는 초기 스타일(createMapStyle)에 포함되어 있으므로
 	   여기서는 존재를 보장하는 방어 코드만 둔다. */
 	_ensureLineLayer() {
-		if (this.map.getSource('network-lines')) return;
-		this.map.addSource('network-lines', {
-			type: 'geojson',
-			data: { type: 'FeatureCollection', features: [] }
-		});
-		this.map.addLayer({
-			id: 'network-lines',
-			type: 'line',
-			source: 'network-lines',
-			layout: { 'line-cap': 'round', 'line-join': 'round' },
-			paint: {
-				'line-color': ['get', 'color'],
-				'line-width': 2,
-				'line-opacity': 0.6,
-				'line-dasharray': [0, 4, 3]
-			}
-		});
+		if (!this.map.getSource('network-lines')) {
+			this.map.addSource('network-lines', {
+				type: 'geojson',
+				data: { type: 'FeatureCollection', features: [] }
+			});
+			this.map.addLayer({
+				id: 'network-lines',
+				type: 'line',
+				source: 'network-lines',
+				layout: { 'line-cap': 'round', 'line-join': 'round' },
+				paint: {
+					'line-color': ['case', ['get', 'selected'], '#14532d', ['get', 'color']],
+					'line-width': ['case', ['get', 'selected'], 3.6, 2],
+					'line-opacity': ['case', ['get', 'selected'], 0.95, 0.6],
+					'line-dasharray': [0, 4, 3]
+				}
+			});
+		}
 		if (!this.map.getSource('spider-legs')) {
 			this.map.addSource('spider-legs', {
 				type: 'geojson',
@@ -1221,9 +1255,35 @@ export class MapController {
 	_drawLines() {
 		const posById = new Map();
 		for (const [id, entry] of this._positions) posById.set(id, entry.coord);
+		const townById = new Map(
+			this.rawData.filter((item) => item.type === '마을').map((item) => [item.townId, item])
+		);
 
 		const features = [];
+		const movementRoutes = [];
+		const movementPerson = this.rawData.find(
+			(item) => item.id === this.selectedMovementPersonId && item.type === '인물'
+		);
+		const addMovementSegment = (previousTown, currentTown) => {
+			if (!previousTown?.lat || !previousTown?.lng || !currentTown?.lat || !currentTown?.lng) return;
+			movementRoutes.push({
+				from: { lat: previousTown.lat, lng: previousTown.lng },
+				to: { lat: currentTown.lat, lng: currentTown.lng }
+			});
+		};
 		this.rawData.forEach((item) => {
+			const movementRows = movementPerson?.movements?.length
+				? movementPerson.movements
+				: movementPerson?.relatedTownIds?.map((townId) => ({ townId }));
+			if (movementPerson?.id === item.id && movementRows?.length > 1) {
+				for (let i = 1; i < movementRows.length; i++) {
+					addMovementSegment(
+						townById.get(movementRows[i - 1].townId),
+						townById.get(movementRows[i].townId)
+					);
+				}
+			}
+
 			const from = posById.get(item.id);
 			if (!from) return;
 
@@ -1262,19 +1322,39 @@ export class MapController {
 				color = '#9333ea';
 			}
 
-			if (!target) return;
-			const to = posById.get(target.id);
-			if (!to) return;
+			if (target) {
+				const to = posById.get(target.id);
+				if (to) {
+					features.push({
+						type: 'Feature',
+						properties: {
+							color,
+							selected: item.id === this.selectedMovementPersonId && target.type === '마을'
+						},
+						geometry: { type: 'LineString', coordinates: [from, to] }
+					});
+				}
+			}
 
-			features.push({
-				type: 'Feature',
-				properties: { color },
-				geometry: { type: 'LineString', coordinates: [from, to] }
-			});
+			/* 인물의 대표 마을선은 조직선과 별도로 강조해, 선택한 인물의 출발 관계를
+			   다른 인물의 일반 관계선과 즉시 구별한다. */
+			if (item.id === this.selectedMovementPersonId && item.type === '인물' && item.relatedTownId) {
+				const town = townById.get(item.relatedTownId);
+				const townCoord = town ? posById.get(town.id) || [town.lng, town.lat] : null;
+				if (townCoord && from && (!target || target.id !== town.id)) {
+					features.push({
+						type: 'Feature',
+						properties: { color: '#14532d', selected: true },
+						geometry: { type: 'LineString', coordinates: [from, townCoord] }
+					});
+				}
+			}
+
 		});
 
 		const src = this.map.getSource('network-lines');
 		if (src) src.setData({ type: 'FeatureCollection', features });
+		this._movement3D?.setRoutes(movementRoutes);
 	}
 
 	/* 연결선 대시 흐름 + halo 펄스 애니메이션.
@@ -1313,6 +1393,7 @@ export class MapController {
 
 	/* ====== 포커스 (기존 focusOnMap 의 지도 이동 부분 이식) ====== */
 	focus(item) {
+		this._selectMovementPerson(item);
 		const lat = parseFloat(item.lat);
 		const lng = parseFloat(item.lng);
 		let targetLat = lat,
