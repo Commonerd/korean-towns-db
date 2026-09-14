@@ -1185,6 +1185,57 @@ export class MapController {
 				paint: { 'line-color': '#94a3b8', 'line-width': 1.5, 'line-opacity': 0.7 }
 			});
 		}
+				if (!this.map.getSource('movement-order')) {
+			this.map.addSource('movement-order', {
+				type: 'geojson',
+
+				data: {
+					type: 'FeatureCollection',
+					features: []
+				}
+			});
+		}
+
+		if (!this.map.getLayer('movement-order')) {
+			this.map.addLayer({
+				id: 'movement-order',
+				type: 'symbol',
+				source: 'movement-order',
+
+				layout: {
+					'text-field': [
+						'to-string',
+						['get', 'order']
+					],
+
+					'text-size': 14,
+
+					'text-font': [
+						'Open Sans Bold',
+						'Arial Unicode MS Bold'
+					],
+
+					'text-allow-overlap': true,
+					'text-ignore-placement': true,
+
+					'text-offset': [
+						0,
+						-1.2
+					]
+				},
+
+				paint: {
+					'text-color': '#ffffff',
+
+					'text-halo-color':
+						'#14532d',
+
+					'text-halo-width': 3,
+
+					'text-halo-blur': 0.1
+				}
+			});
+		}
 	}
 
 	/* GPU 마커 소스/레이어 존재 보장 (createMapStyle 에 이미 포함되어 있으므로 방어용) */
@@ -1254,108 +1305,438 @@ export class MapController {
 
 	_drawLines() {
 		const posById = new Map();
-		for (const [id, entry] of this._positions) posById.set(id, entry.coord);
+		for (const [id, entry] of this._positions) {
+			posById.set(id, entry.coord);
+		}
+
 		const townById = new Map(
-			this.rawData.filter((item) => item.type === '마을').map((item) => [item.townId, item])
+			this.rawData
+				.filter((item) => item.type === '마을')
+				.map((item) => [item.townId, item])
 		);
 
 		const features = [];
 		const movementRoutes = [];
+		const movementOrderFeatures = [];
+
 		const movementPerson = this.rawData.find(
-			(item) => item.id === this.selectedMovementPersonId && item.type === '인물'
+			(item) =>
+				item.id === this.selectedMovementPersonId &&
+				item.type === '인물'
 		);
-		const addMovementSegment = (previousTown, currentTown) => {
-			if (!previousTown?.lat || !previousTown?.lng || !currentTown?.lat || !currentTown?.lng) return;
+
+		const addMovementSegment = (
+			previousTown,
+			currentTown,
+			order
+		) => {
+			if (
+				!previousTown?.lat ||
+				!previousTown?.lng ||
+				!currentTown?.lat ||
+				!currentTown?.lng
+			) {
+				return;
+			}
+
 			movementRoutes.push({
-				from: { lat: previousTown.lat, lng: previousTown.lng },
-				to: { lat: currentTown.lat, lng: currentTown.lng },
+				from: {
+					lat: previousTown.lat,
+					lng: previousTown.lng
+				},
+				to: {
+					lat: currentTown.lat,
+					lng: currentTown.lng
+				},
+				sequence: order
 			});
 		};
+
 		this.rawData.forEach((item) => {
-			const movementRows = movementPerson?.movements?.length
-				? movementPerson.movements
-				: movementPerson?.relatedTownIds?.map((townId) => ({ townId }));
-			if (movementPerson?.id === item.id && movementRows?.length > 1) {
-				for (let i = 1; i < movementRows.length; i++) {
-					addMovementSegment(
-						townById.get(movementRows[i - 1].townId),
-						townById.get(movementRows[i].townId),
-					);
+			const movementRows =
+				movementPerson?.movements?.length
+					? movementPerson.movements
+					: movementPerson?.relatedTownIds?.map(
+							(townId, index) => ({
+								townId,
+								sequence: index + 1
+							})
+						);
+
+			if (
+				movementPerson?.id === item.id &&
+				movementRows?.length > 1
+			) {
+				const orderedRows = movementRows
+					.map((row, index) => ({
+						row,
+						index
+					}))
+					.sort((a, b) => {
+						const sa = Number(
+							a.row?.sequence
+						);
+						const sb = Number(
+							b.row?.sequence
+						);
+
+						if (
+							Number.isFinite(sa) &&
+							Number.isFinite(sb)
+						) {
+							return sa - sb;
+						}
+
+						if (Number.isFinite(sa)) {
+							return -1;
+						}
+
+						if (Number.isFinite(sb)) {
+							return 1;
+						}
+
+						return a.index - b.index;
+					})
+					.map(({ row }, index) => ({
+						...row,
+						sequence:
+							Number.isFinite(
+								Number(row?.sequence)
+							)
+								? Number(row.sequence)
+								: index + 1
+					}));
+
+				for (
+					let i = 0;
+					i < orderedRows.length;
+					i++
+				) {
+					const town =
+						townById.get(
+							orderedRows[i].townId
+						);
+
+					if (
+						town?.lat != null &&
+						town?.lng != null
+					) {
+						/*
+						 * 같은 마을을 여러 번 방문하면
+						 * 번호가 겹치지 않도록
+						 * 현재 지도 화면 기준으로
+						 * 약 22px씩 방사형으로 벌린다.
+						 *
+						 * 예:
+						 * A(1) → B(2) → A(3)
+						 *
+						 * A의 1과 3이 같은 좌표에
+						 * 겹치지 않게 표시된다.
+						 */
+						const sameTownIndexes =
+							orderedRows
+								.map(
+									(row, index) => ({
+										row,
+										index
+									})
+								)
+								.filter(
+									({ row }) =>
+										row.townId ===
+										orderedRows[i]
+											.townId
+								)
+								.map(
+									({ index }) =>
+										index
+								);
+
+						const visitIndex =
+							sameTownIndexes.indexOf(i);
+
+						const visitTotal =
+							sameTownIndexes.length;
+
+						let orderCoord = [
+							town.lng,
+							town.lat
+						];
+
+						if (visitTotal > 1) {
+							/*
+							 * 방문 횟수에 따라 원형으로 분산.
+							 *
+							 * 2회 방문:
+							 *   위 / 아래
+							 *
+							 * 3회 방문:
+							 *   위 / 좌하 / 우하
+							 *
+							 * 4회 방문:
+							 *   위 / 우 / 아래 / 좌
+							 */
+							const angle =
+								-Math.PI / 2 +
+								(
+									visitIndex *
+									2 *
+									Math.PI
+								) /
+									visitTotal;
+
+							/*
+							 * 화면상 거리.
+							 *
+							 * 위경도 단위가 아니라
+							 * 실제 화면 픽셀 기준이므로
+							 * 줌인/줌아웃을 해도
+							 * 번호 간격이 안정적이다.
+							 */
+							const radiusPx = 22;
+
+							const point =
+								this.map.project([
+									town.lng,
+									town.lat
+								]);
+
+							const shifted =
+								this.map.unproject([
+									point.x +
+										Math.cos(
+											angle
+										) *
+											radiusPx,
+
+									point.y +
+										Math.sin(
+											angle
+										) *
+											radiusPx
+								]);
+
+							orderCoord = [
+								shifted.lng,
+								shifted.lat
+							];
+						}
+
+						movementOrderFeatures.push({
+							type: 'Feature',
+
+							properties: {
+								order:
+									orderedRows[i]
+										.sequence
+							},
+
+							geometry: {
+								type: 'Point',
+
+								coordinates:
+									orderCoord
+							}
+						});
+					}
+
+					/*
+					 * 실제 이동 경로.
+					 *
+					 * 번호 위치를 움직이는 것과
+					 * 별개이므로 3D 경로에는
+					 * 영향을 주지 않는다.
+					 */
+					if (i > 0) {
+						addMovementSegment(
+							townById.get(
+								orderedRows[
+									i - 1
+								].townId
+							),
+							town,
+							orderedRows[i]
+								.sequence
+						);
+					}
 				}
 			}
 
-			const from = posById.get(item.id);
-			if (!from) return;
+		const from = posById.get(item.id);
+		if (!from) return;
 
-			let target = null;
-			let color = '#64748b';
+		let target = null;
+		let color = '#64748b';
 
-			if (item.type === '조직' && item.relatedTownId) {
-				target = this.rawData.find((d) => d.type === '마을' && d.townId === item.relatedTownId);
-				color = '#2563eb';
-			} else if (item.type === '인물') {
-				if (item.relatedOrgIds?.length) {
-					target = this.rawData.find(
-						(d) => d.type === '조직' && d.externalId === item.relatedOrgIds[0]
-					);
-					color = '#16a34a';
-				}
-				if (!target && item.relatedTownId) {
-					target = this.rawData.find((d) => d.type === '마을' && d.townId === item.relatedTownId);
-					color = '#16a34a';
-				}
-			} else if (item.type === '사건') {
-				// 사건은 가장 구체적인 관련 대상(인물 → 조직 → 마을)에 연결
-				if (item.relatedPersonIds?.length) {
-					target = this.rawData.find(
-						(d) => d.type === '인물' && d.externalId === item.relatedPersonIds[0]
-					);
-				}
-				if (!target && item.relatedOrgIds?.length) {
-					target = this.rawData.find(
-						(d) => d.type === '조직' && d.externalId === item.relatedOrgIds[0]
-					);
-				}
-				if (!target && item.relatedTownId) {
-					target = this.rawData.find((d) => d.type === '마을' && d.townId === item.relatedTownId);
-				}
-				color = '#9333ea';
+		if (
+			item.type === '조직' &&
+			item.relatedTownId
+		) {
+			target = this.rawData.find(
+				(d) =>
+					d.type === '마을' &&
+					d.townId === item.relatedTownId
+			);
+			color = '#2563eb';
+		} else if (item.type === '인물') {
+			if (item.relatedOrgIds?.length) {
+				target = this.rawData.find(
+					(d) =>
+						d.type === '조직' &&
+						d.externalId ===
+							item.relatedOrgIds[0]
+				);
+				color = '#16a34a';
 			}
 
-			if (target) {
-				const to = posById.get(target.id);
-				if (to) {
-					features.push({
-						type: 'Feature',
-						properties: {
-							color,
-							selected: item.id === this.selectedMovementPersonId && target.type === '마을'
-						},
-						geometry: { type: 'LineString', coordinates: [from, to] }
-					});
-				}
+			if (
+				!target &&
+				item.relatedTownId
+			) {
+				target = this.rawData.find(
+					(d) =>
+						d.type === '마을' &&
+						d.townId ===
+							item.relatedTownId
+				);
+				color = '#16a34a';
+			}
+		} else if (item.type === '사건') {
+			// 사건은 가장 구체적인 관련 대상
+			// (인물 → 조직 → 마을)에 연결
+			if (item.relatedPersonIds?.length) {
+				target = this.rawData.find(
+					(d) =>
+						d.type === '인물' &&
+						d.externalId ===
+							item.relatedPersonIds[0]
+				);
 			}
 
-			/* 인물의 대표 마을선은 조직선과 별도로 강조해, 선택한 인물의 출발 관계를
-			   다른 인물의 일반 관계선과 즉시 구별한다. */
-			if (item.id === this.selectedMovementPersonId && item.type === '인물' && item.relatedTownId) {
-				const town = townById.get(item.relatedTownId);
-				const townCoord = town ? posById.get(town.id) || [town.lng, town.lat] : null;
-				if (townCoord && from && (!target || target.id !== town.id)) {
-					features.push({
-						type: 'Feature',
-						properties: { color: '#14532d', selected: true },
-						geometry: { type: 'LineString', coordinates: [from, townCoord] }
-					});
-				}
+			if (
+				!target &&
+				item.relatedOrgIds?.length
+			) {
+				target = this.rawData.find(
+					(d) =>
+						d.type === '조직' &&
+						d.externalId ===
+							item.relatedOrgIds[0]
+				);
 			}
 
+			if (
+				!target &&
+				item.relatedTownId
+			) {
+				target = this.rawData.find(
+					(d) =>
+						d.type === '마을' &&
+						d.townId ===
+							item.relatedTownId
+				);
+			}
+
+			color = '#9333ea';
+		}
+
+		if (target) {
+			const to = posById.get(target.id);
+
+			if (to) {
+				features.push({
+					type: 'Feature',
+					properties: {
+						color,
+						selected:
+							item.id ===
+								this
+									.selectedMovementPersonId &&
+							target.type ===
+								'마을'
+					},
+					geometry: {
+						type: 'LineString',
+						coordinates: [
+							from,
+							to
+						]
+					}
+				});
+			}
+		}
+
+		/* 인물의 대표 마을선은 조직선과 별도로 강조 */
+		if (
+			item.id ===
+				this.selectedMovementPersonId &&
+			item.type === '인물' &&
+			item.relatedTownId
+		) {
+			const town = townById.get(
+				item.relatedTownId
+			);
+
+			const townCoord = town
+				? posById.get(town.id) || [
+						town.lng,
+						town.lat
+					]
+				: null;
+
+			if (
+				townCoord &&
+				from &&
+				(!target ||
+					target.id !== town.id)
+			) {
+				features.push({
+					type: 'Feature',
+					properties: {
+						color: '#14532d',
+						selected: true
+					},
+					geometry: {
+						type: 'LineString',
+						coordinates: [
+							from,
+							townCoord
+						]
+					}
+				});
+			}
+		}
+	});
+
+	const src = this.map.getSource(
+		'network-lines'
+	);
+
+	if (src) {
+		src.setData({
+			type: 'FeatureCollection',
+			features
 		});
-
-		const src = this.map.getSource('network-lines');
-		if (src) src.setData({ type: 'FeatureCollection', features });
-		this._movement3D?.setRoutes(movementRoutes);
 	}
+
+	// 이동순서 번호 레이어 업데이트
+	const movementOrderSrc =
+		this.map.getSource(
+			'movement-order'
+		);
+
+	if (movementOrderSrc) {
+		movementOrderSrc.setData({
+			type: 'FeatureCollection',
+			features:
+				movementOrderFeatures
+		});
+	}
+
+	this._movement3D?.setRoutes(
+		movementRoutes
+	);
+}
 
 	/* 연결선 대시 흐름 + halo 펄스 애니메이션.
 	   - 대시: 55ms 마다 DASH_SEQUENCE 를 순환시켜 선이 흐르는 효과.
