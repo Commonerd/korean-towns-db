@@ -37,6 +37,10 @@ function toDegrees(value) {
 
 const DISTANCE_CAP = 0.015; // Mercator 단위, 적도 기준 약 600km
 
+// DEM 타일 미로딩으로 고도 조회가 실패했을 때 재시도할 최대 횟수.
+// 네트워크 장애 등으로 타일이 끝내 안 뜨는 경우 무한 재시도를 막기 위한 상한.
+const MAX_ELEVATION_RETRIES = 4;
+
 function dampDistance(distance) {
 	if (distance <= DISTANCE_CAP) {
 		return distance;
@@ -150,6 +154,59 @@ function sphericalPoint(from, to, t) {
 	};
 }
 
+/*
+ * ----------------------------------------
+ * 지형(DEM) 고도 조회
+ *
+ * 문제:
+ * 이 레이어는 경로 좌표를 map.setTerrain() 이 만드는 실제 지형
+ * 메시가 아니라, Mercator 좌표계에 직접 점을 찍어서 그린다.
+ * 지금까지는 그 점의 고도를 항상 0(해수면)으로 고정해 왔는데,
+ * 3D 지형모드에서는 마을 마커(GPU 심볼/DOM 마커)가 지형 표면
+ * (게다가 exaggeration 이 곱해진 표면) 위에 자동으로 얹히므로,
+ * 해수면에 그려지는 이동선 끝점과 마을 노드 사이에 수직 차이가
+ * 생긴다. pitch 가 있는 카메라에서는 이 수직 차이가 화면상
+ * "옆으로 살짝 비껴난 것"처럼 보인다.
+ *
+ * 해결:
+ * map.queryTerrainElevation() 으로 실제(과장 배율 포함) 지형
+ * 고도를 미터 단위로 구해서 MercatorCoordinate 의 altitude 인자로
+ * 그대로 넘긴다 — 마을 마커가 얹히는 것과 동일한 표면 높이다.
+ *
+ * 주의:
+ * - 지형이 꺼져 있으면(map.getTerrain() 이 null) 언제나 null 이
+ *   반환된다 — 평면모드에서는 정상 동작이므로 조용히 0으로 처리.
+ * - 지형이 켜져 있어도 해당 좌표의 DEM 타일이 아직 로드되기 전이면
+ *   일시적으로 null 이 반환된다 — 이 경우도 일단 0으로 폴백하되,
+ *   호출부(_rebuild)가 "타일 로딩 중"이었음을 알 수 있도록
+ *   결과에 표시해서 타일이 마저 로드된 뒤 다시 계산하게 한다.
+ * ----------------------------------------
+ */
+
+function queryElevationMeters(map, lngLat) {
+	if (!map || typeof map.queryTerrainElevation !== 'function') {
+		return { elevation: 0, pending: false };
+	}
+
+	let raw = null;
+
+	try {
+		raw = map.queryTerrainElevation(lngLat);
+	} catch (err) {
+		raw = null;
+	}
+
+	if (typeof raw === 'number' && Number.isFinite(raw)) {
+		return { elevation: raw, pending: false };
+	}
+
+	// null 이 지형 자체가 꺼져 있어서인지, 타일 로딩 중이어서인지 구분한다.
+	// 지형이 켜져 있는데도 null 이면 "아직 못 구했다"는 뜻이므로 재시도 대상.
+	const terrainActive = typeof map.getTerrain === 'function' && !!map.getTerrain();
+
+	return { elevation: 0, pending: terrainActive };
+}
+
 export class Movement3DLayer {
 	id = 'movement-3d-routes';
 	type = 'custom';
@@ -169,6 +226,18 @@ export class Movement3DLayer {
 
 		this.dashMaterials = [];
 		this.arrowObjects = [];
+
+		/*
+		 * 지형 DEM 고도 재조회 관련 상태.
+		 * - _elevationRetryCount: 같은 route 세트에 대해 "타일이 아직
+		 *   안 떴다"는 이유로 재시도한 횟수. 네트워크 문제 등으로 DEM 이
+		 *   끝내 안 뜨는 경우까지 대비해 무한 재시도는 하지 않는다.
+		 * - _elevationRetryScheduled: 'idle' 리스너가 이미 걸려 있는지
+		 *   여부(중복 예약 방지).
+		 */
+		this._elevationRetryCount = 0;
+		this._elevationRetryScheduled = false;
+		this._onTerrainChange = null;
 	}
 
 	onAdd(map, gl) {
@@ -183,11 +252,29 @@ export class Movement3DLayer {
 		this.renderer.autoClear = false;
 		this.renderer.setPixelRatio(1);
 
+		/*
+		 * 평면 ↔ 3D 지형 전환(map.setTerrain 호출)은 zoomend 를 거치지
+		 * 않을 수 있다(예: 지형 토글 버튼만 눌렀을 때). 그 경우에도
+		 * 경로 고도를 지형 기준으로 다시 계산해야 하므로, MapLibre 가
+		 * setTerrain 시점에 쏘는 'terrain' 이벤트를 직접 구독한다.
+		 */
+		this._onTerrainChange = () => {
+			this._elevationRetryCount = 0;
+			this._rebuild();
+			this.map?.triggerRepaint();
+		};
+		this.map.on('terrain', this._onTerrainChange);
+
 		this._rebuild();
 	}
 
 	onRemove() {
 		this._clearGroup();
+
+		if (this.map && this._onTerrainChange) {
+			this.map.off('terrain', this._onTerrainChange);
+		}
+		this._onTerrainChange = null;
 
 		this.renderer?.dispose();
 		this.renderer = null;
@@ -196,6 +283,9 @@ export class Movement3DLayer {
 
 	setRoutes(routes = []) {
 		this.routes = routes;
+
+		// 경로 자체가 바뀌면 새 좌표 기준으로 재시도 횟수도 리셋한다.
+		this._elevationRetryCount = 0;
 
 		console.debug(
 			'[movement3d] routes:',
@@ -276,6 +366,10 @@ export class Movement3DLayer {
 				)
 			);
 
+		// DEM 타일이 아직 로드되기 전이라 고도 조회가 하나라도 실패했으면
+		// true — 루프가 끝난 뒤 타일 로드를 기다렸다가 한 번 더 재계산한다.
+		let elevationPending = false;
+
 		for (const route of this.routes) {
 			if (
 				route.from?.lat == null ||
@@ -288,15 +382,55 @@ export class Movement3DLayer {
 
 			/*
 			 * ----------------------------------------
+			 * 0. 출발/도착 지점의 지형 고도(m)
+			 *
+			 * 3D 지형모드에서 마을 노드가 얹히는 것과 동일한 표면
+			 * 높이를 구해서, 이동선의 양 끝을 그 높이에 맞춘다.
+			 * 평면모드거나 타일 미로딩 시엔 0(해수면)으로 자연스럽게
+			 * 폴백한다.
+			 * ----------------------------------------
+			 */
+
+			const fromLngLat = {
+				lng: route.from.lng,
+				lat: route.from.lat
+			};
+
+			const toLngLat = {
+				lng: route.to.lng,
+				lat: route.to.lat
+			};
+
+			const fromElevationResult =
+				queryElevationMeters(this.map, fromLngLat);
+
+			const toElevationResult =
+				queryElevationMeters(this.map, toLngLat);
+
+			const fromElevation =
+				fromElevationResult.elevation;
+
+			const toElevation =
+				toElevationResult.elevation;
+
+			if (
+				fromElevationResult.pending ||
+				toElevationResult.pending
+			) {
+				elevationPending = true;
+			}
+
+			/*
+			 * ----------------------------------------
 			 * 1. 출발점
 			 * ----------------------------------------
 			 */
 
 			const origin =
-				maplibregl.MercatorCoordinate.fromLngLat({
-					lng: route.from.lng,
-					lat: route.from.lat
-				});
+				maplibregl.MercatorCoordinate.fromLngLat(
+					fromLngLat,
+					fromElevation
+				);
 
 			const originVector = new THREE.Vector3(
 				origin.x,
@@ -311,10 +445,10 @@ export class Movement3DLayer {
 			 */
 
 			const destination =
-				maplibregl.MercatorCoordinate.fromLngLat({
-					lng: route.to.lng,
-					lat: route.to.lat
-				});
+				maplibregl.MercatorCoordinate.fromLngLat(
+					toLngLat,
+					toElevation
+				);
 
 			/*
 			 * ----------------------------------------
@@ -398,13 +532,23 @@ export class Movement3DLayer {
 						t
 					);
 
+				/*
+				 * 지형을 따라가는 기준선: 출발/도착 지형 고도를
+				 * t 에 따라 선형보간한다. t=0 에서 fromElevation,
+				 * t=1 에서 toElevation 이 되어 각각 origin/destination
+				 * 표면 높이와 정확히 맞물린다.
+				 */
+				const baseElevation =
+					fromElevation +
+					(toElevation - fromElevation) * t;
+
 				const mercator =
 					maplibregl.MercatorCoordinate.fromLngLat(
 						{
 							lng: location.lng,
 							lat: location.lat
 						},
-						0
+						baseElevation
 					);
 
 				const x =
@@ -704,6 +848,29 @@ export class Movement3DLayer {
 			this.group.add(
 				routeGroup
 			);
+		}
+
+		/*
+		 * 지형이 켜져 있는데 일부 지점의 DEM 타일이 아직 없어서
+		 * 고도를 0으로 폴백한 경우, 타일이 다 뜬 뒤('idle') 한 번 더
+		 * 재계산해서 노드 위치와 어긋난 상태가 오래 남지 않게 한다.
+		 * 이미 예약돼 있으면 중복 예약하지 않고, 재시도 상한을 넘으면
+		 * (예: 타일 요청이 계속 실패) 더 이상 걸지 않는다.
+		 */
+		if (
+			elevationPending &&
+			this.map &&
+			!this._elevationRetryScheduled &&
+			this._elevationRetryCount < MAX_ELEVATION_RETRIES
+		) {
+			this._elevationRetryScheduled = true;
+			this._elevationRetryCount += 1;
+
+			this.map.once('idle', () => {
+				this._elevationRetryScheduled = false;
+				this._rebuild();
+				this.map?.triggerRepaint();
+			});
 		}
 	}
 
