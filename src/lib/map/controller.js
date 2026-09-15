@@ -1033,7 +1033,7 @@ export class MapController {
 				this._movementActiveTownId = null;
 				this._movementFocusTimer = null;
 				this.onMovementProgress(null);
-				this._reservePopup(sequence[0].town.id, { centerInView: true });
+				this._reservePopup(item.id, { centerInView: true });
 				this.scheduleRender();
 			};
 
