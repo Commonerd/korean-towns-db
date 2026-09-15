@@ -22,13 +22,15 @@
         onSelectTown = () => {},
         onAskAI = () => {},
         onZoom = () => {},
-        onReady = () => {}
+        onReady = () => {},
+        onMovementProgress = () => {}
     } = $props();
 
     let container;
     let map = null;
     let controller = null;
     let ready = $state(false);
+    let movementProgress = $state(null);
     let applyTerrainMode = (mode = terrainMode, opacity = darkOpacity) => {};
     let applyBaseLayer = (layer = baseLayer, labels = showGeoLabels, opacity = darkOpacity) => {};
 
@@ -303,7 +305,14 @@
                 applyTerrainMode(terrainMode, darkOpacity);
                 applyBaseLayer(baseLayer, showGeoLabels, darkOpacity);
 
-                controller = new MapController(map, { onSelectTown, onAskAI });
+                controller = new MapController(map, {
+                    onSelectTown,
+                    onAskAI,
+                    onMovementProgress: (progress) => {
+                        movementProgress = progress;
+                        onMovementProgress(progress);
+                    }
+                });
                 controller.update({
                     filter,
                     search,
@@ -379,10 +388,137 @@
 
 <div class="map-root" bind:this={container}></div>
 
+{#if movementProgress}
+    <div class="movement-status" role="status" aria-live="polite">
+        <div class="movement-status__header">
+            <strong>{movementProgress.name}</strong>
+            <span>{Math.min(movementProgress.currentIndex + 1, movementProgress.sequence.length)} / {movementProgress.sequence.length}</span>
+        </div>
+        <div class="movement-status__track">
+            <div class="movement-status__progress" style:width={`${movementProgress.sequence.length <= 1 ? 0 : (movementProgress.currentIndex / (movementProgress.sequence.length - 1)) * 100}%`}></div>
+            {#each movementProgress.sequence as stop, i}
+                <div class:active={i === movementProgress.currentIndex} class:visited={i < movementProgress.currentIndex} class="movement-stop">
+                    <div class="movement-stop__dot"></div>
+                    <div class="movement-stop__label">{stop.name}</div>
+                </div>
+            {/each}
+        </div>
+    </div>
+{/if}
+
 <style>
     .map-root {
         position: absolute;
         inset: 0;
         z-index: 0;
     }
+
+    .movement-status {
+        position: absolute;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        z-index: 20;
+        width: min(760px, calc(100% - 32px));
+        padding: 12px 16px 14px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.16);
+        backdrop-filter: blur(10px);
+        pointer-events: none;
+    }
+
+    .movement-status__header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        color: #334155;
+    }
+
+    .movement-status__header strong {
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .movement-status__track {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 6px;
+        padding-top: 2px;
+    }
+
+    .movement-status__progress {
+        position: absolute;
+        left: 0;
+        top: 7px;
+        height: 3px;
+        border-radius: 999px;
+        background: #14532d;
+        transition: width 0.35s ease;
+        z-index: 0;
+        transform-origin: left center;
+    }
+
+    .movement-stop {
+        position: relative;
+        z-index: 1;
+        flex: 1 1 0;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .movement-stop__dot {
+        width: 12px;
+        height: 12px;
+        margin: 0 auto 6px;
+        border: 2px solid #94a3b8;
+        border-radius: 50%;
+        background: white;
+        box-sizing: border-box;
+        transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .movement-stop.visited .movement-stop__dot {
+        border-color: #14532d;
+        background: #14532d;
+    }
+
+    .movement-stop.active .movement-stop__dot {
+        border-color: #14532d;
+        background: white;
+        box-shadow: 0 0 0 5px rgba(20, 83, 45, 0.16);
+        transform: scale(1.15);
+    }
+
+    .movement-stop__label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 11px;
+        color: #64748b;
+    }
+
+    .movement-stop.active .movement-stop__label {
+        color: #14532d;
+        font-weight: 700;
+    }
+
+    @media (max-width: 640px) {
+        .movement-status {
+            bottom: 12px;
+            width: calc(100% - 20px);
+            padding: 10px 10px 12px;
+        }
+        .movement-stop__label {
+            font-size: 10px;
+        }
+    }
+
 </style>

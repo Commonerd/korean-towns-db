@@ -211,10 +211,11 @@ const DASH_SEQUENCE = [
  * 포인트 수가 많아져도 상세줌에서 팬/줌이 매끄럽도록 하기 위함이다.
  */
 export class MapController {
-	constructor(map, { onSelectTown, onAskAI } = {}) {
+	constructor(map, { onSelectTown, onAskAI, onMovementProgress } = {}) {
 		this.map = map;
 		this.onSelectTown = onSelectTown || (() => {});
 		this.onAskAI = onAskAI || (() => {});
+		this.onMovementProgress = onMovementProgress || (() => {});
 
 		this.rawData = [];
 		this.filter = 'all';
@@ -226,7 +227,10 @@ export class MapController {
 		this.yearRangeMax = 2026;
 		this.selectedTownName = null;
 		this.selectedMovementPersonId = null;
-		this.selectedMovementPersonId = null;
+		this._movementPlaying = false;
+		this._movementActiveTownId = null;
+		this._movementSequence = [];
+		this._movementIndex = -1;
 		this._movementFocusTimer = null;
 		this._movementFocusToken = 0;
 		this._suppressMapClickUntil = 0;
@@ -596,7 +600,7 @@ export class MapController {
 						this._addVillageMarker(item, isDetailMode, childCountByTown);
 					} else {
 						const isHighlighted =
-							this.selectedTownName && item.relatedTown === this.selectedTownName;
+							(this.selectedTownName && item.relatedTown === this.selectedTownName) || this._isMovementTownActive(this._villageMap[item.relatedTownId]);
 						this._addItemMarker(item, item.lat, item.lng, { isHighlighted }, isDetailMode);
 					}
 				}
@@ -609,7 +613,7 @@ export class MapController {
 
 			if (item.isPrecise && item.lat && item.lng) {
 				if (this.filter === 'all' && !isDetailMode) return;
-				const isHighlighted = this.selectedTownName && item.relatedTown === this.selectedTownName;
+				const isHighlighted = (this.selectedTownName && item.relatedTown === this.selectedTownName) || this._isMovementTownActive(this._villageMap[item.relatedTownId]);
 				this._addItemMarker(item, item.lat, item.lng, { isHighlighted }, isDetailMode);
 				return;
 			}
@@ -626,7 +630,7 @@ export class MapController {
 			const idx = siblings.findIndex((s) => s.id === item.id);
 			const total = siblings.length || 1;
 			const [flat, flng] = this._computeFloatingLatLng(parentVillage, idx, total);
-			const isHighlighted = this.selectedTownName && item.relatedTown === this.selectedTownName;
+			const isHighlighted = (this.selectedTownName && item.relatedTown === this.selectedTownName) || this._isMovementTownActive(this._villageMap[item.relatedTownId]);
 			this._addItemMarker(item, flat, flng, { isHighlighted, isFloating: true }, isDetailMode);
 		});
 	}
@@ -647,7 +651,7 @@ export class MapController {
 
 		for (const item of filteredVillages) {
 			const childCount = childCountByTown.get(item.name) || 0;
-			const isHighlighted = this.selectedTownName && item.name === this.selectedTownName;
+			const isHighlighted = (this.selectedTownName && item.name === this.selectedTownName) || this._isMovementTownActive(item);
 			const v = computeMarkerVisual('마을', {
 				isHighlighted,
 				settlementType: item.settlementType,
@@ -765,7 +769,7 @@ export class MapController {
 			/* 정확위치 노드, 그리고 부모 마을이 없는 고아 노드는 모두 자기 좌표에 그린다.
 			   (고아 노드를 여기서 빼면 하와이처럼 부모 마을이 없는 지역이 통째로 사라진다.) */
 			if ((item.isPrecise || this._isOrphanGeocoded(item)) && item.lat && item.lng) {
-				const isHighlighted = this.selectedTownName && item.relatedTown === this.selectedTownName;
+				const isHighlighted = (this.selectedTownName && item.relatedTown === this.selectedTownName) || this._isMovementTownActive(this._villageMap[item.relatedTownId]);
 				pushEntity(item, item.lng, item.lat, { isHighlighted });
 				return;
 			}
@@ -779,7 +783,7 @@ export class MapController {
 			const idx = siblings.findIndex((s) => s.id === item.id);
 			const total = siblings.length || 1;
 			const [flat, flng] = this._computeFloatingLatLng(parentVillage, idx, total);
-			const isHighlighted = this.selectedTownName && item.relatedTown === this.selectedTownName;
+			const isHighlighted = (this.selectedTownName && item.relatedTown === this.selectedTownName) || this._isMovementTownActive(this._villageMap[item.relatedTownId]);
 			pushEntity(item, flng, flat, { isHighlighted, isFloating: true });
 		});
 
@@ -936,7 +940,9 @@ export class MapController {
 			this._clearMovementFocus();
 		}
 
-		this._reservePopup(item.id);
+		if (!(this._movementPlaying && item.type === '인물' && this.selectedMovementPersonId === item.id)) {
+			this._reservePopup(item.id);
+		}
 		this.scheduleRender();
 	}
 
@@ -975,120 +981,93 @@ export class MapController {
 		}));
 	}
 
-		_clearMovementFocus() {
-			this._movementFocusToken += 1;
+		_isMovementTownActive(item) {
+		return !!(
+			this._movementPlaying &&
+			this._movementActiveTownId != null &&
+			item &&
+			item.townId === this._movementActiveTownId
+		);
+	}
 
-			if (this._movementFocusTimer) {
-				clearTimeout(this._movementFocusTimer);
-				this._movementFocusTimer = null;
-			}
-
-				// 현재 진행 중인 flyTo/easeTo도 즉시 중단
-			if (this.map) {
-				this.map.stop();
-			}
-		}
+	_clearMovementFocus() {
+		const wasPlaying = this._movementPlaying;
+		this._movementFocusToken += 1;
+		if (this._movementFocusTimer) { clearTimeout(this._movementFocusTimer); this._movementFocusTimer = null; }
+		if (this.map) this.map.stop();
+		this._movementPlaying = false;
+		this._movementActiveTownId = null;
+		this._movementSequence = [];
+		this._movementIndex = -1;
+		this.onMovementProgress(null);
+		if (wasPlaying) { this._clearPendingPopup(); this._closeAdHocPopup(); this.scheduleRender(); }
+	}
 
 		_playMovementSequence(item) {
 			this._clearMovementFocus();
-
 			const rows = this._getOrderedMovementRows(item);
-
 			if (rows.length < 2) return;
-
-			const townById = new Map(
-				this.rawData
-					.filter((d) => d.type === '마을')
-					.map((d) => [d.townId, d])
-			);
-
-			const sequence = rows
-				.map((row) => ({
-					sequence: row.sequence,
-					town: townById.get(row.townId)
-				}))
-				.filter(
-					({ town }) =>
-						town &&
-						Number.isFinite(Number(town.lat)) &&
-						Number.isFinite(Number(town.lng))
-				);
-
+			const townById = new Map(this.rawData.filter((d) => d.type === '마을').map((d) => [d.townId, d]));
+			const sequence = rows.map((row) => ({ sequence: row.sequence, town: townById.get(row.townId) })).filter(({ town }) => town && Number.isFinite(Number(town.lat)) && Number.isFinite(Number(town.lng)));
 			if (sequence.length < 2) return;
+			this._clearPendingPopup();
+			this._closeAdHocPopup();
+			this._movementPlaying = true;
+			this._movementSequence = sequence;
+			this._movementIndex = 0;
+
+			const emitProgress = (currentIndex, phase = 'moving') => {
+				this._movementIndex = currentIndex;
+				this._movementActiveTownId = sequence[currentIndex]?.town?.townId ?? null;
+				this.onMovementProgress({
+					name: this._label(item),
+					sequence: sequence.map(({ sequence: order, town }, i) => ({ sequence: order, townId: town.townId, name: this._label(town), active: i === currentIndex })),
+					currentIndex,
+					phase
+				});
+				this.scheduleRender();
+			};
+
+			const finishPlayback = () => {
+				this._movementPlaying = false;
+				this._movementActiveTownId = null;
+				this._movementFocusTimer = null;
+				this.onMovementProgress(null);
+				this._reservePopup(sequence[0].town.id, { centerInView: true });
+				this.scheduleRender();
+			};
 
 			const token = this._movementFocusToken;
 			let index = 0;
-
 			const FLY_DURATION = 1100;
 			const HOLD_MS = 900;
 
 			const focusNext = () => {
 				if (token !== this._movementFocusToken) return;
-
 				const target = sequence[index];
-
-				if (!target) {
-					this._movementFocusTimer = null;
-					return;
-				}
-
+				if (!target) return;
+				emitProgress(index, 'moving');
 				let finished = false;
-
 				const moveHandler = () => {
 					if (finished) return;
 					finished = true;
-
 					this.map.off('moveend', moveHandler);
-
 					if (token !== this._movementFocusToken) return;
-
 					index += 1;
-
-					// 마지막 sequence까지 완료
 					if (index >= sequence.length) {
-						// 첫 번째 지점으로 한 번 돌아간다.
 						const first = sequence[0];
-
+						emitProgress(0, 'returning');
 						this._movementFocusTimer = setTimeout(() => {
 							if (token !== this._movementFocusToken) return;
-
-							this.map.flyTo({
-								center: [
-									Number(first.town.lng),
-									Number(first.town.lat)
-								],
-								zoom: ZOOM_DETAIL_THRESHOLD + 2,
-								duration: FLY_DURATION,
-								essential: true
-							});
-
-							// 첫 지점으로 돌아온 뒤에는 더 이상 반복하지 않는다.
-							this.map.once('moveend', () => {
-								if (token !== this._movementFocusToken) return;
-								this._movementFocusTimer = null;
-							});
+							this.map.once('moveend', () => { if (token === this._movementFocusToken) finishPlayback(); });
+							this.map.flyTo({ center: [Number(first.town.lng), Number(first.town.lat)], zoom: ZOOM_DETAIL_THRESHOLD + 2, duration: FLY_DURATION, essential: true });
 						}, HOLD_MS);
-
 						return;
 					}
-
-					this._movementFocusTimer = setTimeout(
-						focusNext,
-						HOLD_MS
-					);
+					this._movementFocusTimer = setTimeout(focusNext, HOLD_MS);
 				};
-
 				this.map.once('moveend', moveHandler);
-
-				this.map.flyTo({
-					center: [
-						Number(target.town.lng),
-						Number(target.town.lat)
-					],
-					zoom: ZOOM_DETAIL_THRESHOLD + 2,
-					duration: FLY_DURATION,
-					essential: true
-				});
+				this.map.flyTo({ center: [Number(target.town.lng), Number(target.town.lat)], zoom: ZOOM_DETAIL_THRESHOLD + 2, duration: FLY_DURATION, essential: true });
 			};
 
 			focusNext();
@@ -1317,7 +1296,7 @@ export class MapController {
 
 	_addVillageMarker(item, isDetailMode, childCountByTown) {
 		const childCount = childCountByTown ? childCountByTown.get(item.name) || 0 : 0;
-		const isHighlighted = this.selectedTownName && item.name === this.selectedTownName;
+		const isHighlighted = (this.selectedTownName && item.name === this.selectedTownName) || this._isMovementTownActive(item);
 		const { el, popupOffset } = createMarkerEl('마을', {
 			isHighlighted,
 			badgeCount: childCount,
@@ -1376,7 +1355,9 @@ export class MapController {
 				this._clearMovementFocus();
 			}
 
-			this._reservePopup(item.id);
+			if (!(this._movementPlaying && item.type === '인물' && this.selectedMovementPersonId === item.id)) {
+				this._reservePopup(item.id);
+			}
 			this.scheduleRender();
 		});
 
