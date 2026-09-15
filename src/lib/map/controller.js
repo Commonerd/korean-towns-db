@@ -229,6 +229,7 @@ export class MapController {
 		this.selectedMovementPersonId = null;
 		this._movementFocusTimer = null;
 		this._movementFocusToken = 0;
+		this._suppressMapClickUntil = 0;
 		this.locale = 'ko';
 
 		this._markers = []; // DOM 마커 (저줌 클러스터 상태): { marker, itemId? }
@@ -288,7 +289,12 @@ export class MapController {
 		// 빈 지도(마커 아님) 클릭 시 스파이더 정리. DOM 마커 클릭은 map 'click'을 발생시키지
 		// 않으므로 펼쳐진 leaf 마커·클러스터 클릭에는 영향을 주지 않는다.
 		this._onMapClick = () => {
+			if (performance.now() < this._suppressMapClickUntil) {
+				return;
+			}
 			if (this._spider) this._clearSpider(true);
+			// 지도 빈 곳을 클릭하면 이동 시뮬레이션 중단
+			this._clearMovementFocus();
 		};
 		this.map.on('click', this._onMapClick);
 
@@ -310,7 +316,10 @@ export class MapController {
 		this._onCoordPick = (e) => this._addCoordPoint(e.lngLat);
 		this.map.on('contextmenu', this._onCoordPick);
 		this._onKeyDown = (e) => {
-			if (e.key === 'Escape') this._clearCoordPoints();
+			if (e.key === 'Escape') {
+				this._clearMovementFocus();
+				this._clearCoordPoints();
+			}
 		};
 		document.addEventListener('keydown', this._onKeyDown);
 
@@ -885,6 +894,7 @@ export class MapController {
 
 	_handleIconClick(e) {
 		const feature = e.features && e.features[0];
+		this._suppressMapClickUntil = performance.now() + 100;
 		if (!feature) return;
 
 		const item = this.rawData.find(
@@ -970,6 +980,11 @@ export class MapController {
 				clearTimeout(this._movementFocusTimer);
 				this._movementFocusTimer = null;
 			}
+
+				// 현재 진행 중인 flyTo/easeTo도 즉시 중단
+			if (this.map) {
+				this.map.stop();
+			}
 		}
 
 		_playMovementSequence(item) {
@@ -1027,8 +1042,31 @@ export class MapController {
 
 					index += 1;
 
+					// 마지막 sequence까지 완료
 					if (index >= sequence.length) {
-						this._movementFocusTimer = null;
+						// 첫 번째 지점으로 한 번 돌아간다.
+						const first = sequence[0];
+
+						this._movementFocusTimer = setTimeout(() => {
+							if (token !== this._movementFocusToken) return;
+
+							this.map.flyTo({
+								center: [
+									Number(first.town.lng),
+									Number(first.town.lat)
+								],
+								zoom: ZOOM_DETAIL_THRESHOLD + 2,
+								duration: FLY_DURATION,
+								essential: true
+							});
+
+							// 첫 지점으로 돌아온 뒤에는 더 이상 반복하지 않는다.
+							this.map.once('moveend', () => {
+								if (token !== this._movementFocusToken) return;
+								this._movementFocusTimer = null;
+							});
+						}, HOLD_MS);
+
 						return;
 					}
 
