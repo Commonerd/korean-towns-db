@@ -919,7 +919,9 @@ export class MapController {
 
 			if (rows.length > 1) {
 				const shouldPlay = window.confirm(
-					`「${this._label(item)}」의 이동 경로를 순서대로 재생할까요?`
+					translate(this.locale, 'movement.confirmPlay', {
+						name: this._label(item)
+					})
 				);
 
 				if (shouldPlay) {
@@ -1184,7 +1186,9 @@ export class MapController {
 
 				if (rows.length > 1) {
 					const shouldPlay = window.confirm(
-						`「${this._label(item)}」의 이동 경로를 순서대로 재생할까요?`
+						translate(this.locale, 'movement.confirmPlay', {
+							name: this._label(item)
+						})
 					);
 
 					if (shouldPlay) {
@@ -1355,7 +1359,9 @@ export class MapController {
 
 				if (rows.length > 1) {
 					const shouldPlay = window.confirm(
-						`「${this._label(item)}」의 이동 경로를 순서대로 재생할까요?`
+						translate(this.locale, 'movement.confirmPlay', {
+							name: this._label(item)
+						})
 					);
 
 					if (shouldPlay) {

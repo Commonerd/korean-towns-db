@@ -9,6 +9,105 @@ function toDegrees(value) {
 	return (value * 180) / Math.PI;
 }
 
+/*
+ * ----------------------------------------
+ * 장거리 이동 보정용 거리 감쇠 함수
+ *
+ * 문제:
+ * 고도/두께 계산이 실제 지구상 거리(groundDistance)에
+ * '선형'으로 비례하기 때문에, 해외 이주처럼 수천 km
+ * 떨어진 경로가 섞이면 아치 높이가 수십~수백 km까지
+ * 치솟는다.
+ *
+ * 도시 단위로 확대한 화면에서는 이 거대한 아치의
+ * 정점이 화면 밖으로 나가고, 출발/도착점 근처의
+ * '거의 수직으로 솟는 구간'만 두껍게 보이게 되는데,
+ * 여러 경로가 한 지점(허브 마을)에 몰리면 이 수직
+ * 구간들이 방사형으로 늘어서서 마치 선이 여러 갈래로
+ * 갈라진 것처럼 보인다.
+ *
+ * 해결:
+ * DISTANCE_CAP 이하 거리는 기존과 동일하게 선형으로
+ * 처리하되, 그 이상부터는 로그 함수로 증가폭을 눌러서
+ * '얼마나 먼지'는 여전히 반영하면서도 초장거리 경로가
+ * 화면을 지배하지 않도록 한다. (DISTANCE_CAP 지점에서
+ * 값과 기울기가 모두 선형 구간과 매끄럽게 이어짐)
+ * ----------------------------------------
+ */
+
+const DISTANCE_CAP = 0.015; // Mercator 단위, 적도 기준 약 600km
+
+function dampDistance(distance) {
+	if (distance <= DISTANCE_CAP) {
+		return distance;
+	}
+
+	return DISTANCE_CAP * (1 + Math.log(distance / DISTANCE_CAP));
+}
+
+/*
+ * ----------------------------------------
+ * 이동선 양 끝 테이퍼링
+ *
+ * 문제:
+ * 고도 곡선(sin(pi*t)^0.9)은 t=0, t=1 부근에서
+ * 접선이 거의 수직에 가깝게 급격히 꺾인다.
+ * 이 구간은 커브 상의 실제 이동 거리(수평)는
+ * 짧은데 튜브 반지름은 동일하게 유지되기 때문에
+ * 출발/도착 지점에 두꺼운 '뭉치'가 생긴 것처럼
+ * 보인다.
+ *
+ * 해결:
+ * 경로 양 끝 TAPER_FRACTION 구간에서 반지름을
+ * TAPER_MIN_RATIO까지 매끄럽게 줄여, 끝으로
+ * 갈수록 가늘어지는 창끝 모양으로 만든다.
+ * ----------------------------------------
+ */
+
+const TAPER_FRACTION = 0.08;
+const TAPER_MIN_RATIO = 0.05;
+
+function smoothstep(edge0, edge1, x) {
+	const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+	return t * t * (3 - 2 * t);
+}
+
+function taperFactor(u) {
+	const fromStart = smoothstep(0, TAPER_FRACTION, u);
+	const fromEnd = smoothstep(0, TAPER_FRACTION, 1 - u);
+	const shape = Math.min(fromStart, fromEnd);
+
+	return TAPER_MIN_RATIO + (1 - TAPER_MIN_RATIO) * shape;
+}
+
+function applyEndTaper(tubeGeometry, curve, tubularSegments, radialSegments) {
+	const centers = curve.getSpacedPoints(tubularSegments);
+	const positions = tubeGeometry.attributes.position;
+	const verticesPerRing = radialSegments + 1;
+
+	for (let i = 0; i <= tubularSegments; i++) {
+		const factor = taperFactor(i / tubularSegments);
+		const center = centers[i];
+
+		for (let j = 0; j < verticesPerRing; j++) {
+			const index = i * verticesPerRing + j;
+
+			const x = positions.getX(index);
+			const y = positions.getY(index);
+			const z = positions.getZ(index);
+
+			positions.setXYZ(
+				index,
+				center.x + (x - center.x) * factor,
+				center.y + (y - center.y) * factor,
+				center.z + (z - center.z) * factor
+			);
+		}
+	}
+
+	positions.needsUpdate = true;
+}
+
 function sphericalPoint(from, to, t) {
 	const aLat = toRadians(from.lat);
 	const aLng = toRadians(from.lng);
@@ -149,7 +248,7 @@ export class Movement3DLayer {
 
 		const zoomFactor = Math.pow(
 			2,
-			(zoom - 8) * 0.35
+			(zoom - 8) * 0.5
 		);
 
 		/*
@@ -235,6 +334,14 @@ export class Movement3DLayer {
 				);
 
 			/*
+			 * 고도/두께/화살표 크기 계산에 사용할
+			 * 감쇠된 거리값. 짧은 경로는 groundDistance와
+			 * 동일하고, 장거리 경로만 증가폭이 눌린다.
+			 */
+			const scaledDistance =
+				dampDistance(groundDistance);
+
+			/*
 			 * ----------------------------------------
 			 * 4. Mercator 단위
 			 * ----------------------------------------
@@ -251,7 +358,7 @@ export class Movement3DLayer {
 
 			const baseMaxAltitude =
 				Math.max(
-					groundDistance * 0.02,
+					scaledDistance * 0.02,
 					metersPerMercator * 700
 				);
 
@@ -349,7 +456,7 @@ export class Movement3DLayer {
 
 			const baseTubeRadius =
 				Math.max(
-					groundDistance * 0.0007,
+					scaledDistance * 0.0007,
 					metersPerMercator * 60
 				);
 
@@ -365,6 +472,22 @@ export class Movement3DLayer {
 					8,
 					false
 				);
+
+			/*
+			 * ----------------------------------------
+			 * 9-1. 시작/끝 두께 테이퍼링
+			 *
+			 * 이륙/착륙 구간은 고도 변화가 급격해서
+			 * (구간 길이는 짧은데 반지름은 그대로라)
+			 * 끝부분이 두꺼운 '뭉치'처럼 보인다.
+			 *
+			 * 경로 양 끝 TAPER_FRACTION 구간에서
+			 * 반지름을 점점 줄여, 끝으로 갈수록
+			 * 가늘어지는 형태로 보정한다.
+			 * ----------------------------------------
+			 */
+
+			applyEndTaper(tube, curve, 128, 8);
 
 			/*
 			 * ----------------------------------------
@@ -523,13 +646,13 @@ export class Movement3DLayer {
 
 			const baseArrowHeight =
 				Math.max(
-					groundDistance * 0.015,
+					scaledDistance * 0.015,
 					metersPerMercator * 700
 				);
 
 			const baseArrowRadius =
 				Math.max(
-					groundDistance * 0.003,
+					scaledDistance * 0.003,
 					metersPerMercator * 180
 				);
 
