@@ -2059,6 +2059,19 @@ export class MapController {
 			targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 9);
 		}
 
+		if (item.type === '인물' && this.selectedMovementPersonId === item.id) {
+			const rows = this._getOrderedMovementRows(item);
+			if (rows.length > 1) {
+				const shouldPlay = window.confirm(translate(this.locale, 'movement.confirmPlay', { name: this._label(item) }));
+				if (shouldPlay) this._playMovementSequence(item);
+				else this._clearMovementFocus();
+			} else {
+				this._clearMovementFocus();
+			}
+		} else {
+			this._clearMovementFocus();
+		}
+
 		if (isNaN(targetLat) || isNaN(targetLng) || !targetLat || !targetLng) return;
 
 		// 검색 결과 클릭 등 "포커싱" 경로로 열린 팝업은 내용 길이와 무관하게
