@@ -1029,12 +1029,38 @@ export class MapController {
 			};
 
 			const finishPlayback = () => {
-				this._movementPlaying = false;
-				this._movementActiveTownId = null;
-				this._movementFocusTimer = null;
-				this.onMovementProgress(null);
-				this._reservePopup(item.id, { centerInView: true });
-				this.scheduleRender();
+				const personPos = this._positions.get(item.id);
+
+				// 인물 마커 위치를 찾지 못하면 기존 방식으로 종료
+				if (!personPos?.coord) {
+					this._movementPlaying = false;
+					this._movementActiveTownId = null;
+					this._movementFocusTimer = null;
+					this.onMovementProgress(null);
+					this._reservePopup(item.id, { centerInView: true });
+					this.scheduleRender();
+					return;
+				}
+
+				this.map.once('moveend', () => {
+					if (token !== this._movementFocusToken) return;
+
+					this._movementPlaying = false;
+					this._movementActiveTownId = null;
+					this._movementFocusTimer = null;
+					this.onMovementProgress(null);
+
+					// 인물 팝업 열기
+					this._reservePopup(item.id, { centerInView: true });
+					this.scheduleRender();
+				});
+
+				this.map.flyTo({
+					center: personPos.coord,
+					zoom: ZOOM_DETAIL_THRESHOLD + 2,
+					duration: FLY_DURATION,
+					essential: true
+				});
 			};
 
 			const token = this._movementFocusToken;
@@ -1055,12 +1081,14 @@ export class MapController {
 					if (token !== this._movementFocusToken) return;
 					index += 1;
 					if (index >= sequence.length) {
-						const first = sequence[0];
-						emitProgress(0, 'returning');
+					const first = sequence[0];
+					emitProgress(0, 'returning');
+
 						this._movementFocusTimer = setTimeout(() => {
 							if (token !== this._movementFocusToken) return;
-							this.map.once('moveend', () => { if (token === this._movementFocusToken) finishPlayback(); });
-							this.map.flyTo({ center: [Number(first.town.lng), Number(first.town.lat)], zoom: ZOOM_DETAIL_THRESHOLD + 2, duration: FLY_DURATION, essential: true });
+
+							// 마지막 마을에서 바로 인물 마커로 이동
+							finishPlayback();
 						}, HOLD_MS);
 						return;
 					}
