@@ -59,11 +59,11 @@ export function relationsFor(node, index, locale = 'ko') {
 		}
 		return groups;
 	}
-	const movementTownIds = node.movements?.map((movement) => movement.townId).filter(Boolean);
-	const towns = movementTownIds?.length
-		? resolveIds(index, '마을', movementTownIds, locale).map((town, i) => ({
+	const validMovements = (node.movements || []).filter((m) => m.townId);
+	const towns = validMovements.length
+		? resolveIds(index, '마을', validMovements.map((m) => m.townId), locale).map((town, i) => ({
 			...town,
-			period: [node.movements[i].startYear, node.movements[i].endYear]
+			period: [validMovements[i].startYear, validMovements[i].endYear]
 				.filter(Boolean)
 				.join('–')
 		}))

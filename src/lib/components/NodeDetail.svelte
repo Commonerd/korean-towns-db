@@ -203,7 +203,7 @@
 			<section aria-label={group.label}>
 				<h2 class="archive-h2">{group.label}</h2>
 				<ul class="archive-chips">
-					{#each group.items as item, i (item.type + item.name)}
+					{#each group.items as item, i (item.type + item.name + '__' + (item.period ?? '') + '__' + i)}
 						<li>
 							{#if item.href}
 								<a href={item.href}>{item.name}</a>
