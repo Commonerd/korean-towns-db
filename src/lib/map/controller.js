@@ -226,6 +226,9 @@ export class MapController {
 		this.yearRangeMax = 2026;
 		this.selectedTownName = null;
 		this.selectedMovementPersonId = null;
+		this.selectedMovementPersonId = null;
+		this._movementFocusTimer = null;
+		this._movementFocusToken = 0;
 		this.locale = 'ko';
 
 		this._markers = []; // DOM 마커 (저줌 클러스터 상태): { marker, itemId? }
@@ -451,6 +454,11 @@ export class MapController {
 		if (this._dashTimer) cancelAnimationFrame(this._dashTimer);
 		this._closeAdHocPopup();
 		this._clearCoordPoints();
+		this._closeAdHocPopup();
+		this._clearCoordPoints();
+		this._clearMovementFocus();
+		this._clearSpider();
+		this._clearMarkers();
 		this._clearSpider();
 		this._clearMarkers();
 		if (this.map.getLayer(this._movement3D.id)) this.map.removeLayer(this._movement3D.id);
@@ -878,14 +886,44 @@ export class MapController {
 	_handleIconClick(e) {
 		const feature = e.features && e.features[0];
 		if (!feature) return;
-		const item = this.rawData.find((d) => d.id === feature.properties.itemId);
+
+		const item = this.rawData.find(
+			(d) => d.id === feature.properties.itemId
+		);
+
 		if (!item) return;
-		if (item.type === '마을') this.onSelectTown(item.name);
-		else if (item.relatedTown) this.onSelectTown(item.relatedTown);
+
+		if (item.type === '마을') {
+			this.onSelectTown(item.name);
+		} else if (item.relatedTown) {
+			this.onSelectTown(item.relatedTown);
+		}
+
 		this._selectMovementPerson(item);
 
-		// 선택 상태 변경이 트리거하는 재렌더가 방금 연 팝업을 지워버리지 않도록,
-		// 팝업은 직접 열지 않고 재렌더 이후(_afterRender)에 열리도록 예약한다.
+		if (
+			item.type === '인물' &&
+			this.selectedMovementPersonId === item.id
+		) {
+			const rows = this._getOrderedMovementRows(item);
+
+			if (rows.length > 1) {
+				const shouldPlay = window.confirm(
+					`「${this._label(item)}」의 이동 경로를 순서대로 재생할까요?`
+				);
+
+				if (shouldPlay) {
+					this._playMovementSequence(item);
+				} else {
+					this._clearMovementFocus();
+				}
+			} else {
+				this._clearMovementFocus();
+			}
+		} else {
+			this._clearMovementFocus();
+		}
+
 		this._reservePopup(item.id);
 		this.scheduleRender();
 	}
@@ -894,6 +932,127 @@ export class MapController {
 		const count = item.movements?.length || item.relatedTownIds?.length || 0;
 		this.selectedMovementPersonId = item.type === '인물' && count > 1 ? item.id : null;
 	}
+
+	_getOrderedMovementRows(item) {
+	const movementRows = item?.movements?.length
+		? item.movements
+		: item?.relatedTownIds?.map((townId, index) => ({
+				townId,
+				sequence: index + 1
+			})) || [];
+
+	return movementRows
+		.map((row, index) => ({ row, index }))
+		.sort((a, b) => {
+			const sa = Number(a.row?.sequence);
+			const sb = Number(b.row?.sequence);
+
+			if (Number.isFinite(sa) && Number.isFinite(sb)) {
+				return sa - sb;
+			}
+			if (Number.isFinite(sa)) return -1;
+			if (Number.isFinite(sb)) return 1;
+
+			return a.index - b.index;
+		})
+		.map(({ row }, index) => ({
+			...row,
+			sequence: Number.isFinite(Number(row?.sequence))
+				? Number(row.sequence)
+				: index + 1
+		}));
+	}
+
+		_clearMovementFocus() {
+			this._movementFocusToken += 1;
+
+			if (this._movementFocusTimer) {
+				clearTimeout(this._movementFocusTimer);
+				this._movementFocusTimer = null;
+			}
+		}
+
+		_playMovementSequence(item) {
+			this._clearMovementFocus();
+
+			const rows = this._getOrderedMovementRows(item);
+
+			if (rows.length < 2) return;
+
+			const townById = new Map(
+				this.rawData
+					.filter((d) => d.type === '마을')
+					.map((d) => [d.townId, d])
+			);
+
+			const sequence = rows
+				.map((row) => ({
+					sequence: row.sequence,
+					town: townById.get(row.townId)
+				}))
+				.filter(
+					({ town }) =>
+						town &&
+						Number.isFinite(Number(town.lat)) &&
+						Number.isFinite(Number(town.lng))
+				);
+
+			if (sequence.length < 2) return;
+
+			const token = this._movementFocusToken;
+			let index = 0;
+
+			const FLY_DURATION = 1100;
+			const HOLD_MS = 900;
+
+			const focusNext = () => {
+				if (token !== this._movementFocusToken) return;
+
+				const target = sequence[index];
+
+				if (!target) {
+					this._movementFocusTimer = null;
+					return;
+				}
+
+				let finished = false;
+
+				const moveHandler = () => {
+					if (finished) return;
+					finished = true;
+
+					this.map.off('moveend', moveHandler);
+
+					if (token !== this._movementFocusToken) return;
+
+					index += 1;
+
+					if (index >= sequence.length) {
+						this._movementFocusTimer = null;
+						return;
+					}
+
+					this._movementFocusTimer = setTimeout(
+						focusNext,
+						HOLD_MS
+					);
+				};
+
+				this.map.once('moveend', moveHandler);
+
+				this.map.flyTo({
+					center: [
+						Number(target.town.lng),
+						Number(target.town.lat)
+					],
+					zoom: ZOOM_DETAIL_THRESHOLD + 2,
+					duration: FLY_DURATION,
+					essential: true
+				});
+			};
+
+			focusNext();
+		}
 
 	_setGpuSourceData(id, features) {
 		const src = this.map.getSource(id);
@@ -978,6 +1137,28 @@ export class MapController {
 				if (isTown) this.onSelectTown(item.name);
 				else if (item.relatedTown) this.onSelectTown(item.relatedTown);
 				this._selectMovementPerson(item);
+
+			if (
+				item.type === '인물' &&
+				this.selectedMovementPersonId === item.id
+			) {
+				const rows = this._getOrderedMovementRows(item);
+
+				if (rows.length > 1) {
+					const shouldPlay = window.confirm(
+						`「${this._label(item)}」의 이동 경로를 순서대로 재생할까요?`
+					);
+
+					if (shouldPlay) {
+						this._playMovementSequence(item);
+					} else {
+						this._clearMovementFocus();
+					}
+				}
+			} else {
+				this._clearMovementFocus();
+			}
+
 				this.scheduleRender();
 				this._openAdHocPopup(item, finalPos, Math.round(28 / 2 + 6));
 			});
@@ -1115,19 +1296,55 @@ export class MapController {
 	}
 
 	_wireMarker(el, item, popupOffset, lat, lng) {
-		const marker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(this.map);
+		const marker = new maplibregl.Marker({ element: el })
+			.setLngLat([lng, lat])
+			.addTo(this.map);
 
 		el.addEventListener('click', () => {
-			if (item.type === '마을') this.onSelectTown(item.name);
-			else if (item.relatedTown) this.onSelectTown(item.relatedTown);
+			if (item.type === '마을') {
+				this.onSelectTown(item.name);
+			} else if (item.relatedTown) {
+				this.onSelectTown(item.relatedTown);
+			}
+
 			this._selectMovementPerson(item);
-			// GPU 경로와 동일하게, 팝업은 재렌더 이후에 열리도록 예약한다 (레이스 방지).
+
+			if (
+				item.type === '인물' &&
+				this.selectedMovementPersonId === item.id
+			) {
+				const rows = this._getOrderedMovementRows(item);
+
+				if (rows.length > 1) {
+					const shouldPlay = window.confirm(
+						`「${this._label(item)}」의 이동 경로를 순서대로 재생할까요?`
+					);
+
+					if (shouldPlay) {
+						this._playMovementSequence(item);
+					} else {
+						this._clearMovementFocus();
+					}
+				} else {
+					this._clearMovementFocus();
+				}
+			} else {
+				this._clearMovementFocus();
+			}
+
 			this._reservePopup(item.id);
 			this.scheduleRender();
 		});
 
-		this._markers.push({ marker, itemId: item.id });
-		this._positions.set(item.id, { coord: [lng, lat], popupOffset });
+		this._markers.push({
+			marker,
+			itemId: item.id
+		});
+
+		this._positions.set(item.id, {
+			coord: [lng, lat],
+			popupOffset
+		});
 	}
 
 	_addLabel(lat, lng, text) {
