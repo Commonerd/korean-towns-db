@@ -33,23 +33,43 @@
     let movementProgress = $state(null);
 
     const MOVEMENT_INTRO_KEY = 'ktdb-movement-intro-done';
-    // 이미 첫 재생을 한 인물들의 ID
-    let movementIntroPersonIds = new Set();
+    const MOVEMENT_INTRO_TTL = 10 * 60 * 1000; // 10분
+
+    let movementIntroPersonIds = new Map();
 
     try {
         const saved = JSON.parse(
-            localStorage.getItem(MOVEMENT_INTRO_KEY) || '[]'
+            localStorage.getItem(MOVEMENT_INTRO_KEY) || '{}'
         );
 
-        if (Array.isArray(saved)) {
-            movementIntroPersonIds = new Set(
-                saved
-                    .map(Number)
-                    .filter((id) => Number.isFinite(id))
-            );
+        const now = Date.now();
+
+        for (const [personId, timestamp] of Object.entries(saved)) {
+            const ts = Number(timestamp);
+
+            // 10분 이내의 기록만 유지
+            if (
+                Number.isFinite(ts) &&
+                now - ts < MOVEMENT_INTRO_TTL
+            ) {
+                movementIntroPersonIds.set(
+                    Number(personId),
+                    ts
+                );
+            }
         }
+
+        // 만료된 기록 제거 후 정리해서 다시 저장
+        const cleaned = Object.fromEntries(
+            movementIntroPersonIds
+        );
+
+        localStorage.setItem(
+            MOVEMENT_INTRO_KEY,
+            JSON.stringify(cleaned)
+        );
     } catch {
-        movementIntroPersonIds = new Set();
+        movementIntroPersonIds = new Map();
     }
     let hasAutoFlattenedOnce = false; // 실제 값은 onMount 에서 localStorage 확인 후 채운다 (SSR/프리렌더 중엔 localStorage 가 없다)
     let applyTerrainMode = (mode = terrainMode, opacity = darkOpacity) => {};
@@ -445,19 +465,21 @@
                 );
 
                 // 이 인물은 첫 재생을 끝낸 것으로 기록
-                movementIntroPersonIds.add(personId);
+                const now = Date.now();
 
-                try {
-                    localStorage.setItem(
-                        MOVEMENT_INTRO_KEY,
-                        JSON.stringify(
-                            [...movementIntroPersonIds]
-                        )
-                    );
-                } catch {
-                    // localStorage 저장 실패해도
-                    // 현재 세션에서는 Set에 기록되어 있음
-                }
+                movementIntroPersonIds.set(
+                    personId,
+                    now
+                );
+
+                const saved = Object.fromEntries(
+                    movementIntroPersonIds
+                );
+
+                localStorage.setItem(
+                    MOVEMENT_INTRO_KEY,
+                    JSON.stringify(saved)
+                );
             }
         }
 

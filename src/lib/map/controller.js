@@ -1100,7 +1100,7 @@ export class MapController {
 			let index = 0;
 			const FLY_DURATION = 1200;
 			const FLY_SPEED = 1.2; // 첫 구간: 거리에 비례해 소요시간을 자동 계산
-			const HOLD_MS = 1000;
+			const HOLD_MS = 900;
 
 			const focusNext = () => {
 				if (token !== this._movementFocusToken) return;
