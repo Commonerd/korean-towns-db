@@ -1005,33 +1005,67 @@ export class MapController {
 
 		_playMovementSequence(item) {
 			this._clearMovementFocus();
+
 			const rows = this._getOrderedMovementRows(item);
 			if (rows.length < 2) return;
-			const townById = new Map(this.rawData.filter((d) => d.type === '마을').map((d) => [d.townId, d]));
-			const sequence = rows.map((row) => ({ sequence: row.sequence, town: townById.get(row.townId) })).filter(({ town }) => town && Number.isFinite(Number(town.lat)) && Number.isFinite(Number(town.lng)));
+
+			const townById = new Map(
+				this.rawData
+					.filter((d) => d.type === '마을')
+					.map((d) => [d.townId, d])
+			);
+
+			const sequence = rows
+				.map((row) => ({
+					sequence: row.sequence,
+					town: townById.get(row.townId)
+				}))
+				.filter(
+					({ town }) =>
+						town &&
+						Number.isFinite(Number(town.lat)) &&
+						Number.isFinite(Number(town.lng))
+				);
+
 			if (sequence.length < 2) return;
+
 			this._clearPendingPopup();
 			this._closeAdHocPopup();
+
 			this._movementPlaying = true;
 			this._movementSequence = sequence;
 			this._movementIndex = 0;
 
 			const emitProgress = (currentIndex, phase = 'moving') => {
 				this._movementIndex = currentIndex;
-				this._movementActiveTownId = sequence[currentIndex]?.town?.townId ?? null;
+				this._movementActiveTownId =
+					sequence[currentIndex]?.town?.townId ?? null;
+
 				this.onMovementProgress({
+					// ★ 추가: 지금 재생 중인 '인물'의 ID
+					personId: item.id,
+
 					name: this._label(item),
-					sequence: sequence.map(({ sequence: order, town }, i) => ({ sequence: order, townId: town.townId, name: this._label(town), active: i === currentIndex })),
+
+					sequence: sequence.map(
+						({ sequence: order, town }, i) => ({
+							sequence: order,
+							townId: town.townId,
+							name: this._label(town),
+							active: i === currentIndex
+						})
+					),
+
 					currentIndex,
 					phase
 				});
+
 				this.scheduleRender();
 			};
 
 			const finishPlayback = () => {
 				const personPos = this._positions.get(item.id);
 
-				// 인물 마커 위치를 찾지 못하면 기존 방식으로 종료
 				if (!personPos?.coord) {
 					this._movementPlaying = false;
 					this._movementActiveTownId = null;
@@ -1050,7 +1084,6 @@ export class MapController {
 					this._movementFocusTimer = null;
 					this.onMovementProgress(null);
 
-					// 인물 팝업 열기
 					this._reservePopup(item.id, { centerInView: true });
 					this.scheduleRender();
 				});
@@ -1065,8 +1098,9 @@ export class MapController {
 
 			const token = this._movementFocusToken;
 			let index = 0;
-			const FLY_DURATION = 1100;
-			const HOLD_MS = 900;
+			const FLY_DURATION = 1200;
+			const FLY_SPEED = 1.2; // 첫 구간: 거리에 비례해 소요시간을 자동 계산
+			const HOLD_MS = 1000;
 
 			const focusNext = () => {
 				if (token !== this._movementFocusToken) return;
@@ -1081,8 +1115,8 @@ export class MapController {
 					if (token !== this._movementFocusToken) return;
 					index += 1;
 					if (index >= sequence.length) {
-					const first = sequence[0];
-					emitProgress(0, 'returning');
+						const first = sequence[0];
+						emitProgress(0, 'returning');
 
 						this._movementFocusTimer = setTimeout(() => {
 							if (token !== this._movementFocusToken) return;
@@ -1095,7 +1129,21 @@ export class MapController {
 					this._movementFocusTimer = setTimeout(focusNext, HOLD_MS);
 				};
 				this.map.once('moveend', moveHandler);
-				this.map.flyTo({ center: [Number(target.town.lng), Number(target.town.lat)], zoom: ZOOM_DETAIL_THRESHOLD + 2, duration: FLY_DURATION, essential: true });
+
+				const flyOptions = {
+					center: [Number(target.town.lng), Number(target.town.lat)],
+					zoom: ZOOM_DETAIL_THRESHOLD + 2,
+					essential: true
+				};
+				if (index === 0) {
+					// 재생 시작 시 카메라는 인물 마커 위치에 있어, 첫 마을까지의 거리가
+					// 이후 마을 간 이동보다 훨씬 먼 경우가 많다. 고정 duration으로 압축하면
+					// 그만큼 빨라 보이므로, 첫 구간만 거리 비례 속도로 날아가게 한다.
+					flyOptions.speed = FLY_SPEED;
+				} else {
+					flyOptions.duration = FLY_DURATION;
+				}
+				this.map.flyTo(flyOptions);
 			};
 
 			focusNext();
@@ -2058,8 +2106,6 @@ export class MapController {
 				targetLng = parent.lng;
 				targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 8);
 			} else {
-				/* 부모 마을이 없는 고아 노드 — 자기 좌표로 간다. 기본 zoom 8 은 상세줌
-				   임계값(10) 아래라 도착해도 클러스터만 보이므로 상세줌까지 당겨야 한다. */
 				targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 9);
 			}
 		} else if (item.type === '마을') {
@@ -2068,12 +2114,17 @@ export class MapController {
 			targetZoom = Math.max(ZOOM_DETAIL_THRESHOLD + 1, 9);
 		}
 
+		let playingMovement = false;
 		if (item.type === '인물' && this.selectedMovementPersonId === item.id) {
 			const rows = this._getOrderedMovementRows(item);
 			if (rows.length > 1) {
 				const shouldPlay = window.confirm(translate(this.locale, 'movement.confirmPlay', { name: this._label(item) }));
-				if (shouldPlay) this._playMovementSequence(item);
-				else this._clearMovementFocus();
+				if (shouldPlay) {
+					this._playMovementSequence(item);
+					playingMovement = true;
+				} else {
+					this._clearMovementFocus();
+				}
 			} else {
 				this._clearMovementFocus();
 			}
@@ -2081,10 +2132,13 @@ export class MapController {
 			this._clearMovementFocus();
 		}
 
+		// 재생이 시작됐으면 카메라는 _playMovementSequence 가 전담한다 — 여기서 또
+		// flyTo 하면 방금 시작된 첫 구간 애니메이션을 즉시 가로채 끊어버려서, moveend가
+		// 엉뚱한 타이밍에 발생해 초반 구간들이 순식간에 지나가는 것처럼 보인다.
+		if (playingMovement) return;
+
 		if (isNaN(targetLat) || isNaN(targetLng) || !targetLat || !targetLng) return;
 
-		// 검색 결과 클릭 등 "포커싱" 경로로 열린 팝업은 내용 길이와 무관하게
-		// 화면 중앙에 통째로 보이도록 한 번 더 보정한다 (_centerPopupInView).
 		this._reservePopup(item.id, { centerInView: true });
 		this.map.flyTo({ center: [targetLng, targetLat], zoom: targetZoom, duration: 800 });
 		this.map.once('moveend', () => this.scheduleRender());

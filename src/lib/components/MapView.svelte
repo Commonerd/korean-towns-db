@@ -31,6 +31,27 @@
     let controller = null;
     let ready = $state(false);
     let movementProgress = $state(null);
+
+    const MOVEMENT_INTRO_KEY = 'ktdb-movement-intro-done';
+    // 이미 첫 재생을 한 인물들의 ID
+    let movementIntroPersonIds = new Set();
+
+    try {
+        const saved = JSON.parse(
+            localStorage.getItem(MOVEMENT_INTRO_KEY) || '[]'
+        );
+
+        if (Array.isArray(saved)) {
+            movementIntroPersonIds = new Set(
+                saved
+                    .map(Number)
+                    .filter((id) => Number.isFinite(id))
+            );
+        }
+    } catch {
+        movementIntroPersonIds = new Set();
+    }
+    let hasAutoFlattenedOnce = false; // 실제 값은 onMount 에서 localStorage 확인 후 채운다 (SSR/프리렌더 중엔 localStorage 가 없다)
     let applyTerrainMode = (mode = terrainMode, opacity = darkOpacity) => {};
     let applyBaseLayer = (layer = baseLayer, labels = showGeoLabels, opacity = darkOpacity) => {};
 
@@ -76,6 +97,11 @@
     }
 
     onMount(() => {
+        try {
+        hasAutoFlattenedOnce = localStorage.getItem(MOVEMENT_INTRO_KEY) === '1';
+        } catch {
+            /* localStorage 접근 불가 시 무시 — 이번 방문 동안은 매번 첫 재생처럼 동작 */
+        }
         let ro;
         let disposed = false;
 
@@ -373,8 +399,10 @@
        (다크모드 슬라이더를 움직여도 지형·베이스레이어가 갱신되지 않던 버그의 원인).
        ready 는 $state 라 이 값으로 게이트해야 나중에 true 로 바뀔 때 정상적으로
        재실행되고, 그 실행에서 비로소 terrainMode/darkOpacity 등을 의존성으로 잡는다. */
+    // after
     $effect(() => {
         if (!ready) return;
+        if (movementProgress) return; // 재생 중엔 아래 effect가 지형/라벨을 전담
         const mode = terrainMode;
         const opacity = darkOpacity;
         applyTerrainMode(mode, opacity);
@@ -382,8 +410,75 @@
 
     $effect(() => {
         if (!ready) return;
+        if (movementProgress) return; // 재생 중엔 아래 effect가 지형/라벨을 전담
         applyBaseLayer(baseLayer, showGeoLabels, darkOpacity);
     });
+
+    // after
+    let wasPlayingMovement = false;
+
+    $effect(() => {
+        if (!ready) return;
+
+        const playing = Boolean(movementProgress);
+
+        // 이동 재생이 새로 시작된 순간
+        if (playing && !wasPlayingMovement) {
+            const personId = Number(movementProgress?.personId);
+
+            const isValidPersonId =
+                Number.isFinite(personId);
+
+            const isFirstPlaybackForPerson =
+                isValidPersonId &&
+                !movementIntroPersonIds.has(personId);
+
+            // ★ 해당 '인물'의 첫 재생일 때만
+            //    평면 + 지리정보 숨김으로 시작
+            if (isFirstPlaybackForPerson) {
+                applyTerrainMode('flat', darkOpacity);
+
+                applyBaseLayer(
+                    baseLayer,
+                    false,
+                    darkOpacity
+                );
+
+                // 이 인물은 첫 재생을 끝낸 것으로 기록
+                movementIntroPersonIds.add(personId);
+
+                try {
+                    localStorage.setItem(
+                        MOVEMENT_INTRO_KEY,
+                        JSON.stringify(
+                            [...movementIntroPersonIds]
+                        )
+                    );
+                } catch {
+                    // localStorage 저장 실패해도
+                    // 현재 세션에서는 Set에 기록되어 있음
+                }
+            }
+        }
+
+        // 재생 종료
+        else if (!playing && wasPlayingMovement) {
+            // 사용자가 원래 선택해 둔 설정으로 복귀
+            applyTerrainMode(
+                terrainMode,
+                darkOpacity
+            );
+
+            applyBaseLayer(
+                baseLayer,
+                showGeoLabels,
+                darkOpacity
+            );
+        }
+
+        wasPlayingMovement = playing;
+    });
+
 </script>
 
 <div class="map-root" bind:this={container}></div>
